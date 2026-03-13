@@ -9,7 +9,6 @@ const route = useRoute();
 const guidanceSetId = route.params.guidanceSetId as string;
 
 const steps = ref<GuidanceStep[]>([]);
-const loading = ref(false);
 
 function handleBack() {
   router.push(`/guidance/${guidanceSetId}/edit`);

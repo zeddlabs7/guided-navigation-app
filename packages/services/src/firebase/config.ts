@@ -1,12 +1,12 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
-import { getStorage, type Storage } from 'firebase/storage';
+import { getStorage, type FirebaseStorage } from 'firebase/storage';
 
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let firestore: Firestore | null = null;
-let storage: Storage | null = null;
+let storage: FirebaseStorage | null = null;
 
 export interface FirebaseConfig {
   apiKey: string;
@@ -47,7 +47,7 @@ export function getFirebaseFirestore(): Firestore {
   return firestore;
 }
 
-export function getFirebaseStorage(): Storage {
+export function getFirebaseStorage(): FirebaseStorage {
   if (!storage) {
     storage = getStorage(getFirebaseApp());
   }

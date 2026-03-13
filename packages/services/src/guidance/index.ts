@@ -164,7 +164,7 @@ export async function deleteGuidanceStep(stepId: string): Promise<void> {
 }
 
 export async function reorderGuidanceSteps(
-  guidanceSetId: string,
+  _guidanceSetId: string,
   stepIds: string[]
 ): Promise<void> {
   const db = getFirebaseFirestore();

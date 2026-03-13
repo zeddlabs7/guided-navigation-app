@@ -4,20 +4,20 @@ import { en } from './locales/en';
 import { ar } from './locales/ar';
 import type { LocaleMessages } from './types';
 
-const messages: Record<Language, LocaleMessages> = {
-  en,
-  ar,
-};
+type MessageSchema = LocaleMessages;
 
 export function createI18nInstance(defaultLocale: Language = 'en') {
-  return createI18n({
+  return createI18n<[MessageSchema], 'en' | 'ar'>({
     legacy: false,
     locale: defaultLocale,
     fallbackLocale: 'en',
-    messages,
+    messages: {
+      en,
+      ar,
+    },
   });
 }
 
 export function useAppI18n() {
-  return useI18n<{ message: LocaleMessages }>();
+  return useI18n<{ message: MessageSchema }>();
 }
