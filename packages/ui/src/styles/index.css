@@ -1,37 +1,63 @@
 :root {
-  /* Primary */
-  --color-primary: #2563eb;
-  --color-primary-dark: #1d4ed8;
+  /* Primary - matches Figma #155dfc */
+  --color-primary: #155dfc;
+  --color-primary-dark: #1249d6;
   --color-primary-light: #eff6ff;
+  --color-primary-bg: #eff6ff;
 
   /* Secondary */
   --color-secondary: #e5e7eb;
   --color-secondary-dark: #d1d5db;
 
-  /* Text */
-  --color-text: #1f2937;
-  --color-text-muted: #6b7280;
-  --color-text-light: #9ca3af;
+  /* Text - matches Figma */
+  --color-text: #101828;
+  --color-text-secondary: #4a5565;
+  --color-text-muted: #99a1af;
+  --color-text-light: #d1d5dc;
 
-  /* Background */
+  /* Background - matches Figma */
   --color-background: #f9fafb;
   --color-surface: #ffffff;
 
-  /* Border */
+  /* Border - matches Figma */
   --color-border: #e5e7eb;
+  --color-border-light: #f3f4f6;
 
-  /* Status */
-  --color-success: #16a34a;
-  --color-success-light: #dcfce7;
-  --color-warning: #d97706;
-  --color-warning-light: #fef3c7;
+  /* Status - matches Figma */
+  --color-success: #008236;
+  --color-success-bg: #f0fdf4;
+  --color-success-dot: #00c950;
+  
+  --color-warning: #bb4d00;
+  --color-warning-bg: #fffbeb;
+  --color-warning-dot: #ffb900;
+  
   --color-danger: #dc2626;
-  --color-danger-light: #fee2e2;
-  --color-info: #2563eb;
-  --color-info-light: #dbeafe;
+  --color-danger-bg: #fee2e2;
+  
+  --color-info: #155dfc;
+  --color-info-bg: #eff6ff;
 
-  /* Disabled */
+  /* Step type colors - from Figma */
+  --color-step-parking: #99a1af;
+  --color-step-parking-bg: #f3f4f6;
+  
+  --color-step-pin-check: #bb4d00;
+  --color-step-pin-check-bg: #fffbeb;
+  --color-step-pin-check-dot: #ffb900;
+  
+  --color-step-elevator: #8200db;
+  --color-step-elevator-bg: #faf5ff;
+  --color-step-elevator-dot: #ad46ff;
+  
+  --color-step-gate-entry: #008236;
+  --color-step-gate-entry-bg: #f0fdf4;
+  --color-step-gate-entry-dot: #00c950;
+
+  /* Disabled - matches Figma */
   --color-disabled: #f3f4f6;
+  --color-disabled-text: #6a7282;
+  --color-disabled-dot: #99a1af;
 
   /* Spacing */
   --spacing-xs: 0.25rem;
@@ -39,22 +65,36 @@
   --spacing-md: 1rem;
   --spacing-lg: 1.5rem;
   --spacing-xl: 2rem;
+  --spacing-2xl: 2.5rem;
 
-  /* Border Radius */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
+  /* Border Radius - matches Figma */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
   --radius-xl: 1rem;
   --radius-full: 9999px;
 
-  /* Font */
-  --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-size-xs: 0.75rem;
-  --font-size-sm: 0.875rem;
-  --font-size-base: 1rem;
-  --font-size-lg: 1.125rem;
-  --font-size-xl: 1.25rem;
+  /* Font - Inter from Figma */
+  --font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-arabic: 'Noto Sans Arabic', 'Inter', system-ui, sans-serif;
+  
+  --font-size-2xs: 0.625rem;
+  --font-size-xs: 0.6875rem;
+  --font-size-sm: 0.75rem;
+  --font-size-base: 0.875rem;
+  --font-size-lg: 1rem;
+  --font-size-xl: 1.125rem;
   --font-size-2xl: 1.5rem;
+
+  /* Font weights */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+
+  /* Shadows - matches Figma */
+  --shadow-sm: 0px 1px 2px 0px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0px 1px 3px 0px rgba(0, 0, 0, 0.1), 0px 1px 2px 0px rgba(0, 0, 0, 0.1);
+  --shadow-button: 0px 1px 3px 0px #bedbff, 0px 1px 2px 0px #bedbff;
 }
 
 *,
@@ -72,4 +112,26 @@ body {
   padding: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+}
+
+[dir="rtl"] {
+  font-family: var(--font-family-arabic);
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  font-family: inherit;
+}
+
+input, textarea {
+  font-family: inherit;
 }
