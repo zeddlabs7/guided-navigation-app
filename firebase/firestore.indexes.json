@@ -1,0 +1,63 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "guidanceSets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "recipientUserId", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "guidanceSets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "recipientUserId", "order": "ASCENDING" },
+        { "fieldPath": "deletedAt", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "guidanceSteps",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "guidanceSetId", "order": "ASCENDING" },
+        { "fieldPath": "stepIndex", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "guidanceSteps",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "guidanceSetId", "order": "ASCENDING" },
+        { "fieldPath": "deletedAt", "order": "ASCENDING" },
+        { "fieldPath": "stepIndex", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "shareLinks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "guidanceSetId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "analyticsEvents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "guidanceSetId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "feedbackEvents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "guidanceSetId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

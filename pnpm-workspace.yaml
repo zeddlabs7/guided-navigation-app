@@ -1,0 +1,24 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+  - 'firebase/functions'
+allowBuilds:
+  ' ': true
+  '-': true
+  a: true
+  b: true
+  d: true
+  e: true
+  f: true
+  h: true
+  i: true
+  j: true
+  l: true
+  m: true
+  o: true
+  p: true
+  r: true
+  s: true
+  t: true
+  u: true
+  v: true
