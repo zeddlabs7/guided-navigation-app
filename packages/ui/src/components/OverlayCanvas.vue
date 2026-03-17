@@ -33,13 +33,42 @@ function getImageRect(): DOMRect | null {
   return imageRef.value?.getBoundingClientRect() ?? null;
 }
 
-function screenToNormalized(screenX: number, screenY: number): { x: number; y: number } | null {
+function screenToNormalized(screenX: number, screenY: number, padding: number = 0): { x: number; y: number } | null {
   const rect = getImageRect();
   if (!rect) return null;
   
+  const rawX = (screenX - rect.left) / rect.width;
+  const rawY = (screenY - rect.top) / rect.height;
+  
   return {
-    x: Math.max(0, Math.min(1, (screenX - rect.left) / rect.width)),
-    y: Math.max(0, Math.min(1, (screenY - rect.top) / rect.height)),
+    x: Math.max(padding, Math.min(1 - padding, rawX)),
+    y: Math.max(padding, Math.min(1 - padding, rawY)),
+  };
+}
+
+function getMarkerPadding(): { paddingX: number; paddingY: number } {
+  const rect = getImageRect();
+  if (!rect) return { paddingX: 0.05, paddingY: 0.05 };
+  
+  const markerRadius = 16; // Half of 32px marker dot
+  return {
+    paddingX: markerRadius / rect.width,
+    paddingY: markerRadius / rect.height,
+  };
+}
+
+function screenToNormalizedForMarker(screenX: number, screenY: number): { x: number; y: number } | null {
+  const rect = getImageRect();
+  if (!rect) return null;
+  
+  const { paddingX, paddingY } = getMarkerPadding();
+  
+  const rawX = (screenX - rect.left) / rect.width;
+  const rawY = (screenY - rect.top) / rect.height;
+  
+  return {
+    x: Math.max(paddingX, Math.min(1 - paddingX, rawX)),
+    y: Math.max(paddingY, Math.min(1 - paddingY, rawY)),
   };
 }
 
@@ -57,15 +86,17 @@ function handleCanvasPointerDown(event: PointerEvent) {
     return;
   }
   
-  const pos = screenToNormalized(event.clientX, event.clientY);
-  if (!pos) return;
-  
   if (props.mode === 'add-arrow') {
+    const pos = screenToNormalized(event.clientX, event.clientY, 0.05);
+    if (!pos) return;
     isDrawingArrow.value = true;
     arrowStartPos.value = pos;
     arrowStartScreen.value = { x: event.clientX, y: event.clientY };
     canvasRef.value?.setPointerCapture(event.pointerId);
   } else if (props.mode === 'add-marker') {
+    // Use marker-specific padding to keep dot fully visible
+    const pos = screenToNormalizedForMarker(event.clientX, event.clientY);
+    if (!pos) return;
     emit('canvas-tap', pos.x, pos.y);
   } else {
     emit('select-overlay', null);
@@ -195,11 +226,20 @@ function handleOverlayDragStart(event: PointerEvent, overlayId: string) {
   const offsetX = event.clientX - overlayScreenX;
   const offsetY = event.clientY - overlayScreenY;
   
+  const isMarker = overlay.type === 'marker';
+  
   const target = event.currentTarget as HTMLElement;
   target.setPointerCapture(event.pointerId);
   
   const handleMove = (e: PointerEvent) => {
-    const pos = screenToNormalized(e.clientX - offsetX, e.clientY - offsetY);
+    let pos;
+    if (isMarker) {
+      // Use marker-specific padding to keep dot fully visible
+      pos = screenToNormalizedForMarker(e.clientX - offsetX, e.clientY - offsetY);
+    } else {
+      // Arrows can go closer to edges
+      pos = screenToNormalized(e.clientX - offsetX, e.clientY - offsetY, 0.02);
+    }
     if (pos) {
       emit('update-overlay', overlayId, { x: pos.x, y: pos.y });
     }

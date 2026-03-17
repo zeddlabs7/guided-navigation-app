@@ -33,7 +33,11 @@ const selectedOverlay = computed(() => {
 });
 
 const labelModalTitle = computed(() => {
-  return editingLabelOverlayId.value ? 'Edit Label' : 'Add Label';
+  if (editingLabelOverlayId.value) {
+    const overlay = props.overlays.find(o => o.id === editingLabelOverlayId.value);
+    return overlay?.label ? 'Edit Label' : 'Add Label';
+  }
+  return 'Add Label';
 });
 
 const labelModalInitialValue = computed(() => {
@@ -89,9 +93,19 @@ function handleAddOverlay(x: number, y: number, rotation?: number, scale?: numbe
 
 function handleCanvasTap(x: number, y: number) {
   if (mode.value === 'add-marker') {
-    pendingMarkerPosition.value = { x, y };
-    editingLabelOverlayId.value = null;
-    showLabelModal.value = true;
+    // Place marker directly without label
+    const newOverlay: Overlay = {
+      id: generateId(),
+      type: 'marker',
+      x,
+      y,
+      rotation: 0,
+      scale: 1,
+      label: null,
+    };
+    emit('update:overlays', [...props.overlays, newOverlay]);
+    selectedOverlayId.value = newOverlay.id;
+    mode.value = 'select';
   }
 }
 
@@ -227,6 +241,7 @@ watch(() => props.readonly, (isReadonly) => {
         <OverlayToolbar
           :overlay-type="selectedOverlay.type"
           :arrow-style="selectedOverlay.arrowStyle"
+          :has-label="!!selectedOverlay.label"
           :visible="true"
           @rotate-left="handleRotateLeft"
           @rotate-right="handleRotateRight"
