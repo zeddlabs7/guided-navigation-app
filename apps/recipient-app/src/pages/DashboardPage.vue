@@ -284,7 +284,7 @@ function handleMenu(id: string) {
   >
     <div class="dashboard">
       <header class="dashboard__header">
-        <h1 class="dashboard__title">My Guidance Sets</h1>
+        <h1 class="dashboard__title">My Addresses</h1>
         <p class="dashboard__subtitle">
           Create and manage step-by-step delivery guidance for couriers.
         </p>

@@ -9,5 +9,10 @@ export { default as AppHeader } from './components/AppHeader.vue';
 export { default as AppLayout } from './components/AppLayout.vue';
 export { default as FilterTabs } from './components/FilterTabs.vue';
 export { default as GuidanceSetCard } from './components/GuidanceSetCard.vue';
+export { default as StepCard } from './components/StepCard.vue';
+export { default as OverlayEditor } from './components/OverlayEditor.vue';
+export { default as ArrowOverlay } from './components/ArrowOverlay.vue';
+export { default as MarkerOverlay } from './components/MarkerOverlay.vue';
+export { default as LabelInputModal } from './components/LabelInputModal.vue';
 
 export type { FilterTab } from './components/FilterTabs.vue';
