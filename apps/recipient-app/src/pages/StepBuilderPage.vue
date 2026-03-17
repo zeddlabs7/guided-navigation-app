@@ -1,12 +1,21 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import type { StepType, Overlay } from '@guidenav/types';
-import { OverlayEditor } from '@guidenav/ui';
+import type { StepType, Overlay, GuidanceStep } from '@guidenav/types';
+import { OverlayEditor, GSpinner } from '@guidenav/ui';
+import { 
+  createGuidanceStep, 
+  updateGuidanceStep, 
+  uploadStepImage,
+  deleteStepImage,
+  getGuidanceSteps
+} from '@guidenav/services';
+import { validateImageFile } from '@guidenav/core';
 
 const router = useRouter();
 const route = useRoute();
 const guidanceSetId = route.params.guidanceSetId as string;
+const editStepId = route.query.edit as string | undefined;
 
 interface StepTypeOption {
   type: StepType;
@@ -27,8 +36,16 @@ const stepTitleArabic = ref('');
 const instructions = ref('');
 const instructionsArabic = ref('');
 const imageUrl = ref<string | null>(null);
+const imageStoragePath = ref<string | null>(null);
 const overlays = ref<Overlay[]>([]);
 const loading = ref(false);
+const saving = ref(false);
+const uploading = ref(false);
+const error = ref<string | null>(null);
+const existingStep = ref<GuidanceStep | null>(null);
+const fileInputRef = ref<HTMLInputElement | null>(null);
+
+const isEditMode = computed(() => !!editStepId);
 
 const selectedTypeLabel = computed(() => {
   const option = stepTypeOptions.find(o => o.type === selectedStepType.value);
@@ -52,29 +69,164 @@ const stepTypeBadgeStyle = computed(() => {
   return colors[selectedStepType.value] || colors.APPROACH;
 });
 
+async function loadExistingStep() {
+  if (!editStepId) return;
+  
+  loading.value = true;
+  error.value = null;
+  
+  try {
+    const steps = await getGuidanceSteps(guidanceSetId);
+    const step = steps.find(s => s.id === editStepId);
+    
+    if (!step) {
+      error.value = 'Step not found';
+      return;
+    }
+    
+    existingStep.value = step;
+    selectedStepType.value = step.stepType;
+    stepTitle.value = step.title || '';
+    instructions.value = step.instructionOriginal;
+    imageUrl.value = step.image?.publicUrl || null;
+    imageStoragePath.value = step.image?.storagePath || null;
+    overlays.value = step.overlays || [];
+  } catch (err) {
+    console.error('Failed to load step:', err);
+    error.value = 'Failed to load step. Please try again.';
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(() => {
+  if (isEditMode.value) {
+    loadExistingStep();
+  }
+});
+
 function handleBack() {
   router.push(`/guidance/${guidanceSetId}/edit`);
 }
 
-function handleSaveStep() {
-  loading.value = true;
-  console.log('Saving step with overlays:', overlays.value);
-  setTimeout(() => {
-    loading.value = false;
+async function handleSaveStep() {
+  if (!instructions.value.trim()) {
+    error.value = 'Instructions are required';
+    return;
+  }
+  
+  saving.value = true;
+  error.value = null;
+  
+  try {
+    if (isEditMode.value && editStepId) {
+      await updateGuidanceStep(editStepId, {
+        stepType: selectedStepType.value,
+        title: stepTitle.value.trim() || null,
+        instructionOriginal: instructions.value.trim(),
+        overlays: overlays.value,
+      });
+    } else {
+      await createGuidanceStep(guidanceSetId, {
+        stepType: selectedStepType.value,
+        contentType: imageUrl.value ? 'PHOTO' : 'TEXT',
+        title: stepTitle.value.trim() || null,
+        instructionOriginal: instructions.value.trim(),
+      });
+    }
+    
     router.push(`/guidance/${guidanceSetId}/edit`);
-  }, 500);
+  } catch (err) {
+    console.error('Failed to save step:', err);
+    error.value = 'Failed to save step. Please try again.';
+  } finally {
+    saving.value = false;
+  }
 }
 
 function handleSelectStepType(type: StepType) {
   selectedStepType.value = type;
 }
 
-function handleUploadPhoto() {
-  imageUrl.value = 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600';
+function triggerFileInput() {
+  fileInputRef.value?.click();
 }
 
-function handleRemovePhoto() {
+async function handleFileSelected(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  
+  if (!file) return;
+  
+  const img = new Image();
+  const objectUrl = URL.createObjectURL(file);
+  
+  img.onload = async () => {
+    const validation = validateImageFile({
+      size: file.size,
+      type: file.type,
+      width: img.width,
+      height: img.height,
+    });
+    
+    URL.revokeObjectURL(objectUrl);
+    
+    if (!validation.valid) {
+      error.value = validation.errors.join('. ');
+      input.value = '';
+      return;
+    }
+    
+    uploading.value = true;
+    error.value = null;
+    
+    try {
+      const stepId = editStepId || `temp-${Date.now()}`;
+      const uploadedImage = await uploadStepImage(guidanceSetId, stepId, file);
+      
+      imageUrl.value = uploadedImage.publicUrl;
+      imageStoragePath.value = uploadedImage.storagePath;
+      
+      if (editStepId) {
+        await updateGuidanceStep(editStepId, {
+          image: uploadedImage,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to upload image:', err);
+      error.value = 'Failed to upload image. Please try again.';
+    } finally {
+      uploading.value = false;
+      input.value = '';
+    }
+  };
+  
+  img.onerror = () => {
+    URL.revokeObjectURL(objectUrl);
+    error.value = 'Invalid image file';
+    input.value = '';
+  };
+  
+  img.src = objectUrl;
+}
+
+async function handleRemovePhoto() {
+  if (imageStoragePath.value) {
+    try {
+      await deleteStepImage(imageStoragePath.value);
+      
+      if (editStepId) {
+        await updateGuidanceStep(editStepId, {
+          image: null,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to delete image:', err);
+    }
+  }
+  
   imageUrl.value = null;
+  imageStoragePath.value = null;
   overlays.value = [];
 }
 
@@ -93,7 +245,7 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
       </button>
       
       <div class="step-header__info">
-        <span class="step-header__label">New Step</span>
+        <span class="step-header__label">{{ isEditMode ? 'Edit Step' : 'New Step' }}</span>
         <span 
           class="step-header__type-badge"
           :style="{
@@ -109,103 +261,142 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
         </span>
       </div>
       
-      <button class="step-header__save-btn" @click="handleSaveStep">
-        Save Step
+      <button 
+        class="step-header__save-btn" 
+        @click="handleSaveStep"
+        :disabled="saving || uploading || loading"
+      >
+        {{ saving ? 'Saving...' : 'Save Step' }}
       </button>
     </header>
     
     <main class="step-content">
-      <div class="form-section">
-        <label class="form-label">Step Type</label>
-        <div class="step-type-buttons">
-          <button 
-            v-for="option in stepTypeOptions"
-            :key="option.type"
-            class="step-type-btn"
-            :class="{ 'step-type-btn--selected': selectedStepType === option.type }"
-            @click="handleSelectStepType(option.type)"
-          >
-            {{ option.label }}
-          </button>
-        </div>
+      <div v-if="loading" class="step-loading">
+        <GSpinner />
       </div>
       
-      <div class="divider" />
-      
-      <div class="form-section">
-        <div class="form-field-header">
-          <label class="form-label">Upload Photo</label>
-          <button 
-            v-if="imageUrl"
-            class="remove-btn"
-            @click="handleRemovePhoto"
-          >
-            Remove
+      <template v-else>
+        <div v-if="error" class="error-banner">
+          <p class="error-banner__text">{{ error }}</p>
+          <button class="error-banner__dismiss" @click="error = null" aria-label="Dismiss">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
           </button>
         </div>
         
-        <div v-if="imageUrl" class="photo-editor">
-          <OverlayEditor
-            :image-url="imageUrl"
-            :overlays="overlays"
-            @update:overlays="handleOverlaysUpdate"
-          />
+        <div class="form-section">
+          <label class="form-label">Step Type</label>
+          <div class="step-type-buttons">
+            <button 
+              v-for="option in stepTypeOptions"
+              :key="option.type"
+              class="step-type-btn"
+              :class="{ 'step-type-btn--selected': selectedStepType === option.type }"
+              @click="handleSelectStepType(option.type)"
+              :disabled="saving"
+            >
+              {{ option.label }}
+            </button>
+          </div>
         </div>
-        <button v-else class="photo-upload" @click="handleUploadPhoto">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
-            <path d="M21 15L16 10L5 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span>Tap to upload a photo</span>
-        </button>
-      </div>
-      
-      <div class="divider" />
-      
-      <div class="form-section">
-        <div class="form-field">
-          <label class="form-label">Step Title</label>
+        
+        <div class="divider" />
+        
+        <div class="form-section">
+          <div class="form-field-header">
+            <label class="form-label">Upload Photo</label>
+            <button 
+              v-if="imageUrl"
+              class="remove-btn"
+              @click="handleRemovePhoto"
+              :disabled="uploading"
+            >
+              Remove
+            </button>
+          </div>
+          
+          <div v-if="uploading" class="upload-progress">
+            <GSpinner />
+            <span>Uploading...</span>
+          </div>
+          <div v-else-if="imageUrl" class="photo-editor">
+            <OverlayEditor
+              :image-url="imageUrl"
+              :overlays="overlays"
+              @update:overlays="handleOverlaysUpdate"
+            />
+          </div>
+          <button v-else class="photo-upload" @click="triggerFileInput" :disabled="saving">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+              <path d="M21 15L16 10L5 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Tap to take or choose a photo</span>
+          </button>
+          
+          <!-- Native file input with camera capture -->
           <input 
-            v-model="stepTitle"
-            type="text"
-            class="form-input"
-            placeholder="e.g. Enter PIN at gate"
+            ref="fileInputRef"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            capture="environment"
+            @change="handleFileSelected"
+            class="sr-only"
           />
         </div>
         
-        <div class="form-field">
-          <label class="form-label form-label--optional">Arabic Title</label>
-          <input 
-            v-model="stepTitleArabic"
-            type="text"
-            class="form-input"
-            dir="rtl"
-            placeholder="أدخل العنوان بالعربية"
-          />
-        </div>
+        <div class="divider" />
         
-        <div class="form-field">
-          <label class="form-label">Instructions</label>
-          <textarea 
-            v-model="instructions"
-            class="form-textarea"
-            rows="3"
-            placeholder="Describe what the courier should do…"
-          />
+        <div class="form-section">
+          <div class="form-field">
+            <label class="form-label">Step Title</label>
+            <input 
+              v-model="stepTitle"
+              type="text"
+              class="form-input"
+              placeholder="e.g. Enter PIN at gate"
+              :disabled="saving"
+            />
+          </div>
+          
+          <div class="form-field">
+            <label class="form-label form-label--optional">Arabic Title</label>
+            <input 
+              v-model="stepTitleArabic"
+              type="text"
+              class="form-input"
+              dir="rtl"
+              placeholder="أدخل العنوان بالعربية"
+              :disabled="saving"
+            />
+          </div>
+          
+          <div class="form-field">
+            <label class="form-label">Instructions</label>
+            <textarea 
+              v-model="instructions"
+              class="form-textarea"
+              rows="3"
+              placeholder="Describe what the courier should do…"
+              :disabled="saving"
+            />
+          </div>
+          
+          <div class="form-field">
+            <label class="form-label form-label--optional">Arabic Instructions</label>
+            <textarea 
+              v-model="instructionsArabic"
+              class="form-textarea"
+              rows="3"
+              dir="rtl"
+              placeholder="أضف التعليمات بالعربية…"
+              :disabled="saving"
+            />
+          </div>
         </div>
-        
-        <div class="form-field">
-          <label class="form-label form-label--optional">Arabic Instructions</label>
-          <textarea 
-            v-model="instructionsArabic"
-            class="form-textarea"
-            rows="3"
-            dir="rtl"
-            placeholder="أضف التعليمات بالعربية…"
-          />
-        </div>
-      </div>
+      </template>
     </main>
   </div>
 </template>
@@ -297,8 +488,13 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
   white-space: nowrap;
 }
 
-.step-header__save-btn:hover {
+.step-header__save-btn:hover:not(:disabled) {
   background-color: var(--color-primary-dark);
+}
+
+.step-header__save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .step-content {
@@ -312,6 +508,49 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
     max-width: 640px;
     margin: 0 auto;
   }
+}
+
+.step-loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 17px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-lg);
+  margin-bottom: 16px;
+}
+
+.error-banner__text {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: #dc2626;
+  line-height: 1.6;
+}
+
+.error-banner__dismiss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #dc2626;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.error-banner__dismiss:hover {
+  background-color: #fee2e2;
 }
 
 .form-section {
@@ -359,8 +598,13 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
   transition: color 0.2s ease;
 }
 
-.remove-btn:hover {
+.remove-btn:hover:not(:disabled) {
   color: var(--color-danger);
+}
+
+.remove-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .form-input {
@@ -381,6 +625,11 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
   outline: none;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.form-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .form-textarea {
@@ -406,6 +655,11 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
   box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
+.form-textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .step-type-buttons {
   display: flex;
   flex-wrap: wrap;
@@ -424,9 +678,14 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
   transition: all 0.2s ease;
 }
 
-.step-type-btn:hover {
+.step-type-btn:hover:not(:disabled) {
   border-color: var(--color-primary);
   color: var(--color-primary);
+}
+
+.step-type-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .step-type-btn--selected {
@@ -436,7 +695,7 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
   box-shadow: var(--shadow-button);
 }
 
-.step-type-btn--selected:hover {
+.step-type-btn--selected:hover:not(:disabled) {
   background-color: var(--color-primary);
   border-color: var(--color-primary);
   color: white;
@@ -450,6 +709,25 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
 
 .photo-editor {
   margin-bottom: 8px;
+}
+
+.upload-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  height: 200px;
+  background-color: var(--color-surface);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-muted);
+}
+
+.upload-progress span {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
 }
 
 .photo-upload {
@@ -468,13 +746,30 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
   transition: all 0.2s ease;
 }
 
-.photo-upload:hover {
+.photo-upload:hover:not(:disabled) {
   border-color: var(--color-primary);
   color: var(--color-primary);
+}
+
+.photo-upload:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .photo-upload span {
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 </style>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { 
   AppLayout, 
@@ -11,12 +11,18 @@ import {
 } from '@guidenav/ui';
 import type { FilterTab } from '@guidenav/ui';
 import type { GuidanceSet, GuidanceStep, GuidanceStatus } from '@guidenav/types';
+import { getUserGuidanceSets, getGuidanceSteps, deleteGuidanceSet } from '@guidenav/services';
+import { useAuth } from '../composables/useAuth';
 
 const router = useRouter();
-const loading = ref(false);
+const { userId } = useAuth();
+
+const loading = ref(true);
+const error = ref<string | null>(null);
 const searchQuery = ref('');
 const activeFilter = ref('all');
 const currentLanguage = ref<'en' | 'ar'>('en');
+const deletingId = ref<string | null>(null);
 
 interface GuidanceSetWithSteps extends GuidanceSet {
   steps: GuidanceStep[];
@@ -24,187 +30,39 @@ interface GuidanceSetWithSteps extends GuidanceSet {
   expiresDate?: string;
 }
 
-const guidanceSets = ref<GuidanceSetWithSteps[]>([
-  {
-    id: '1',
-    recipientUserId: 'user1',
-    title: 'Al Nakheel Tower – Delivery Guide',
-    titleArabic: 'برج النخيل – دليل التوصيل',
-    description: null,
-    status: 'PUBLISHED',
-    languageOriginal: 'en',
-    supportedLanguages: ['en', 'ar'],
-    availabilityMode: 'ANYTIME_TODAY',
-    availabilityStartTs: null,
-    availabilityEndTs: null,
-    timezone: 'Asia/Riyadh',
-    destinationCoordinates: null,
-    currentVersion: 1,
-    publishedAt: '2026-02-10T12:00:00.000Z',
-    createdAt: '2026-02-10T12:00:00.000Z',
-    updatedAt: '2026-02-10T12:00:00.000Z',
-    deletedAt: null,
-    expiresDate: '1 Jun 2026',
-    steps: [
-      {
-        id: 's1',
-        guidanceSetId: '1',
-        stepIndex: 0,
-        stepType: 'APPROACH',
-        contentType: 'PHOTO',
-        title: 'Parking',
-        instructionOriginal: 'Park here',
-        instructionTranslations: { en: 'Park here', ar: 'قف هنا' },
-        image: { storagePath: '', publicUrl: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400', width: 400, height: 300, fileSize: 50000, mimeType: 'image/jpeg' },
-        overlays: [],
-        isRequired: true,
-        createdAt: '2026-02-10T12:00:00.000Z',
-        updatedAt: '2026-02-10T12:00:00.000Z',
-        deletedAt: null,
-      },
-      {
-        id: 's2',
-        guidanceSetId: '1',
-        stepIndex: 1,
-        stepType: 'PIN_CHECK',
-        contentType: 'PHOTO',
-        title: 'PIN Check',
-        instructionOriginal: 'Enter PIN',
-        instructionTranslations: { en: 'Enter PIN', ar: 'أدخل الرقم السري' },
-        image: { storagePath: '', publicUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400', width: 400, height: 300, fileSize: 50000, mimeType: 'image/jpeg' },
-        overlays: [],
-        isRequired: true,
-        createdAt: '2026-02-10T12:00:00.000Z',
-        updatedAt: '2026-02-10T12:00:00.000Z',
-        deletedAt: null,
-      },
-      {
-        id: 's3',
-        guidanceSetId: '1',
-        stepIndex: 2,
-        stepType: 'ELEVATOR',
-        contentType: 'PHOTO',
-        title: 'Elevator',
-        instructionOriginal: 'Take elevator',
-        instructionTranslations: { en: 'Take elevator', ar: 'استخدم المصعد' },
-        image: { storagePath: '', publicUrl: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400', width: 400, height: 300, fileSize: 50000, mimeType: 'image/jpeg' },
-        overlays: [],
-        isRequired: true,
-        createdAt: '2026-02-10T12:00:00.000Z',
-        updatedAt: '2026-02-10T12:00:00.000Z',
-        deletedAt: null,
-      },
-      {
-        id: 's4',
-        guidanceSetId: '1',
-        stepIndex: 3,
-        stepType: 'DOOR_ENTRY',
-        contentType: 'PHOTO',
-        title: 'Door Entry',
-        instructionOriginal: 'Ring doorbell',
-        instructionTranslations: { en: 'Ring doorbell', ar: 'اضغط على الجرس' },
-        image: null,
-        overlays: [],
-        isRequired: true,
-        createdAt: '2026-02-10T12:00:00.000Z',
-        updatedAt: '2026-02-10T12:00:00.000Z',
-        deletedAt: null,
-      },
-    ],
-  },
-  {
-    id: '2',
-    recipientUserId: 'user1',
-    title: 'Business Bay Office – Floor 12',
-    titleArabic: 'مكتب بيزنس باي – الطابق ١٢',
-    description: null,
-    status: 'DRAFT',
-    languageOriginal: 'en',
-    supportedLanguages: ['en', 'ar'],
-    availabilityMode: 'ANYTIME_TODAY',
-    availabilityStartTs: null,
-    availabilityEndTs: null,
-    timezone: 'Asia/Riyadh',
-    destinationCoordinates: null,
-    currentVersion: 1,
-    publishedAt: null,
-    createdAt: '2026-02-18T12:00:00.000Z',
-    updatedAt: '2026-02-18T12:00:00.000Z',
-    deletedAt: null,
-    steps: [
-      {
-        id: 's5',
-        guidanceSetId: '2',
-        stepIndex: 0,
-        stepType: 'GATE_ENTRY',
-        contentType: 'PHOTO',
-        title: 'Gate Entry',
-        instructionOriginal: 'Enter gate',
-        instructionTranslations: { en: 'Enter gate', ar: 'ادخل البوابة' },
-        image: { storagePath: '', publicUrl: 'https://images.unsplash.com/photo-1577495508048-b635879837f1?w=400', width: 400, height: 300, fileSize: 50000, mimeType: 'image/jpeg' },
-        overlays: [],
-        isRequired: true,
-        createdAt: '2026-02-18T12:00:00.000Z',
-        updatedAt: '2026-02-18T12:00:00.000Z',
-        deletedAt: null,
-      },
-      {
-        id: 's6',
-        guidanceSetId: '2',
-        stepIndex: 1,
-        stepType: 'ELEVATOR',
-        contentType: 'PHOTO',
-        title: 'Elevator',
-        instructionOriginal: 'Take elevator to floor 12',
-        instructionTranslations: { en: 'Take elevator to floor 12', ar: 'استخدم المصعد للطابق ١٢' },
-        image: { storagePath: '', publicUrl: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400', width: 400, height: 300, fileSize: 50000, mimeType: 'image/jpeg' },
-        overlays: [],
-        isRequired: true,
-        createdAt: '2026-02-18T12:00:00.000Z',
-        updatedAt: '2026-02-18T12:00:00.000Z',
-        deletedAt: null,
-      },
-    ],
-  },
-  {
-    id: '3',
-    recipientUserId: 'user1',
-    title: 'Marina Residence – Villa 7',
-    titleArabic: 'مارينا ريزيدنس – فيلا ٧',
-    description: null,
-    status: 'DISABLED',
-    languageOriginal: 'en',
-    supportedLanguages: ['en', 'ar'],
-    availabilityMode: 'ANYTIME_TODAY',
-    availabilityStartTs: null,
-    availabilityEndTs: null,
-    timezone: 'Asia/Riyadh',
-    destinationCoordinates: null,
-    currentVersion: 1,
-    publishedAt: null,
-    createdAt: '2025-12-05T12:00:00.000Z',
-    updatedAt: '2025-12-05T12:00:00.000Z',
-    deletedAt: null,
-    steps: [
-      {
-        id: 's7',
-        guidanceSetId: '3',
-        stepIndex: 0,
-        stepType: 'GATE_ENTRY',
-        contentType: 'PHOTO',
-        title: 'Gate Entry',
-        instructionOriginal: 'Enter main gate',
-        instructionTranslations: { en: 'Enter main gate', ar: 'ادخل البوابة الرئيسية' },
-        image: { storagePath: '', publicUrl: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400', width: 400, height: 300, fileSize: 50000, mimeType: 'image/jpeg' },
-        overlays: [],
-        isRequired: true,
-        createdAt: '2025-12-05T12:00:00.000Z',
-        updatedAt: '2025-12-05T12:00:00.000Z',
-        deletedAt: null,
-      },
-    ],
-  },
-]);
+const guidanceSets = ref<GuidanceSetWithSteps[]>([]);
+
+async function loadGuidanceSets() {
+  loading.value = true;
+  error.value = null;
+  
+  try {
+    const sets = await getUserGuidanceSets(userId.value);
+    
+    const setsWithSteps = await Promise.all(
+      sets.map(async (set) => {
+        const steps = await getGuidanceSteps(set.id);
+        return {
+          ...set,
+          steps,
+          titleArabic: undefined,
+          expiresDate: undefined,
+        } as GuidanceSetWithSteps;
+      })
+    );
+    
+    guidanceSets.value = setsWithSteps;
+  } catch (err) {
+    console.error('Failed to load guidance sets:', err);
+    error.value = 'Failed to load your guidance sets. Please try again.';
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(() => {
+  loadGuidanceSets();
+});
 
 const filterTabs = computed<FilterTab[]>(() => {
   const counts = {
@@ -245,8 +103,18 @@ const filteredGuidanceSets = computed(() => {
   return filtered;
 });
 
-function formatDate(timestamp: string): string {
-  const date = new Date(timestamp);
+function formatDate(timestamp: string | { toDate?: () => Date } | null): string {
+  if (!timestamp) return '';
+  
+  let date: Date;
+  if (typeof timestamp === 'string') {
+    date = new Date(timestamp);
+  } else if (timestamp.toDate) {
+    date = timestamp.toDate();
+  } else {
+    return '';
+  }
+  
   return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
@@ -270,8 +138,28 @@ function handleShare(id: string) {
   router.push(`/guidance/${id}/share`);
 }
 
+async function handleDelete(id: string) {
+  const guidance = guidanceSets.value.find(g => g.id === id);
+  if (!guidance) return;
+  
+  const confirmed = window.confirm(`Are you sure you want to delete "${guidance.title}"? This action cannot be undone.`);
+  if (!confirmed) return;
+  
+  deletingId.value = id;
+  
+  try {
+    await deleteGuidanceSet(id);
+    guidanceSets.value = guidanceSets.value.filter(g => g.id !== id);
+  } catch (err) {
+    console.error('Failed to delete guidance set:', err);
+    alert('Failed to delete. Please try again.');
+  } finally {
+    deletingId.value = null;
+  }
+}
+
 function handleMenu(id: string) {
-  console.log('Menu clicked for:', id);
+  handleDelete(id);
 }
 </script>
 
@@ -309,6 +197,18 @@ function handleMenu(id: string) {
         <GSpinner />
       </div>
 
+      <div v-else-if="error" class="dashboard__error">
+        <GCard padding="lg">
+          <div class="error-state">
+            <p class="error-state__title">Something went wrong</p>
+            <p class="error-state__description">{{ error }}</p>
+            <button class="error-state__retry" @click="loadGuidanceSets">
+              Try Again
+            </button>
+          </div>
+        </GCard>
+      </div>
+
       <div v-else-if="filteredGuidanceSets.length === 0" class="dashboard__empty">
         <GCard padding="lg">
           <div class="empty-state">
@@ -342,6 +242,7 @@ function handleMenu(id: string) {
           :modified-date="formatDate(guidance.updatedAt)"
           :expires-date="guidance.expiresDate"
           :is-link-disabled="guidance.status === 'DISABLED'"
+          :class="{ 'card--deleting': deletingId === guidance.id }"
           @edit="handleEdit"
           @share="handleShare"
           @menu="handleMenu"
@@ -404,25 +305,51 @@ function handleMenu(id: string) {
   gap: 16px;
 }
 
-.dashboard__empty {
+.dashboard__empty,
+.dashboard__error {
   margin-top: 16px;
 }
 
-.empty-state {
+.empty-state,
+.error-state {
   text-align: center;
   padding: 24px;
 }
 
-.empty-state__title {
+.empty-state__title,
+.error-state__title {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text);
   margin: 0 0 8px;
 }
 
-.empty-state__description {
+.empty-state__description,
+.error-state__description {
   font-size: var(--font-size-base);
   color: var(--color-text-muted);
   margin: 0;
+}
+
+.error-state__retry {
+  margin-top: 16px;
+  padding: 10px 20px;
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.error-state__retry:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.card--deleting {
+  opacity: 0.5;
+  pointer-events: none;
 }
 </style>

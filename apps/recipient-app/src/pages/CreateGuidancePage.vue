@@ -2,12 +2,17 @@
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import type { StepType } from '@guidenav/types';
+import { createGuidanceSet } from '@guidenav/services';
+import { validateGuidanceTitle } from '@guidenav/core';
+import { useAuth } from '../composables/useAuth';
 
 const router = useRouter();
+const { userId } = useAuth();
 
 const title = ref('');
 const titleArabic = ref('');
 const loading = ref(false);
+const error = ref<string | null>(null);
 const showStepTypeSelector = ref(false);
 
 interface StepTypeOption {
@@ -30,16 +35,64 @@ function handleBack() {
   router.push('/dashboard');
 }
 
-function handleSaveDraft() {
+async function handleSaveDraft() {
+  const validation = validateGuidanceTitle(title.value);
+  if (!validation.valid) {
+    error.value = validation.error || 'Please enter a valid title';
+    return;
+  }
+  
   loading.value = true;
-  setTimeout(() => {
+  error.value = null;
+  
+  try {
+    const guidanceSetId = await createGuidanceSet(userId.value, {
+      title: title.value.trim(),
+      description: null,
+      languageOriginal: 'en',
+      availabilityMode: 'ANYTIME_TODAY',
+      availabilityStartTs: null,
+      availabilityEndTs: null,
+      destinationCoordinates: null,
+    });
+    
+    router.push(`/guidance/${guidanceSetId}/edit`);
+  } catch (err) {
+    console.error('Failed to create guidance set:', err);
+    error.value = 'Failed to save. Please try again.';
+  } finally {
     loading.value = false;
-    router.push('/dashboard');
-  }, 500);
+  }
 }
 
-function handlePreviewAndPublish() {
-  console.log('Preview & Publish');
+async function handlePreviewAndPublish() {
+  const validation = validateGuidanceTitle(title.value);
+  if (!validation.valid) {
+    error.value = validation.error || 'Please enter a valid title';
+    return;
+  }
+  
+  loading.value = true;
+  error.value = null;
+  
+  try {
+    const guidanceSetId = await createGuidanceSet(userId.value, {
+      title: title.value.trim(),
+      description: null,
+      languageOriginal: 'en',
+      availabilityMode: 'ANYTIME_TODAY',
+      availabilityStartTs: null,
+      availabilityEndTs: null,
+      destinationCoordinates: null,
+    });
+    
+    router.push(`/guidance/${guidanceSetId}/preview`);
+  } catch (err) {
+    console.error('Failed to create guidance set:', err);
+    error.value = 'Failed to save. Please try again.';
+  } finally {
+    loading.value = false;
+  }
 }
 
 function handleAddStep() {
@@ -50,9 +103,36 @@ function handleCloseStepSelector() {
   showStepTypeSelector.value = false;
 }
 
-function handleSelectStepType(stepType: StepType) {
+async function handleSelectStepType(stepType: StepType) {
+  const validation = validateGuidanceTitle(title.value);
+  if (!validation.valid) {
+    error.value = validation.error || 'Please enter a title first';
+    showStepTypeSelector.value = false;
+    return;
+  }
+  
+  loading.value = true;
+  error.value = null;
   showStepTypeSelector.value = false;
-  router.push(`/guidance/new/steps?type=${stepType}`);
+  
+  try {
+    const guidanceSetId = await createGuidanceSet(userId.value, {
+      title: title.value.trim(),
+      description: null,
+      languageOriginal: 'en',
+      availabilityMode: 'ANYTIME_TODAY',
+      availabilityStartTs: null,
+      availabilityEndTs: null,
+      destinationCoordinates: null,
+    });
+    
+    router.push(`/guidance/${guidanceSetId}/steps?type=${stepType}`);
+  } catch (err) {
+    console.error('Failed to create guidance set:', err);
+    error.value = 'Failed to save. Please try again.';
+  } finally {
+    loading.value = false;
+  }
 }
 </script>
 
@@ -70,12 +150,25 @@ function handleSelectStepType(stepType: StepType) {
         <span class="create-header__title">{{ displayTitle }}</span>
       </div>
       
-      <button class="create-header__save-btn" @click="handleSaveDraft">
-        Save Draft
+      <button 
+        class="create-header__save-btn" 
+        @click="handleSaveDraft"
+        :disabled="loading"
+      >
+        {{ loading ? 'Saving...' : 'Save Draft' }}
       </button>
     </header>
     
     <main class="create-content">
+      <div v-if="error" class="error-banner">
+        <p class="error-banner__text">{{ error }}</p>
+        <button class="error-banner__dismiss" @click="error = null" aria-label="Dismiss">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+      
       <div class="warning-banner">
         <svg class="warning-banner__icon" width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M12 9V13M12 17H12.01M10.29 3.86L1.82 18C1.64 18.3 1.55 18.64 1.55 19C1.55 19.36 1.64 19.7 1.82 20C2 20.3 2.26 20.56 2.58 20.74C2.9 20.92 3.26 21.01 3.64 21H20.36C20.74 21.01 21.1 20.92 21.42 20.74C21.74 20.56 22 20.3 22.18 20C22.36 19.7 22.45 19.36 22.45 19C22.45 18.64 22.36 18.3 22.18 18L13.71 3.86C13.53 3.56 13.27 3.32 12.95 3.16C12.63 3 12.28 2.92 11.91 2.93C11.54 2.94 11.19 3.04 10.89 3.21C10.59 3.38 10.34 3.63 10.17 3.93L10.29 3.86Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -93,6 +186,7 @@ function handleSelectStepType(stepType: StepType) {
             type="text"
             class="form-input"
             placeholder="e.g. Al Nakheel Tower – Delivery Guide"
+            :disabled="loading"
           />
         </div>
         
@@ -104,6 +198,7 @@ function handleSelectStepType(stepType: StepType) {
             class="form-input"
             dir="rtl"
             placeholder="عنوان عربي اختياري"
+            :disabled="loading"
           />
         </div>
       </div>
@@ -142,13 +237,14 @@ function handleSelectStepType(stepType: StepType) {
               :key="option.type"
               class="step-type-option"
               @click="handleSelectStepType(option.type)"
+              :disabled="loading"
             >
               {{ option.label }}
             </button>
           </div>
         </div>
         
-        <button class="add-step-btn" @click="handleAddStep">
+        <button class="add-step-btn" @click="handleAddStep" :disabled="loading">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
@@ -158,10 +254,18 @@ function handleSelectStepType(stepType: StepType) {
     </main>
     
     <footer class="create-footer">
-      <button class="footer-btn footer-btn--secondary" @click="handleSaveDraft">
-        Save Draft
+      <button 
+        class="footer-btn footer-btn--secondary" 
+        @click="handleSaveDraft"
+        :disabled="loading"
+      >
+        {{ loading ? 'Saving...' : 'Save Draft' }}
       </button>
-      <button class="footer-btn footer-btn--primary" @click="handlePreviewAndPublish">
+      <button 
+        class="footer-btn footer-btn--primary" 
+        @click="handlePreviewAndPublish"
+        :disabled="loading"
+      >
         Preview & Publish
       </button>
     </footer>
@@ -246,9 +350,14 @@ function handleSelectStepType(stepType: StepType) {
   white-space: nowrap;
 }
 
-.create-header__save-btn:hover {
+.create-header__save-btn:hover:not(:disabled) {
   background-color: var(--color-background);
   border-color: var(--color-secondary-dark);
+}
+
+.create-header__save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .create-content {
@@ -263,6 +372,43 @@ function handleSelectStepType(stepType: StepType) {
     max-width: 400px;
     margin: 0 auto;
   }
+}
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 17px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-lg);
+  margin-bottom: 16px;
+}
+
+.error-banner__text {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: #dc2626;
+  line-height: 1.6;
+}
+
+.error-banner__dismiss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #dc2626;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.error-banner__dismiss:hover {
+  background-color: #fee2e2;
 }
 
 .warning-banner {
@@ -329,6 +475,11 @@ function handleSelectStepType(stepType: StepType) {
   outline: none;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.form-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .divider {
@@ -454,10 +605,15 @@ function handleSelectStepType(stepType: StepType) {
   transition: all 0.2s ease;
 }
 
-.step-type-option:hover {
+.step-type-option:hover:not(:disabled) {
   background-color: var(--color-primary-bg);
   border-color: var(--color-primary);
   color: var(--color-primary);
+}
+
+.step-type-option:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .add-step-btn {
@@ -477,10 +633,15 @@ function handleSelectStepType(stepType: StepType) {
   transition: all 0.2s ease;
 }
 
-.add-step-btn:hover {
+.add-step-btn:hover:not(:disabled) {
   background-color: var(--color-background);
   border-color: var(--color-primary);
   color: var(--color-primary);
+}
+
+.add-step-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .create-footer {
@@ -517,13 +678,18 @@ function handleSelectStepType(stepType: StepType) {
   transition: all 0.2s ease;
 }
 
+.footer-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .footer-btn--secondary {
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   color: var(--color-text-secondary);
 }
 
-.footer-btn--secondary:hover {
+.footer-btn--secondary:hover:not(:disabled) {
   background-color: var(--color-background);
   border-color: var(--color-secondary-dark);
 }
@@ -534,7 +700,7 @@ function handleSelectStepType(stepType: StepType) {
   color: white;
 }
 
-.footer-btn--primary:hover {
+.footer-btn--primary:hover:not(:disabled) {
   background-color: var(--color-primary-dark);
 }
 </style>

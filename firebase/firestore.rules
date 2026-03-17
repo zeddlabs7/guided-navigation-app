@@ -2,62 +2,44 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper function to check if user is authenticated
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    // Helper function to check if user owns the resource
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
-    // Users collection
-    match /users/{userId} {
-      allow read: if isOwner(userId);
-      allow create: if isAuthenticated() && request.auth.uid == userId;
-      allow update: if isOwner(userId);
-      allow delete: if false;
-    }
+    // ============================================================
+    // TEMPORARY: Open rules for development without auth
+    // TODO: Revert to auth-based rules before production launch
+    // ============================================================
 
     // Guidance Sets collection
     match /guidanceSets/{guidanceSetId} {
-      allow read: if isOwner(resource.data.recipientUserId);
-      allow create: if isAuthenticated() && request.resource.data.recipientUserId == request.auth.uid;
-      allow update: if isOwner(resource.data.recipientUserId);
-      allow delete: if isOwner(resource.data.recipientUserId);
+      allow read, write: if true;
     }
 
     // Guidance Steps collection
     match /guidanceSteps/{stepId} {
-      // Allow read if user owns the parent guidance set
-      allow read: if isAuthenticated() && 
-        exists(/databases/$(database)/documents/guidanceSets/$(resource.data.guidanceSetId)) &&
-        get(/databases/$(database)/documents/guidanceSets/$(resource.data.guidanceSetId)).data.recipientUserId == request.auth.uid;
-      
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
+      allow read, write: if true;
     }
 
-    // Share Links collection - managed via Cloud Functions
+    // Share Links collection
     match /shareLinks/{shareLinkId} {
-      allow read: if isAuthenticated();
-      allow write: if false; // Only via Cloud Functions
+      allow read: if true;
+      allow write: if true;
     }
 
     // Feedback Events collection
     match /feedbackEvents/{eventId} {
-      allow read: if isAuthenticated();
-      allow create: if true; // Couriers can submit feedback without auth
+      allow read: if true;
+      allow create: if true;
       allow update, delete: if false;
     }
 
     // Analytics Events collection
     match /analyticsEvents/{eventId} {
-      allow read: if isAuthenticated();
-      allow create: if true; // Both apps can log events
+      allow read: if true;
+      allow create: if true;
       allow update, delete: if false;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read, write: if true;
     }
   }
 }
