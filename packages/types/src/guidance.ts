@@ -113,7 +113,7 @@ export type CreateGuidanceStepInput = Pick<
 };
 
 export type UpdateGuidanceStepInput = Partial<
-  Pick<GuidanceStep, 'stepType' | 'contentType' | 'title' | 'instructionOriginal' | 'overlays'>
+  Pick<GuidanceStep, 'stepType' | 'contentType' | 'title' | 'instructionOriginal' | 'overlays' | 'image'>
 >;
 
 export const STEP_TYPE_LABELS: Record<StepType, { en: string; ar: string }> = {

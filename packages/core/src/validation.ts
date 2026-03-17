@@ -2,7 +2,6 @@ import {
   MAX_STEPS_PER_GUIDANCE,
   IMAGE_CONSTRAINTS,
   type GuidanceStep,
-  type StepImage,
 } from '@guidenav/types';
 
 export function validateStepCount(currentCount: number): { valid: boolean; error?: string } {

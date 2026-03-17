@@ -1,4 +1,4 @@
-import type { Coordinates, Overlay } from '@guidenav/types';
+import type { Coordinates } from '@guidenav/types';
 
 export function generateId(prefix: string = ''): string {
   const timestamp = Date.now().toString(36);

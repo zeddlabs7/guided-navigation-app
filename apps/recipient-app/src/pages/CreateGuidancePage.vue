@@ -51,8 +51,6 @@ async function handleSaveDraft() {
       description: null,
       languageOriginal: 'en',
       availabilityMode: 'ANYTIME_TODAY',
-      availabilityStartTs: null,
-      availabilityEndTs: null,
       destinationCoordinates: null,
     });
     
@@ -81,8 +79,6 @@ async function handlePreviewAndPublish() {
       description: null,
       languageOriginal: 'en',
       availabilityMode: 'ANYTIME_TODAY',
-      availabilityStartTs: null,
-      availabilityEndTs: null,
       destinationCoordinates: null,
     });
     
@@ -121,8 +117,6 @@ async function handleSelectStepType(stepType: StepType) {
       description: null,
       languageOriginal: 'en',
       availabilityMode: 'ANYTIME_TODAY',
-      availabilityStartTs: null,
-      availabilityEndTs: null,
       destinationCoordinates: null,
     });
     
