@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import type { StepType, Overlay, GuidanceStep } from '@guidenav/types';
+import type { StepType, Overlay, GuidanceStep, StepImage } from '@guidenav/types';
 import { OverlayEditor, GSpinner } from '@guidenav/ui';
 import { 
   createGuidanceStep, 
   updateGuidanceStep, 
   uploadStepImage,
   deleteStepImage,
+  deleteGuidanceStep,
   getGuidanceSteps
 } from '@guidenav/services';
 import { validateImageFile } from '@guidenav/core';
@@ -44,7 +45,11 @@ const uploading = ref(false);
 const error = ref<string | null>(null);
 const existingStep = ref<GuidanceStep | null>(null);
 const fileInputRef = ref<HTMLInputElement | null>(null);
+const pendingImage = ref<StepImage | null>(null);
 
+const stepId = ref<string | null>(editStepId || null);
+const stepSaved = ref(false);
+const isNewStep = computed(() => !editStepId);
 const isEditMode = computed(() => !!editStepId);
 
 const selectedTypeLabel = computed(() => {
@@ -99,9 +104,44 @@ async function loadExistingStep() {
   }
 }
 
+async function createNewStep() {
+  loading.value = true;
+  error.value = null;
+  
+  try {
+    const newId = await createGuidanceStep(guidanceSetId, {
+      stepType: selectedStepType.value,
+      contentType: 'TEXT',
+      title: null,
+      instructionOriginal: '',
+    });
+    stepId.value = newId;
+  } catch (err) {
+    console.error('Failed to create step:', err);
+    error.value = 'Failed to initialize step. Please try again.';
+  } finally {
+    loading.value = false;
+  }
+}
+
 onMounted(() => {
   if (isEditMode.value) {
     loadExistingStep();
+  } else {
+    createNewStep();
+  }
+});
+
+onBeforeUnmount(async () => {
+  if (isNewStep.value && stepId.value && !stepSaved.value) {
+    try {
+      await deleteGuidanceStep(stepId.value);
+      if (imageStoragePath.value) {
+        await deleteStepImage(imageStoragePath.value);
+      }
+    } catch (e) {
+      console.error('Failed to cleanup orphan step:', e);
+    }
   }
 });
 
@@ -115,26 +155,36 @@ async function handleSaveStep() {
     return;
   }
   
+  if (!stepId.value) {
+    error.value = 'Step not initialized. Please refresh and try again.';
+    return;
+  }
+  
+  if (uploading.value) {
+    error.value = 'Please wait for image upload to complete';
+    return;
+  }
+  
+  // Check if there's an image preview but upload failed
+  if (imageUrl.value && !pendingImage.value && !existingStep.value?.image) {
+    error.value = 'Image upload failed. Please remove and re-upload the image.';
+    return;
+  }
+  
   saving.value = true;
   error.value = null;
   
   try {
-    if (isEditMode.value && editStepId) {
-      await updateGuidanceStep(editStepId, {
-        stepType: selectedStepType.value,
-        title: stepTitle.value.trim() || null,
-        instructionOriginal: instructions.value.trim(),
-        overlays: overlays.value,
-      });
-    } else {
-      await createGuidanceStep(guidanceSetId, {
-        stepType: selectedStepType.value,
-        contentType: imageUrl.value ? 'PHOTO' : 'TEXT',
-        title: stepTitle.value.trim() || null,
-        instructionOriginal: instructions.value.trim(),
-      });
-    }
+    await updateGuidanceStep(stepId.value, {
+      stepType: selectedStepType.value,
+      contentType: imageUrl.value ? 'PHOTO' : 'TEXT',
+      title: stepTitle.value.trim() || null,
+      instructionOriginal: instructions.value.trim(),
+      overlays: overlays.value,
+      image: pendingImage.value ?? existingStep.value?.image ?? null,
+    });
     
+    stepSaved.value = true;
     router.push(`/guidance/${guidanceSetId}/edit`);
   } catch (err) {
     console.error('Failed to save step:', err);
@@ -158,6 +208,12 @@ async function handleFileSelected(event: Event) {
   
   if (!file) return;
   
+  if (!stepId.value) {
+    error.value = 'Step not initialized. Please wait and try again.';
+    input.value = '';
+    return;
+  }
+  
   const img = new Image();
   const objectUrl = URL.createObjectURL(file);
   
@@ -169,32 +225,33 @@ async function handleFileSelected(event: Event) {
       height: img.height,
     });
     
-    URL.revokeObjectURL(objectUrl);
-    
     if (!validation.valid) {
+      URL.revokeObjectURL(objectUrl);
       error.value = validation.errors.join('. ');
       input.value = '';
       return;
     }
     
+    // Show local preview immediately
+    imageUrl.value = objectUrl;
+    imageStoragePath.value = null;
+    pendingImage.value = null;
+    
+    // Upload in background
     uploading.value = true;
     error.value = null;
     
     try {
-      const stepId = editStepId || `temp-${Date.now()}`;
-      const uploadedImage = await uploadStepImage(guidanceSetId, stepId, file);
-      
-      imageUrl.value = uploadedImage.publicUrl;
+      const uploadedImage = await uploadStepImage(guidanceSetId, stepId.value!, file);
       imageStoragePath.value = uploadedImage.storagePath;
-      
-      if (editStepId) {
-        await updateGuidanceStep(editStepId, {
-          image: uploadedImage,
-        });
-      }
+      pendingImage.value = uploadedImage;
+      // Keep showing local blob URL - it's faster than fetching the uploaded one
     } catch (err) {
       console.error('Failed to upload image:', err);
       error.value = 'Failed to upload image. Please try again.';
+      // Keep the preview but mark as not uploaded
+      imageStoragePath.value = null;
+      pendingImage.value = null;
     } finally {
       uploading.value = false;
       input.value = '';
@@ -211,15 +268,14 @@ async function handleFileSelected(event: Event) {
 }
 
 async function handleRemovePhoto() {
+  // Revoke blob URL if it's a local preview
+  if (imageUrl.value && imageUrl.value.startsWith('blob:')) {
+    URL.revokeObjectURL(imageUrl.value);
+  }
+  
   if (imageStoragePath.value) {
     try {
       await deleteStepImage(imageStoragePath.value);
-      
-      if (editStepId) {
-        await updateGuidanceStep(editStepId, {
-          image: null,
-        });
-      }
     } catch (err) {
       console.error('Failed to delete image:', err);
     }
@@ -228,6 +284,7 @@ async function handleRemovePhoto() {
   imageUrl.value = null;
   imageStoragePath.value = null;
   overlays.value = [];
+  pendingImage.value = null;
 }
 
 function handleOverlaysUpdate(newOverlays: Overlay[]) {
@@ -316,16 +373,20 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
             </button>
           </div>
           
-          <div v-if="uploading" class="upload-progress">
-            <GSpinner />
-            <span>Uploading...</span>
-          </div>
-          <div v-else-if="imageUrl" class="photo-editor">
+          <div v-if="imageUrl" class="photo-editor">
             <OverlayEditor
               :image-url="imageUrl"
               :overlays="overlays"
               @update:overlays="handleOverlaysUpdate"
             />
+            <div v-if="uploading" class="upload-indicator">
+              <GSpinner size="sm" />
+              <span>Uploading...</span>
+            </div>
+          </div>
+          <div v-else-if="uploading" class="upload-progress">
+            <GSpinner />
+            <span>Uploading...</span>
           </div>
           <button v-else class="photo-upload" @click="triggerFileInput" :disabled="saving">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -708,7 +769,24 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
 }
 
 .photo-editor {
+  position: relative;
   margin-bottom: 8px;
+}
+
+.upload-indicator {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: rgba(0, 0, 0, 0.7);
+  border-radius: var(--radius-md);
+  color: white;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  z-index: 10;
 }
 
 .upload-progress {

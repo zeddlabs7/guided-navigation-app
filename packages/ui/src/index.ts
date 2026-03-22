@@ -14,5 +14,6 @@ export { default as OverlayEditor } from './components/OverlayEditor.vue';
 export { default as ArrowOverlay } from './components/ArrowOverlay.vue';
 export { default as MarkerOverlay } from './components/MarkerOverlay.vue';
 export { default as LabelInputModal } from './components/LabelInputModal.vue';
+export { default as StepThumbnail } from './components/StepThumbnail.vue';
 
 export type { FilterTab } from './components/FilterTabs.vue';

@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import type { GuidanceStatus, StepType } from '@guidenav/types';
+import type { GuidanceStatus, StepType, Overlay } from '@guidenav/types';
+import StepThumbnail from './StepThumbnail.vue';
 
 interface StepPreview {
   id: string;
   stepType: StepType;
   imageUrl: string | null;
+  overlays?: Overlay[];
 }
 
 interface Props {
@@ -74,13 +76,12 @@ const extraStepCount = props.steps.length > 3 ? props.steps.length - 3 : 0;
         class="guidance-card__image-container"
         :class="{ 'guidance-card__image-container--has-overlay': index === 2 && extraStepCount > 0 }"
       >
-        <img 
-          v-if="step.imageUrl"
-          :src="step.imageUrl" 
+        <StepThumbnail
+          :image-url="step.imageUrl"
+          :overlays="step.overlays"
+          fill-container
           :alt="stepTypeLabels[step.stepType]"
-          class="guidance-card__image"
         />
-        <div v-else class="guidance-card__image-placeholder" />
         
         <div 
           v-if="index === 2 && extraStepCount > 0"
@@ -153,14 +154,13 @@ const extraStepCount = props.steps.length > 3 ? props.steps.length - 3 : 0;
         
         <div class="guidance-card__action-right">
           <button 
-            class="guidance-card__action-btn guidance-card__action-btn--menu"
+            class="guidance-card__action-btn guidance-card__action-btn--delete"
             @click="emit('menu', id)"
-            aria-label="More options"
+            aria-label="Delete"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="5" r="2" fill="currentColor"/>
-              <circle cx="12" cy="12" r="2" fill="currentColor"/>
-              <circle cx="12" cy="19" r="2" fill="currentColor"/>
+              <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </button>
           
@@ -199,17 +199,6 @@ const extraStepCount = props.steps.length > 3 ? props.steps.length - 3 : 0;
   flex: 1;
   position: relative;
   overflow: hidden;
-}
-
-.guidance-card__image,
-.guidance-card__image-placeholder {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.guidance-card__image-placeholder {
-  background: linear-gradient(135deg, var(--color-border-light) 0%, var(--color-border) 100%);
 }
 
 .guidance-card__image-overlay {
@@ -367,16 +356,16 @@ const extraStepCount = props.steps.length > 3 ? props.steps.length - 3 : 0;
   background-color: #dbeafe;
 }
 
-.guidance-card__action-btn--menu {
+.guidance-card__action-btn--delete {
   width: 32px;
   padding: 0;
   background-color: transparent;
   color: var(--color-text-muted);
 }
 
-.guidance-card__action-btn--menu:hover {
-  background-color: var(--color-background);
-  color: var(--color-text-secondary);
+.guidance-card__action-btn--delete:hover {
+  background-color: #fef2f2;
+  color: #dc2626;
 }
 
 .guidance-card__action-btn--edit {

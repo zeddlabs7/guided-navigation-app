@@ -180,3 +180,44 @@ export async function reorderGuidanceSteps(
 
   await batch.commit();
 }
+
+function chunkArray<T>(array: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+  return chunks;
+}
+
+export async function getAllStepsForGuidanceSets(
+  guidanceSetIds: string[]
+): Promise<Map<string, GuidanceStep[]>> {
+  if (guidanceSetIds.length === 0) {
+    return new Map();
+  }
+
+  const db = getFirebaseFirestore();
+  const stepsBySet = new Map<string, GuidanceStep[]>();
+  
+  // Firestore 'in' queries limited to 30 items, batch if needed
+  const chunks = chunkArray(guidanceSetIds, 30);
+  
+  await Promise.all(chunks.map(async (chunk) => {
+    const q = query(
+      collection(db, GUIDANCE_STEPS_COLLECTION),
+      where('guidanceSetId', 'in', chunk),
+      where('deletedAt', '==', null),
+      orderBy('stepIndex', 'asc')
+    );
+    
+    const snapshot = await getDocs(q);
+    snapshot.docs.forEach(docSnap => {
+      const step = { id: docSnap.id, ...docSnap.data() } as GuidanceStep;
+      const existing = stepsBySet.get(step.guidanceSetId) || [];
+      existing.push(step);
+      stepsBySet.set(step.guidanceSetId, existing);
+    });
+  }));
+  
+  return stepsBySet;
+}

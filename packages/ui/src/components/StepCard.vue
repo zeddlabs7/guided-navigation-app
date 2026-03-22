@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { StepType } from '@guidenav/types';
+import type { StepType, Overlay } from '@guidenav/types';
+import StepThumbnail from './StepThumbnail.vue';
 
 interface Props {
   stepNumber: number;
@@ -7,6 +8,7 @@ interface Props {
   title: string;
   instructions: string;
   imageUrl: string | null;
+  overlays?: Overlay[];
   overlayCount?: number;
   isFirst?: boolean;
   isLast?: boolean;
@@ -137,23 +139,16 @@ const label = stepTypeLabels[props.stepType] || props.stepType;
     </div>
     
     <div class="step-card__content">
-      <div class="step-card__image-container">
-        <img 
-          v-if="imageUrl"
-          :src="imageUrl" 
-          :alt="title"
-          class="step-card__image"
-        />
-        <div v-else class="step-card__image-placeholder" />
-      </div>
+      <StepThumbnail
+        :image-url="imageUrl"
+        :overlays="overlays"
+        size="md"
+        :alt="title"
+      />
       
       <div class="step-card__details">
         <p class="step-card__title">{{ title }}</p>
         <p class="step-card__instructions">{{ instructions }}</p>
-        <div v-if="overlayCount && overlayCount > 0" class="step-card__overlay-count">
-          <span class="step-card__overlay-badge">{{ overlayCount }}</span>
-          <span class="step-card__overlay-label">overlay{{ overlayCount > 1 ? 's' : '' }}</span>
-        </div>
       </div>
     </div>
   </div>
@@ -260,27 +255,6 @@ const label = stepTypeLabels[props.stepType] || props.stepType;
   padding: 0 14px 14px 54px;
 }
 
-.step-card__image-container {
-  flex-shrink: 0;
-  width: 64px;
-  height: 64px;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  border: 1px solid var(--color-border-light);
-}
-
-.step-card__image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.step-card__image-placeholder {
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, var(--color-border-light) 0%, var(--color-border) 100%);
-}
-
 .step-card__details {
   flex: 1;
   min-width: 0;
@@ -303,30 +277,5 @@ const label = stepTypeLabels[props.stepType] || props.stepType;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-.step-card__overlay-count {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 8px;
-}
-
-.step-card__overlay-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
-  background-color: var(--color-background);
-  border-radius: var(--radius-full);
-  font-size: 10px;
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-}
-
-.step-card__overlay-label {
-  font-size: var(--font-size-sm);
-  color: var(--color-warning);
 }
 </style>

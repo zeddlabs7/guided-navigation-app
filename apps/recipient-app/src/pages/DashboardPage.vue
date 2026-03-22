@@ -11,7 +11,7 @@ import {
 } from '@guidenav/ui';
 import type { FilterTab } from '@guidenav/ui';
 import type { GuidanceSet, GuidanceStep, GuidanceStatus } from '@guidenav/types';
-import { getUserGuidanceSets, getGuidanceSteps, deleteGuidanceSet } from '@guidenav/services';
+import { getUserGuidanceSets, getAllStepsForGuidanceSets, deleteGuidanceSet } from '@guidenav/services';
 import { useAuth } from '../composables/useAuth';
 
 const router = useRouter();
@@ -39,19 +39,20 @@ async function loadGuidanceSets() {
   try {
     const sets = await getUserGuidanceSets(userId.value);
     
-    const setsWithSteps = await Promise.all(
-      sets.map(async (set) => {
-        const steps = await getGuidanceSteps(set.id);
-        return {
-          ...set,
-          steps,
-          titleArabic: undefined,
-          expiresDate: undefined,
-        } as GuidanceSetWithSteps;
-      })
-    );
+    if (sets.length === 0) {
+      guidanceSets.value = [];
+      return;
+    }
     
-    guidanceSets.value = setsWithSteps;
+    const setIds = sets.map(s => s.id);
+    const stepsMap = await getAllStepsForGuidanceSets(setIds);
+    
+    guidanceSets.value = sets.map(set => ({
+      ...set,
+      steps: stepsMap.get(set.id) || [],
+      titleArabic: undefined,
+      expiresDate: undefined,
+    }));
   } catch (err) {
     console.error('Failed to load guidance sets:', err);
     error.value = 'Failed to load your guidance sets. Please try again.';
@@ -238,6 +239,7 @@ function handleMenu(id: string) {
             id: s.id,
             stepType: s.stepType,
             imageUrl: s.image?.publicUrl || null,
+            overlays: s.overlays || [],
           }))"
           :modified-date="formatDate(guidance.updatedAt)"
           :expires-date="guidance.expiresDate"

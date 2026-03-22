@@ -29,7 +29,7 @@ interface StepData {
   title: string;
   instructions: string;
   imageUrl: string | null;
-  overlayCount: number;
+  overlays: import('@guidenav/types').Overlay[];
 }
 
 const steps = ref<StepData[]>([]);
@@ -60,7 +60,7 @@ async function loadGuidanceSet() {
       title: step.title || '',
       instructions: step.instructionOriginal,
       imageUrl: step.image?.publicUrl || null,
-      overlayCount: step.overlays?.length || 0,
+      overlays: step.overlays || [],
     }));
   } catch (err) {
     console.error('Failed to load guidance set:', err);
@@ -316,7 +316,7 @@ async function handleDeleteGuidance() {
               :title="step.title"
               :instructions="step.instructions"
               :image-url="step.imageUrl"
-              :overlay-count="step.overlayCount"
+              :overlays="step.overlays"
               :is-first="index === 0"
               :is-last="index === steps.length - 1"
               @move-up="handleMoveUp(index)"
