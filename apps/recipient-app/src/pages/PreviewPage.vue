@@ -233,13 +233,15 @@ function handleShareLink() {
                   :key="idx"
                   class="step-overlay"
                   :style="{
-                    left: `${overlay.x}%`,
-                    top: `${overlay.y}%`,
-                    width: `${overlay.width}%`,
-                    height: `${overlay.height}%`,
+                    left: `${overlay.x * 100}%`,
+                    top: `${overlay.y * 100}%`,
+                    transform: `translate(-50%, -50%) rotate(${overlay.rotation}deg) scale(${overlay.scale})`,
                   }"
                 >
-                  <span class="step-overlay__dot" />
+                  <span v-if="overlay.type === 'marker'" class="step-overlay__dot" />
+                  <svg v-else class="step-overlay__arrow" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 5V19M12 19L5 12M12 19L19 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
                 </div>
               </div>
               
@@ -609,15 +611,21 @@ function handleShareLink() {
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: none;
 }
 
 .step-overlay__dot {
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   background-color: var(--color-primary);
-  border: 2px solid white;
+  border: 3px solid white;
   border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.step-overlay__arrow {
+  color: var(--color-primary);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
 .step-card__content {
