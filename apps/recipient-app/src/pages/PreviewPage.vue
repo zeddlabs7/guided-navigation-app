@@ -2,7 +2,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { GSpinner } from '@guidenav/ui';
-import type { GuidanceStep, GuidanceStatus } from '@guidenav/types';
+import type { GuidanceStep, GuidanceStatus, ArrowStyle } from '@guidenav/types';
+import arrowImage from '@guidenav/ui/assets/arrow-forward.png';
 import { getGuidanceSet, getGuidanceSteps, updateGuidanceSet } from '@guidenav/services';
 
 const router = useRouter();
@@ -52,6 +53,10 @@ function getStepTypeLabel(stepType: string): string {
 
 function getOverlayCount(step: GuidanceStep): number {
   return step.overlays?.length || 0;
+}
+
+function is3DArrow(arrowStyle?: ArrowStyle): boolean {
+  return arrowStyle === '3d' || arrowStyle === undefined;
 }
 
 async function loadPreviewData() {
@@ -239,9 +244,29 @@ function handleShareLink() {
                   }"
                 >
                   <span v-if="overlay.type === 'marker'" class="step-overlay__dot" />
-                  <svg v-else class="step-overlay__arrow" width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 5V19M12 19L5 12M12 19L19 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
+                  <template v-else>
+                    <img 
+                      v-if="is3DArrow(overlay.arrowStyle)"
+                      :src="arrowImage" 
+                      alt="" 
+                      class="step-overlay__arrow-img"
+                      draggable="false"
+                    />
+                    <svg
+                      v-else
+                      class="step-overlay__arrow-svg"
+                      width="60"
+                      height="80"
+                      viewBox="0 0 450 600"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M225 0 L60 180 L150 180 L150 480 L300 480 L300 180 L390 180 Z"
+                        fill="#ffde53"
+                      />
+                    </svg>
+                  </template>
                 </div>
               </div>
               
@@ -617,15 +642,26 @@ function handleShareLink() {
 .step-overlay__dot {
   width: 16px;
   height: 16px;
-  background-color: var(--color-primary);
+  background-color: #ff6467;
   border: 3px solid white;
   border-radius: 50%;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
-.step-overlay__arrow {
-  color: var(--color-primary);
+.step-overlay__arrow-img {
+  display: block;
+  width: 60px;
+  height: auto;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  pointer-events: none;
+}
+
+.step-overlay__arrow-svg {
+  display: block;
+  width: 60px;
+  height: auto;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+  pointer-events: none;
 }
 
 .step-card__content {

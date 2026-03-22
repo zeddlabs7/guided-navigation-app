@@ -10,7 +10,8 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts"
     },
-    "./styles": "./src/styles/index.css"
+    "./styles": "./src/styles/index.css",
+    "./assets/*": "./src/assets/*"
   },
   "scripts": {
     "build": "vue-tsc --declaration --emitDeclarationOnly && vite build",
