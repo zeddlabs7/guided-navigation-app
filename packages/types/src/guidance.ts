@@ -20,7 +20,7 @@ export type StepType =
 export type ContentType = 'PHOTO' | 'TEXT';
 
 export type OverlayType = 'arrow' | 'marker';
-export type ArrowDirection = 'right' | 'left' | 'top' | 'bottom' | 'straight' | 'reverse';
+export type ArrowDirection = 'right' | 'left' | 'upward' | 'downward' | 'forward';
 
 export interface Coordinates {
   latitude: number;

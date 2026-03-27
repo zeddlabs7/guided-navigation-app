@@ -200,7 +200,7 @@ const cursorStyle = computed(() => {
           :x="overlay.x"
           :y="overlay.y"
           :scale="overlay.scale"
-          :arrow-direction="overlay.arrowDirection || 'top'"
+          :arrow-direction="overlay.arrowDirection || 'upward'"
           :selected="selectedId === overlay.id"
           @select="handleOverlaySelect(overlay.id)"
           @scale-drag-start="(e) => handleScaleDragStart(e, overlay.id)"

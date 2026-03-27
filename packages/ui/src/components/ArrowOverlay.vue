@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { ArrowDirection } from '@guidenav/types';
+import arrow3dImage from '../assets/arrow-3d.png';
 import arrowForwardImage from '../assets/arrow-forward.png';
 import arrowCurvedRight from '../assets/arrow-curved-right.png';
 import arrowCurvedLeft from '../assets/arrow-curved-left.png';
@@ -16,7 +17,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   selected: false,
   scale: 1,
-  arrowDirection: 'top',
+  arrowDirection: 'upward',
 });
 
 const emit = defineEmits<{
@@ -24,22 +25,20 @@ const emit = defineEmits<{
   'scale-drag-start': [event: PointerEvent];
 }>();
 
-const arrowConfig = computed(() => {
+const arrowConfig = computed((): { type: string; image: string | undefined; rotation: number } => {
   switch (props.arrowDirection) {
     case 'right':
       return { type: 'curved', image: arrowCurvedRight, rotation: 0 };
     case 'left':
       return { type: 'curved', image: arrowCurvedLeft, rotation: 0 };
-    case 'top':
-      return { type: '3d', image: arrowForwardImage, rotation: 0 };
-    case 'bottom':
-      return { type: '3d', image: arrowForwardImage, rotation: 180 };
-    case 'straight':
-      return { type: '2d', image: null, rotation: 0 };
-    case 'reverse':
-      return { type: '2d', image: null, rotation: 180 };
+    case 'upward':
+      return { type: '3d', image: arrow3dImage, rotation: 0 };
+    case 'downward':
+      return { type: '3d', image: arrow3dImage, rotation: 180 };
+    case 'forward':
+      return { type: 'forward', image: arrowForwardImage, rotation: 0 };
     default:
-      return { type: '3d', image: arrowForwardImage, rotation: 0 };
+      return { type: '3d', image: arrow3dImage, rotation: 0 };
   }
 });
 
@@ -51,7 +50,7 @@ const style = computed(() => ({
 
 const isCurved = computed(() => arrowConfig.value.type === 'curved');
 const is3D = computed(() => arrowConfig.value.type === '3d');
-const is2D = computed(() => arrowConfig.value.type === '2d');
+const isForward = computed(() => arrowConfig.value.type === 'forward');
 
 function handleClick(event: PointerEvent) {
   event.stopPropagation();
@@ -90,21 +89,14 @@ function handleScaleHandleDown(event: PointerEvent) {
       draggable="false"
     />
     
-    <!-- 2D Arrow: Custom SVG for straight/reverse -->
-    <svg
-      v-else-if="is2D"
-      class="arrow-overlay__svg"
-      width="60"
-      height="80"
-      viewBox="0 0 450 600"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M225 0 L60 180 L150 180 L150 480 L300 480 L300 180 L390 180 Z"
-        fill="#ffde53"
-      />
-    </svg>
+    <!-- Forward Arrow: Use forward PNG image -->
+    <img 
+      v-else-if="isForward"
+      :src="arrowConfig.image" 
+      alt="Arrow" 
+      class="arrow-overlay__image"
+      draggable="false"
+    />
     
     <!-- Scale handle (at bottom) -->
     <div

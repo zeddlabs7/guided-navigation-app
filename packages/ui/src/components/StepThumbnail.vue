@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { Overlay, ArrowStyle } from '@guidenav/types';
-import arrowImage from '../assets/arrow-forward.png';
+import type { Overlay, ArrowDirection } from '@guidenav/types';
+import arrow3dImage from '../assets/arrow-3d.png';
+import arrowForwardImage from '../assets/arrow-forward.png';
+import arrowCurvedRight from '../assets/arrow-curved-right.png';
+import arrowCurvedLeft from '../assets/arrow-curved-left.png';
 
 interface Props {
   imageUrl: string | null;
@@ -37,12 +40,30 @@ const scaleFactors = {
 
 const scaleFactor = computed(() => scaleFactors[props.size]);
 
+function getArrowConfig(direction?: ArrowDirection) {
+  switch (direction) {
+    case 'right':
+      return { type: 'curved', image: arrowCurvedRight, rotation: 0 };
+    case 'left':
+      return { type: 'curved', image: arrowCurvedLeft, rotation: 0 };
+    case 'upward':
+      return { type: '3d', image: arrow3dImage, rotation: 0 };
+    case 'downward':
+      return { type: '3d', image: arrow3dImage, rotation: 180 };
+    case 'forward':
+      return { type: 'forward', image: arrowForwardImage, rotation: 0 };
+    default:
+      return { type: '3d', image: arrow3dImage, rotation: 0 };
+  }
+}
+
 function getArrowStyle(overlay: Overlay) {
+  const config = getArrowConfig(overlay.arrowDirection);
   const baseScale = overlay.scale * scaleFactor.value;
   return {
     left: `${overlay.x * 100}%`,
     top: `${overlay.y * 100}%`,
-    transform: `translate(-50%, -50%) rotate(${overlay.rotation}deg) scale(${baseScale})`,
+    transform: `translate(-50%, -50%) rotate(${config.rotation}deg) scale(${baseScale})`,
   };
 }
 
@@ -54,8 +75,21 @@ function getMarkerStyle(overlay: Overlay) {
   };
 }
 
-function is3DArrow(arrowStyle?: ArrowStyle): boolean {
-  return arrowStyle === '3d' || arrowStyle === undefined;
+function isCurvedArrow(direction?: ArrowDirection): boolean {
+  return direction === 'right' || direction === 'left';
+}
+
+function is3DArrow(direction?: ArrowDirection): boolean {
+  return direction === 'upward' || direction === 'downward' || direction === undefined;
+}
+
+function isForwardArrow(direction?: ArrowDirection): boolean {
+  return direction === 'forward';
+}
+
+function getArrowImage(direction?: ArrowDirection): string {
+  const config = getArrowConfig(direction);
+  return config.image || arrow3dImage;
 }
 
 type LabelPosition = 'left' | 'right' | 'top' | 'bottom';
@@ -96,27 +130,30 @@ function getLabelPosition(overlay: Overlay): LabelPosition {
           class="step-thumbnail__arrow"
           :style="getArrowStyle(overlay)"
         >
+          <!-- Curved arrows (right/left) -->
           <img 
-            v-if="is3DArrow(overlay.arrowStyle)"
-            :src="arrowImage" 
+            v-if="isCurvedArrow(overlay.arrowDirection)"
+            :src="getArrowImage(overlay.arrowDirection)" 
+            alt="" 
+            class="step-thumbnail__arrow-img step-thumbnail__arrow-img--curved"
+            draggable="false"
+          />
+          <!-- 3D arrows (top/bottom) -->
+          <img 
+            v-else-if="is3DArrow(overlay.arrowDirection)"
+            :src="getArrowImage(overlay.arrowDirection)" 
             alt="" 
             class="step-thumbnail__arrow-img"
             draggable="false"
           />
-          <svg
-            v-else
-            class="step-thumbnail__arrow-svg"
-            width="60"
-            height="80"
-            viewBox="0 0 450 600"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M225 0 L60 180 L150 180 L150 480 L300 480 L300 180 L390 180 Z"
-              fill="#ffde53"
-            />
-          </svg>
+          <!-- Forward arrow -->
+          <img 
+            v-else-if="isForwardArrow(overlay.arrowDirection)"
+            :src="getArrowImage(overlay.arrowDirection)" 
+            alt="" 
+            class="step-thumbnail__arrow-img"
+            draggable="false"
+          />
         </div>
         
         <!-- Marker overlay -->
@@ -203,6 +240,10 @@ function getLabelPosition(overlay: Overlay): LabelPosition {
   height: auto;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
   pointer-events: none;
+}
+
+.step-thumbnail__arrow-img--curved {
+  width: 80px;
 }
 
 .step-thumbnail__arrow-svg {

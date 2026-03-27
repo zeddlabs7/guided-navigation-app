@@ -21,12 +21,11 @@ const emit = defineEmits<{
 const showDirectionPicker = ref(false);
 
 const directions: { value: ArrowDirection; label: string; icon: string }[] = [
-  { value: 'top', label: 'Top', icon: '↑' },
-  { value: 'bottom', label: 'Bottom', icon: '↓' },
+  { value: 'upward', label: 'Upward', icon: '↑' },
+  { value: 'downward', label: 'Downward', icon: '↓' },
   { value: 'left', label: 'Left', icon: '↰' },
   { value: 'right', label: 'Right', icon: '↱' },
-  { value: 'straight', label: 'Straight', icon: '⬆' },
-  { value: 'reverse', label: 'Reverse', icon: '⬇' },
+  { value: 'forward', label: 'Forward', icon: '⬆' },
 ];
 
 function selectDirection(direction: ArrowDirection) {

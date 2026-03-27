@@ -82,7 +82,7 @@ function handleAddOverlay(x: number, y: number) {
       y,
       scale: 1,
       label: null,
-      arrowDirection: 'top',
+      arrowDirection: 'upward',
     };
     emit('update:overlays', [...props.overlays, newOverlay]);
     selectedOverlayId.value = newOverlay.id;
