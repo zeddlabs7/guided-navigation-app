@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import type { Overlay, ArrowStyle } from '@guidenav/types';
+import type { Overlay, ArrowDirection } from '@guidenav/types';
 import OverlayCanvas from './OverlayCanvas.vue';
 import OverlayToolbar from './OverlayToolbar.vue';
 import LabelInputModal from './LabelInputModal.vue';
@@ -73,17 +73,16 @@ function handleSelectOverlay(id: string | null) {
   }
 }
 
-function handleAddOverlay(x: number, y: number, rotation?: number, scale?: number) {
+function handleAddOverlay(x: number, y: number) {
   if (mode.value === 'add-arrow') {
     const newOverlay: Overlay = {
       id: generateId(),
       type: 'arrow',
       x,
       y,
-      rotation: rotation ?? -90,
-      scale: scale ?? 1,
+      scale: 1,
       label: null,
-      arrowStyle: '3d',
+      arrowDirection: 'top',
     };
     emit('update:overlays', [...props.overlays, newOverlay]);
     selectedOverlayId.value = newOverlay.id;
@@ -93,13 +92,11 @@ function handleAddOverlay(x: number, y: number, rotation?: number, scale?: numbe
 
 function handleCanvasTap(x: number, y: number) {
   if (mode.value === 'add-marker') {
-    // Place marker directly without label
     const newOverlay: Overlay = {
       id: generateId(),
       type: 'marker',
       x,
       y,
-      rotation: 0,
       scale: 1,
       label: null,
     };
@@ -122,7 +119,6 @@ function handleLabelSave(label: string) {
       type: 'marker',
       x: pendingMarkerPosition.value.x,
       y: pendingMarkerPosition.value.y,
-      rotation: 0,
       scale: 1,
       label,
     };
@@ -147,28 +143,11 @@ function handleUpdateOverlay(id: string, updates: Partial<Overlay>) {
   emit('update:overlays', updatedOverlays);
 }
 
-function handleRotateLeft() {
+function handleChangeDirection(direction: ArrowDirection) {
   if (!selectedOverlayId.value) return;
   const overlay = props.overlays.find(o => o.id === selectedOverlayId.value);
   if (overlay && overlay.type === 'arrow') {
-    handleUpdateOverlay(selectedOverlayId.value, { rotation: overlay.rotation - 15 });
-  }
-}
-
-function handleRotateRight() {
-  if (!selectedOverlayId.value) return;
-  const overlay = props.overlays.find(o => o.id === selectedOverlayId.value);
-  if (overlay && overlay.type === 'arrow') {
-    handleUpdateOverlay(selectedOverlayId.value, { rotation: overlay.rotation + 15 });
-  }
-}
-
-function handleToggleStyle() {
-  if (!selectedOverlayId.value) return;
-  const overlay = props.overlays.find(o => o.id === selectedOverlayId.value);
-  if (overlay && overlay.type === 'arrow') {
-    const newStyle: ArrowStyle = overlay.arrowStyle === '3d' ? '2d' : '3d';
-    handleUpdateOverlay(selectedOverlayId.value, { arrowStyle: newStyle });
+    handleUpdateOverlay(selectedOverlayId.value, { arrowDirection: direction });
   }
 }
 
@@ -240,12 +219,10 @@ watch(() => props.readonly, (isReadonly) => {
       <div v-if="selectedOverlay" class="overlay-editor__toolbar-container">
         <OverlayToolbar
           :overlay-type="selectedOverlay.type"
-          :arrow-style="selectedOverlay.arrowStyle"
+          :arrow-direction="selectedOverlay.arrowDirection"
           :has-label="!!selectedOverlay.label"
           :visible="true"
-          @rotate-left="handleRotateLeft"
-          @rotate-right="handleRotateRight"
-          @toggle-style="handleToggleStyle"
+          @change-direction="handleChangeDirection"
           @edit-label="handleEditLabel"
           @delete="handleDelete"
           @done="handleDone"

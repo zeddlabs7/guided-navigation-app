@@ -10,7 +10,10 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts"
     },
-    "./styles": "./src/styles/index.css",
+    "./styles": {
+      "import": "./src/styles/index.css",
+      "default": "./src/styles/index.css"
+    },
     "./assets/*": "./src/assets/*"
   },
   "scripts": {

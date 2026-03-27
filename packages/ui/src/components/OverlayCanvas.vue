@@ -17,17 +17,13 @@ const props = defineProps<Props>();
 
 const emit = defineEmits<{
   'select-overlay': [id: string | null];
-  'add-overlay': [x: number, y: number, rotation?: number, scale?: number];
+  'add-overlay': [x: number, y: number];
   'update-overlay': [id: string, updates: Partial<Overlay>];
   'canvas-tap': [x: number, y: number];
 }>();
 
 const canvasRef = ref<HTMLDivElement | null>(null);
 const imageRef = ref<HTMLImageElement | null>(null);
-
-const isDrawingArrow = ref(false);
-const arrowStartPos = ref({ x: 0, y: 0 });
-const arrowStartScreen = ref({ x: 0, y: 0 });
 
 function getImageRect(): DOMRect | null {
   return imageRef.value?.getBoundingClientRect() ?? null;
@@ -50,7 +46,7 @@ function getMarkerPadding(): { paddingX: number; paddingY: number } {
   const rect = getImageRect();
   if (!rect) return { paddingX: 0.05, paddingY: 0.05 };
   
-  const markerRadius = 16; // Half of 32px marker dot
+  const markerRadius = 16;
   return {
     paddingX: markerRadius / rect.width,
     paddingY: markerRadius / rect.height,
@@ -72,12 +68,6 @@ function screenToNormalizedForMarker(screenX: number, screenY: number): { x: num
   };
 }
 
-function calculateAngle(centerX: number, centerY: number, pointX: number, pointY: number): number {
-  const deltaX = pointX - centerX;
-  const deltaY = pointY - centerY;
-  return Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-}
-
 function handleCanvasPointerDown(event: PointerEvent) {
   const target = event.target as HTMLElement;
   
@@ -89,12 +79,8 @@ function handleCanvasPointerDown(event: PointerEvent) {
   if (props.mode === 'add-arrow') {
     const pos = screenToNormalized(event.clientX, event.clientY, 0.05);
     if (!pos) return;
-    isDrawingArrow.value = true;
-    arrowStartPos.value = pos;
-    arrowStartScreen.value = { x: event.clientX, y: event.clientY };
-    canvasRef.value?.setPointerCapture(event.pointerId);
+    emit('add-overlay', pos.x, pos.y);
   } else if (props.mode === 'add-marker') {
-    // Use marker-specific padding to keep dot fully visible
     const pos = screenToNormalizedForMarker(event.clientX, event.clientY);
     if (!pos) return;
     emit('canvas-tap', pos.x, pos.y);
@@ -103,77 +89,8 @@ function handleCanvasPointerDown(event: PointerEvent) {
   }
 }
 
-function handleCanvasPointerMove(_event: PointerEvent) {
-  // Arrow drawing preview could be added here
-}
-
-function handleCanvasPointerUp(event: PointerEvent) {
-  if (isDrawingArrow.value && props.mode === 'add-arrow') {
-    const endPos = screenToNormalized(event.clientX, event.clientY);
-    if (endPos) {
-      const dx = endPos.x - arrowStartPos.value.x;
-      const dy = endPos.y - arrowStartPos.value.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      
-      // Calculate scale based on drag distance (0.02 = small, 0.2 = large)
-      // Map to scale range 0.6 to 1.8
-      const scale = Math.max(0.6, Math.min(1.8, 0.6 + (distance / 0.2) * 1.2));
-      
-      // Arrow points UP by default, so add 90 to make drag direction match arrow direction
-      let rotation = -90; // default: pointing up
-      if (distance > 0.02) {
-        rotation = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
-      }
-      
-      emit('add-overlay', arrowStartPos.value.x, arrowStartPos.value.y, rotation, distance > 0.02 ? scale : 1);
-    }
-    isDrawingArrow.value = false;
-    canvasRef.value?.releasePointerCapture(event.pointerId);
-  }
-}
-
 function handleOverlaySelect(id: string) {
   emit('select-overlay', id);
-}
-
-function handleRotationDragStart(event: PointerEvent, overlayId: string) {
-  event.stopPropagation();
-  event.preventDefault();
-  
-  const overlay = props.overlays.find(o => o.id === overlayId);
-  if (!overlay) return;
-  
-  const rect = getImageRect();
-  if (!rect) return;
-  
-  const centerX = rect.left + overlay.x * rect.width;
-  const centerY = rect.top + overlay.y * rect.height;
-  let lastAngle = calculateAngle(centerX, centerY, event.clientX, event.clientY);
-  
-  const target = event.target as HTMLElement;
-  target.setPointerCapture(event.pointerId);
-  
-  const handleMove = (e: PointerEvent) => {
-    const currentOverlay = props.overlays.find(o => o.id === overlayId);
-    if (!currentOverlay) return;
-    
-    const currentAngle = calculateAngle(centerX, centerY, e.clientX, e.clientY);
-    const angleDelta = currentAngle - lastAngle;
-    lastAngle = currentAngle;
-    
-    emit('update-overlay', overlayId, { rotation: currentOverlay.rotation + angleDelta });
-  };
-  
-  const handleUp = (e: PointerEvent) => {
-    target.releasePointerCapture(e.pointerId);
-    target.removeEventListener('pointermove', handleMove);
-    target.removeEventListener('pointerup', handleUp);
-    target.removeEventListener('pointercancel', handleUp);
-  };
-  
-  target.addEventListener('pointermove', handleMove);
-  target.addEventListener('pointerup', handleUp);
-  target.addEventListener('pointercancel', handleUp);
 }
 
 function handleScaleDragStart(event: PointerEvent, overlayId: string) {
@@ -190,9 +107,8 @@ function handleScaleDragStart(event: PointerEvent, overlayId: string) {
   target.setPointerCapture(event.pointerId);
   
   const handleMove = (e: PointerEvent) => {
-    // Drag down = bigger, drag up = smaller
     const deltaY = e.clientY - startY;
-    const scaleDelta = deltaY / 100; // 100px = 1.0 scale change
+    const scaleDelta = deltaY / 100;
     const newScale = Math.max(0.4, Math.min(2.5, startScale + scaleDelta));
     
     emit('update-overlay', overlayId, { scale: newScale });
@@ -234,10 +150,8 @@ function handleOverlayDragStart(event: PointerEvent, overlayId: string) {
   const handleMove = (e: PointerEvent) => {
     let pos;
     if (isMarker) {
-      // Use marker-specific padding to keep dot fully visible
       pos = screenToNormalizedForMarker(e.clientX - offsetX, e.clientY - offsetY);
     } else {
-      // Arrows can go closer to edges
       pos = screenToNormalized(e.clientX - offsetX, e.clientY - offsetY, 0.02);
     }
     if (pos) {
@@ -270,9 +184,6 @@ const cursorStyle = computed(() => {
     class="overlay-canvas"
     :style="{ cursor: cursorStyle }"
     @pointerdown="handleCanvasPointerDown"
-    @pointermove="handleCanvasPointerMove"
-    @pointerup="handleCanvasPointerUp"
-    @pointercancel="handleCanvasPointerUp"
   >
     <img
       ref="imageRef"
@@ -288,12 +199,10 @@ const cursorStyle = computed(() => {
           v-if="overlay.type === 'arrow'"
           :x="overlay.x"
           :y="overlay.y"
-          :rotation="overlay.rotation"
           :scale="overlay.scale"
-          :arrow-style="overlay.arrowStyle || '3d'"
+          :arrow-direction="overlay.arrowDirection || 'top'"
           :selected="selectedId === overlay.id"
           @select="handleOverlaySelect(overlay.id)"
-          @rotation-drag-start="(e) => handleRotationDragStart(e, overlay.id)"
           @scale-drag-start="(e) => handleScaleDragStart(e, overlay.id)"
           @pointerdown="(e: PointerEvent) => handleOverlayDragStart(e, overlay.id)"
         />
@@ -313,7 +222,7 @@ const cursorStyle = computed(() => {
       v-if="mode === 'add-arrow' || mode === 'add-marker'"
       class="overlay-canvas__hint"
     >
-      {{ mode === 'add-arrow' ? 'Tap and drag to draw arrow' : 'Tap to place marker' }}
+      {{ mode === 'add-arrow' ? 'Tap to place arrow' : 'Tap to place marker' }}
     </div>
   </div>
 </template>

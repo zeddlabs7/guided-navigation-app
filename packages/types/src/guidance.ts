@@ -20,7 +20,7 @@ export type StepType =
 export type ContentType = 'PHOTO' | 'TEXT';
 
 export type OverlayType = 'arrow' | 'marker';
-export type ArrowStyle = '2d' | '3d';
+export type ArrowDirection = 'right' | 'left' | 'top' | 'bottom' | 'straight' | 'reverse';
 
 export interface Coordinates {
   latitude: number;
@@ -61,10 +61,9 @@ export interface Overlay {
   type: OverlayType;
   x: number; // Normalized 0-1
   y: number; // Normalized 0-1
-  rotation: number; // Degrees
   scale: number; // 0.4 to 2.5, default 1.0
   label: string | null;
-  arrowStyle?: ArrowStyle; // Only for arrow type, default '3d'
+  arrowDirection?: ArrowDirection; // Only for arrow type, default 'top'
 }
 
 export interface GuidanceStep {
