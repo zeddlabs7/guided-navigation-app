@@ -2,8 +2,11 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { GSpinner } from '@guidenav/ui';
-import type { GuidanceStep, GuidanceStatus, ArrowStyle } from '@guidenav/types';
-import arrowImage from '@guidenav/ui/assets/arrow-forward.png';
+import type { GuidanceStep, GuidanceStatus, ArrowDirection } from '@guidenav/types';
+import arrow3dImage from '@guidenav/ui/assets/arrow-3d.png';
+import arrowForwardImage from '@guidenav/ui/assets/arrow-forward.png';
+import arrowCurvedRight from '@guidenav/ui/assets/arrow-curved-right.png';
+import arrowCurvedLeft from '@guidenav/ui/assets/arrow-curved-left.png';
 import { getGuidanceSet, getGuidanceSteps, updateGuidanceSet } from '@guidenav/services';
 
 const router = useRouter();
@@ -55,8 +58,25 @@ function getOverlayCount(step: GuidanceStep): number {
   return step.overlays?.length || 0;
 }
 
-function is3DArrow(arrowStyle?: ArrowStyle): boolean {
-  return arrowStyle === '3d' || arrowStyle === undefined;
+function getArrowConfig(direction?: ArrowDirection): { image: string; rotation: number } {
+  switch (direction) {
+    case 'right':
+      return { image: arrowCurvedRight, rotation: 0 };
+    case 'left':
+      return { image: arrowCurvedLeft, rotation: 0 };
+    case 'upward':
+      return { image: arrow3dImage, rotation: 0 };
+    case 'downward':
+      return { image: arrow3dImage, rotation: 180 };
+    case 'forward':
+      return { image: arrowForwardImage, rotation: 0 };
+    default:
+      return { image: arrow3dImage, rotation: 0 };
+  }
+}
+
+function isCurvedArrow(direction?: ArrowDirection): boolean {
+  return direction === 'right' || direction === 'left';
 }
 
 async function loadPreviewData() {
@@ -240,33 +260,18 @@ function handleShareLink() {
                   :style="{
                     left: `${overlay.x * 100}%`,
                     top: `${overlay.y * 100}%`,
-                    transform: `translate(-50%, -50%) rotate(${overlay.rotation}deg) scale(${overlay.scale})`,
+                    transform: `translate(-50%, -50%) rotate(${getArrowConfig(overlay.arrowDirection).rotation}deg) scale(${overlay.scale})`,
                   }"
                 >
                   <span v-if="overlay.type === 'marker'" class="step-overlay__dot" />
-                  <template v-else>
-                    <img 
-                      v-if="is3DArrow(overlay.arrowStyle)"
-                      :src="arrowImage" 
-                      alt="" 
-                      class="step-overlay__arrow-img"
-                      draggable="false"
-                    />
-                    <svg
-                      v-else
-                      class="step-overlay__arrow-svg"
-                      width="60"
-                      height="80"
-                      viewBox="0 0 450 600"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M225 0 L60 180 L150 180 L150 480 L300 480 L300 180 L390 180 Z"
-                        fill="#ffde53"
-                      />
-                    </svg>
-                  </template>
+                  <img 
+                    v-else
+                    :src="getArrowConfig(overlay.arrowDirection).image" 
+                    alt="" 
+                    class="step-overlay__arrow-img"
+                    :class="{ 'step-overlay__arrow-img--curved': isCurvedArrow(overlay.arrowDirection) }"
+                    draggable="false"
+                  />
                 </div>
               </div>
               
@@ -656,12 +661,8 @@ function handleShareLink() {
   pointer-events: none;
 }
 
-.step-overlay__arrow-svg {
-  display: block;
-  width: 60px;
-  height: auto;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
-  pointer-events: none;
+.step-overlay__arrow-img--curved {
+  width: 80px;
 }
 
 .step-card__content {
