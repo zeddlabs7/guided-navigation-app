@@ -20,6 +20,7 @@ const router = useRouter();
 const route = useRoute();
 const guidanceSetId = route.params.guidanceSetId as string;
 const editStepId = route.query.edit as string | undefined;
+const stepIndexParam = route.query.stepIndex as string | undefined;
 
 interface StepTypeOption {
   type: StepType;
@@ -111,13 +112,15 @@ async function createNewStep() {
   loading.value = true;
   error.value = null;
   
+  const stepIndex = stepIndexParam !== undefined ? parseInt(stepIndexParam, 10) : 0;
+  
   try {
     const newId = await createGuidanceStep(guidanceSetId, {
       stepType: selectedStepType.value,
       contentType: 'TEXT',
       title: null,
       instructionOriginal: '',
-    });
+    }, stepIndex);
     stepId.value = newId;
   } catch (err) {
     console.error('Failed to create step:', err);
@@ -380,7 +383,7 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
             <OverlayEditor
               :image-url="imageUrl"
               :overlays="overlays"
-              :user-id="userId"
+              :user-id="userId ?? undefined"
               @update:overlays="handleOverlaysUpdate"
             />
             <div v-if="uploading" class="upload-indicator">

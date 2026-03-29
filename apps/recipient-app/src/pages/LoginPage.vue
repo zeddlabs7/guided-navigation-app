@@ -1,19 +1,74 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { GButton, GCard, GInput } from '@guidenav/ui';
+import { GButton, GCard, GInput, OTPInput } from '@guidenav/ui';
+import { useAuth } from '@/composables/useAuth';
 
 const router = useRouter();
-const email = ref('');
-const loading = ref(false);
+const { 
+  isLoading, 
+  error, 
+  isAuthenticated,
+  setupRecaptcha, 
+  sendOTP, 
+  verifyOTP, 
+  clearError 
+} = useAuth();
 
-async function handleLogin() {
-  loading.value = true;
-  // TODO: Implement Firebase Auth
-  setTimeout(() => {
-    loading.value = false;
+type Step = 'phone' | 'otp';
+const currentStep = ref<Step>('phone');
+const phoneNumber = ref('');
+const otpCode = ref('');
+const otpInputRef = ref<InstanceType<typeof OTPInput> | null>(null);
+
+const formattedPhone = computed(() => {
+  let phone = phoneNumber.value.trim();
+  if (phone && !phone.startsWith('+')) {
+    phone = '+' + phone;
+  }
+  return phone;
+});
+
+const isPhoneValid = computed(() => {
+  const phone = formattedPhone.value;
+  return phone.length >= 10 && /^\+[1-9]\d{1,14}$/.test(phone);
+});
+
+onMounted(() => {
+  setupRecaptcha('recaptcha-container');
+  
+  if (isAuthenticated.value) {
     router.push('/dashboard');
-  }, 1000);
+  }
+});
+
+async function handleSendCode() {
+  clearError();
+  const success = await sendOTP(formattedPhone.value);
+  if (success) {
+    currentStep.value = 'otp';
+  }
+}
+
+async function handleVerifyCode(code: string) {
+  otpCode.value = code;
+  const success = await verifyOTP(code);
+  if (success) {
+    router.push('/dashboard');
+  } else {
+    otpInputRef.value?.clear();
+  }
+}
+
+function handleBackToPhone() {
+  currentStep.value = 'phone';
+  clearError();
+}
+
+async function handleResendCode() {
+  clearError();
+  otpInputRef.value?.clear();
+  await sendOTP(formattedPhone.value);
 }
 </script>
 
@@ -22,28 +77,93 @@ async function handleLogin() {
     <div class="login-container">
       <header class="login-header">
         <h1 class="login-title">Delivery Guidance</h1>
-        <p class="login-subtitle">Sign in to manage your delivery guidance</p>
+        <p class="login-subtitle">
+          {{ currentStep === 'phone' 
+            ? 'Sign in with your phone number' 
+            : 'Enter the verification code' 
+          }}
+        </p>
       </header>
 
       <GCard padding="lg">
-        <form class="login-form" @submit.prevent="handleLogin">
+        <!-- Phone Number Step -->
+        <form 
+          v-if="currentStep === 'phone'" 
+          class="login-form" 
+          @submit.prevent="handleSendCode"
+        >
           <GInput
-            v-model="email"
-            type="email"
-            label="Email"
-            placeholder="Enter your email"
+            v-model="phoneNumber"
+            type="tel"
+            label="Phone Number"
+            placeholder="+1234567890"
+            :error="error ?? undefined"
+            :disabled="isLoading"
           />
+
+          <p class="phone-hint">
+            Enter your phone number with country code (e.g., +1 for US)
+          </p>
 
           <GButton
             type="submit"
             variant="primary"
             full-width
-            :loading="loading"
+            :loading="isLoading"
+            :disabled="!isPhoneValid || isLoading"
           >
-            Continue
+            Send Verification Code
           </GButton>
         </form>
+
+        <!-- OTP Verification Step -->
+        <div v-else class="login-form">
+          <p class="otp-sent-message">
+            Code sent to <strong>{{ formattedPhone }}</strong>
+          </p>
+
+          <OTPInput
+            ref="otpInputRef"
+            :length="6"
+            :disabled="isLoading"
+            :error="error ?? undefined"
+            @complete="handleVerifyCode"
+          />
+
+          <GButton
+            variant="primary"
+            full-width
+            :loading="isLoading"
+            :disabled="otpCode.length !== 6 || isLoading"
+            @click="handleVerifyCode(otpCode)"
+          >
+            Verify Code
+          </GButton>
+
+          <div class="otp-actions">
+            <GButton
+              variant="ghost"
+              size="sm"
+              :disabled="isLoading"
+              @click="handleResendCode"
+            >
+              Resend Code
+            </GButton>
+
+            <GButton
+              variant="ghost"
+              size="sm"
+              :disabled="isLoading"
+              @click="handleBackToPhone"
+            >
+              Change Number
+            </GButton>
+          </div>
+        </div>
       </GCard>
+      
+      <!-- Invisible reCAPTCHA container -->
+      <div id="recaptcha-container"></div>
     </div>
   </div>
 </template>
@@ -83,5 +203,33 @@ async function handleLogin() {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
+}
+
+.phone-hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin: calc(-1 * var(--spacing-sm)) 0 0 0;
+}
+
+.otp-sent-message {
+  text-align: center;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.otp-sent-message strong {
+  color: var(--color-text);
+}
+
+.otp-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-md);
+}
+
+#recaptcha-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
 }
 </style>

@@ -116,20 +116,14 @@ export async function getGuidanceSteps(guidanceSetId: string): Promise<GuidanceS
 export async function createGuidanceStep(
   guidanceSetId: string,
   input: CreateGuidanceStepInput,
-  stepIndex?: number
+  stepIndex: number
 ): Promise<string> {
   const db = getFirebaseFirestore();
-
-  let finalStepIndex = stepIndex;
-  if (finalStepIndex === undefined) {
-    const existingSteps = await getGuidanceSteps(guidanceSetId);
-    finalStepIndex = existingSteps.length;
-  }
 
   const docRef = await addDoc(collection(db, GUIDANCE_STEPS_COLLECTION), {
     ...input,
     guidanceSetId,
-    stepIndex: finalStepIndex,
+    stepIndex,
     instructionTranslations: {},
     image: null,
     overlays: [],

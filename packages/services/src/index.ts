@@ -1,5 +1,9 @@
 export { initializeFirebase, getFirebaseApp, getFirebaseAuth, getFirebaseFirestore, getFirebaseStorage } from './firebase/config';
+export * from './auth';
+export * from './users';
 export * from './guidance';
+export { useGuidanceSets } from './guidance/useGuidanceSets';
+export { useGuidanceSteps } from './guidance/useGuidanceSteps';
 export * from './share-links';
 export * from './analytics';
 export * from './storage';

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { 
   AppLayout, 
@@ -11,14 +11,12 @@ import {
 } from '@guidenav/ui';
 import type { FilterTab } from '@guidenav/ui';
 import type { GuidanceSet, GuidanceStep, GuidanceStatus } from '@guidenav/types';
-import { getUserGuidanceSets, getAllStepsForGuidanceSets, deleteGuidanceSet } from '@guidenav/services';
+import { useGuidanceSets, getAllStepsForGuidanceSets, deleteGuidanceSet } from '@guidenav/services';
 import { useAuth } from '../composables/useAuth';
 
 const router = useRouter();
 const { userId } = useAuth();
 
-const loading = ref(true);
-const error = ref<string | null>(null);
 const searchQuery = ref('');
 const activeFilter = ref('all');
 const currentLanguage = ref<'en' | 'ar'>('en');
@@ -30,40 +28,51 @@ interface GuidanceSetWithSteps extends GuidanceSet {
   expiresDate?: string;
 }
 
+const { sets: rawSets, loading: setsLoading, error: setsError } = useGuidanceSets(userId);
 const guidanceSets = ref<GuidanceSetWithSteps[]>([]);
+const stepsLoading = ref(false);
+const stepsError = ref<string | null>(null);
 
-async function loadGuidanceSets() {
-  loading.value = true;
-  error.value = null;
-  
-  try {
-    const sets = await getUserGuidanceSets(userId.value);
-    
+const loading = computed(() => setsLoading.value || stepsLoading.value);
+const error = computed(() => {
+  if (setsError.value) return setsError.value.message;
+  return stepsError.value;
+});
+
+watch(
+  rawSets,
+  async (sets: GuidanceSet[]) => {
     if (sets.length === 0) {
       guidanceSets.value = [];
       return;
     }
-    
-    const setIds = sets.map(s => s.id);
-    const stepsMap = await getAllStepsForGuidanceSets(setIds);
-    
-    guidanceSets.value = sets.map(set => ({
-      ...set,
-      steps: stepsMap.get(set.id) || [],
-      titleArabic: undefined,
-      expiresDate: undefined,
-    }));
-  } catch (err) {
-    console.error('Failed to load guidance sets:', err);
-    error.value = 'Failed to load your guidance sets. Please try again.';
-  } finally {
-    loading.value = false;
-  }
-}
 
-onMounted(() => {
-  loadGuidanceSets();
-});
+    stepsLoading.value = true;
+    stepsError.value = null;
+
+    try {
+      const setIds = sets.map((s: GuidanceSet) => s.id);
+      const stepsMap = await getAllStepsForGuidanceSets(setIds);
+
+      guidanceSets.value = sets.map((set: GuidanceSet) => ({
+        ...set,
+        steps: stepsMap.get(set.id) || [],
+        titleArabic: undefined,
+        expiresDate: undefined,
+      }));
+    } catch (err) {
+      console.error('Failed to load steps:', err);
+      stepsError.value = 'Failed to load guidance steps. Please try again.';
+    } finally {
+      stepsLoading.value = false;
+    }
+  },
+  { immediate: true }
+);
+
+function reloadData() {
+  window.location.reload();
+}
 
 const filterTabs = computed<FilterTab[]>(() => {
   const counts = {
@@ -146,13 +155,15 @@ async function handleDelete(id: string) {
   const confirmed = window.confirm(`Are you sure you want to delete "${guidance.title}"? This action cannot be undone.`);
   if (!confirmed) return;
   
+  const previousSets = [...guidanceSets.value];
+  guidanceSets.value = guidanceSets.value.filter(g => g.id !== id);
   deletingId.value = id;
   
   try {
     await deleteGuidanceSet(id);
-    guidanceSets.value = guidanceSets.value.filter(g => g.id !== id);
   } catch (err) {
     console.error('Failed to delete guidance set:', err);
+    guidanceSets.value = previousSets;
     alert('Failed to delete. Please try again.');
   } finally {
     deletingId.value = null;
@@ -203,7 +214,7 @@ function handleMenu(id: string) {
           <div class="error-state">
             <p class="error-state__title">Something went wrong</p>
             <p class="error-state__description">{{ error }}</p>
-            <button class="error-state__retry" @click="loadGuidanceSets">
+            <button class="error-state__retry" @click="reloadData">
               Try Again
             </button>
           </div>

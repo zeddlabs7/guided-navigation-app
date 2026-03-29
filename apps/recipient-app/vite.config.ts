@@ -13,6 +13,24 @@ export default defineConfig({
         clientsClaim: true,
         cleanupOutdatedCaches: true,
         dontCacheBustURLsMatching: /\.[a-f0-9]{8}\./,
+        sourcemap: false,
+        mode: 'production',
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'guidance-images',
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 24 * 30,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+        ],
       },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {

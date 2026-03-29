@@ -36,6 +36,11 @@ function handleBack() {
 }
 
 async function handleSaveDraft() {
+  if (!userId.value) {
+    error.value = 'Not authenticated';
+    return;
+  }
+  
   const validation = validateGuidanceTitle(title.value);
   if (!validation.valid) {
     error.value = validation.error || 'Please enter a valid title';
@@ -64,6 +69,11 @@ async function handleSaveDraft() {
 }
 
 async function handlePreviewAndPublish() {
+  if (!userId.value) {
+    error.value = 'Not authenticated';
+    return;
+  }
+  
   const validation = validateGuidanceTitle(title.value);
   if (!validation.valid) {
     error.value = validation.error || 'Please enter a valid title';
@@ -100,6 +110,11 @@ function handleCloseStepSelector() {
 }
 
 async function handleSelectStepType(stepType: StepType) {
+  if (!userId.value) {
+    error.value = 'Not authenticated';
+    return;
+  }
+  
   const validation = validateGuidanceTitle(title.value);
   if (!validation.valid) {
     error.value = validation.error || 'Please enter a title first';

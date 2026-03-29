@@ -115,7 +115,7 @@ function handlePreviewAndPublish() {
 }
 
 function handleAddStep() {
-  router.push(`/guidance/${guidanceSetId}/steps`);
+  router.push(`/guidance/${guidanceSetId}/steps?stepIndex=${steps.value.length}`);
 }
 
 async function handleMoveUp(index: number) {

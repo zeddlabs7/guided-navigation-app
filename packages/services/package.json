@@ -18,7 +18,8 @@
   },
   "dependencies": {
     "@guidenav/types": "workspace:*",
-    "firebase": "^10.8.0"
+    "firebase": "^10.8.0",
+    "vue": "^3.4.0"
   },
   "devDependencies": {
     "typescript": "^5.4.0"

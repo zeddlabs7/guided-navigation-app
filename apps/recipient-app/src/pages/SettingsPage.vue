@@ -2,16 +2,18 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { GButton, GCard } from '@guidenav/ui';
+import { useAuth } from '@/composables/useAuth';
 
 const router = useRouter();
+const { phoneNumber, logout, isLoading } = useAuth();
 const language = ref('en');
 
 function handleBack() {
   router.push('/dashboard');
 }
 
-function handleLogout() {
-  // TODO: Implement logout
+async function handleLogout() {
+  await logout();
   router.push('/login');
 }
 </script>
@@ -37,9 +39,14 @@ function handleLogout() {
       </GCard>
 
       <GCard padding="lg">
-        <div class="setting-item">
+        <div class="setting-section">
           <p class="setting-label">Account</p>
-          <GButton variant="danger" @click="handleLogout">
+          <p v-if="phoneNumber" class="setting-value">{{ phoneNumber }}</p>
+          <GButton 
+            variant="danger" 
+            :loading="isLoading"
+            @click="handleLogout"
+          >
             Log Out
           </GButton>
         </div>
@@ -61,9 +68,21 @@ function handleLogout() {
   align-items: center;
 }
 
+.setting-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
 .setting-label {
   font-weight: 500;
   margin: 0;
+}
+
+.setting-value {
+  color: var(--color-text-muted);
+  margin: 0;
+  font-size: var(--font-size-sm);
 }
 
 .setting-select {
