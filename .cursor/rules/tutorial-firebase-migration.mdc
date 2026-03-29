@@ -1,0 +1,107 @@
+# Tutorial State Firebase Migration
+
+## Current Implementation
+
+The overlay tutorial "seen" state is currently stored in **localStorage** with a userId-based key:
+
+```typescript
+const STORAGE_KEY = `overlay-tutorial-seen:${userId}`;
+```
+
+This approach:
+- Works with the current placeholder userId (`'dev-user-placeholder'`) during development
+- Will automatically use the real Firebase UID once auth is properly implemented
+- Keeps tutorial state per-user on the same device
+- Does NOT persist across devices or after browser data is cleared
+
+## Files Involved
+
+- `packages/ui/src/composables/useTutorialState.ts` - The composable managing tutorial state
+- `packages/ui/src/components/OverlayTutorial.vue` - The tutorial UI component
+- `packages/ui/src/components/OverlayEditor.vue` - Integration point that triggers tutorial
+
+## Migration Steps (When Firebase Auth is Ready)
+
+### 1. Update the User Type
+
+Add the tutorial seen flag to the User type in `packages/types/src/user.ts`:
+
+```typescript
+export interface User {
+  id: string;
+  email: string;
+  // ... other fields
+  hasSeenOverlayTutorial: boolean; // Add this
+}
+```
+
+### 2. Create User Service Functions
+
+Add functions to `packages/services/src/users/index.ts`:
+
+```typescript
+export async function getUserPreferences(userId: string) {
+  const doc = await getDoc(doc(db, 'users', userId));
+  return doc.data();
+}
+
+export async function setTutorialSeen(userId: string) {
+  await updateDoc(doc(db, 'users', userId), {
+    hasSeenOverlayTutorial: true
+  });
+}
+```
+
+### 3. Update the Composable
+
+Replace localStorage with Firestore in `useTutorialState.ts`:
+
+```typescript
+import { getUserPreferences, setTutorialSeen } from '@guidenav/services';
+
+export function useTutorialState(userId: string) {
+  const hasSeenTutorial = ref(false);
+  const loading = ref(true);
+  
+  onMounted(async () => {
+    // Migrate from localStorage if exists
+    const localKey = `overlay-tutorial-seen:${userId}`;
+    const localValue = localStorage.getItem(localKey);
+    
+    if (localValue === 'true') {
+      await setTutorialSeen(userId);
+      localStorage.removeItem(localKey);
+      hasSeenTutorial.value = true;
+    } else {
+      const prefs = await getUserPreferences(userId);
+      hasSeenTutorial.value = prefs?.hasSeenOverlayTutorial ?? false;
+    }
+    loading.value = false;
+  });
+  
+  async function markTutorialSeen() {
+    await setTutorialSeen(userId);
+    hasSeenTutorial.value = true;
+  }
+  
+  return { hasSeenTutorial, markTutorialSeen, loading };
+}
+```
+
+### 4. Update Firestore Security Rules
+
+Ensure users can read/write their own tutorial preference:
+
+```javascript
+match /users/{userId} {
+  allow read, write: if request.auth.uid == userId;
+}
+```
+
+## Why This Temporary Approach?
+
+Firebase Authentication is not yet fully implemented in this project. The `useAuth()` composable currently returns a placeholder user ID. Using localStorage with the userId as a key allows:
+
+1. The feature to work during development
+2. Automatic user-scoped storage once real auth is added
+3. A clear migration path documented here

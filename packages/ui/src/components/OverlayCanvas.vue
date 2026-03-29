@@ -126,6 +126,45 @@ function handleScaleDragStart(event: PointerEvent, overlayId: string) {
   target.addEventListener('pointercancel', handleUp);
 }
 
+function handleRotationDragStart(event: PointerEvent, overlayId: string) {
+  event.stopPropagation();
+  event.preventDefault();
+  
+  const overlay = props.overlays.find(o => o.id === overlayId);
+  if (!overlay) return;
+  
+  const rect = getImageRect();
+  if (!rect) return;
+  
+  const centerX = rect.left + overlay.x * rect.width;
+  const centerY = rect.top + overlay.y * rect.height;
+  
+  const startAngle = Math.atan2(event.clientY - centerY, event.clientX - centerX);
+  const startRotation = overlay.rotation ?? 0;
+  
+  const target = event.target as HTMLElement;
+  target.setPointerCapture(event.pointerId);
+  
+  const handleMove = (e: PointerEvent) => {
+    const currentAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+    const angleDelta = (currentAngle - startAngle) * (180 / Math.PI);
+    const newRotation = startRotation + angleDelta;
+    
+    emit('update-overlay', overlayId, { rotation: newRotation });
+  };
+  
+  const handleUp = (e: PointerEvent) => {
+    target.releasePointerCapture(e.pointerId);
+    target.removeEventListener('pointermove', handleMove);
+    target.removeEventListener('pointerup', handleUp);
+    target.removeEventListener('pointercancel', handleUp);
+  };
+  
+  target.addEventListener('pointermove', handleMove);
+  target.addEventListener('pointerup', handleUp);
+  target.addEventListener('pointercancel', handleUp);
+}
+
 function handleOverlayDragStart(event: PointerEvent, overlayId: string) {
   if (props.selectedId !== overlayId) return;
   
@@ -200,10 +239,12 @@ const cursorStyle = computed(() => {
           :x="overlay.x"
           :y="overlay.y"
           :scale="overlay.scale"
-          :arrow-direction="overlay.arrowDirection || 'upward'"
+          :rotation="overlay.rotation ?? 0"
+          :arrow-direction="overlay.arrowDirection || 'up-down'"
           :selected="selectedId === overlay.id"
           @select="handleOverlaySelect(overlay.id)"
           @scale-drag-start="(e) => handleScaleDragStart(e, overlay.id)"
+          @rotation-drag-start="(e) => handleRotationDragStart(e, overlay.id)"
           @pointerdown="(e: PointerEvent) => handleOverlayDragStart(e, overlay.id)"
         />
         <MarkerOverlay

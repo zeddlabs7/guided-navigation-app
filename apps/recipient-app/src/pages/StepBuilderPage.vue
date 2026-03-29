@@ -12,6 +12,9 @@ import {
   getGuidanceSteps
 } from '@guidenav/services';
 import { validateImageFile } from '@guidenav/core';
+import { useAuth } from '../composables/useAuth';
+
+const { userId } = useAuth();
 
 const router = useRouter();
 const route = useRoute();
@@ -377,6 +380,7 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
             <OverlayEditor
               :image-url="imageUrl"
               :overlays="overlays"
+              :user-id="userId"
               @update:overlays="handleOverlaysUpdate"
             />
             <div v-if="uploading" class="upload-indicator">

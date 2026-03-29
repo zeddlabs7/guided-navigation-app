@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { Overlay, ArrowDirection } from '@guidenav/types';
-import arrow3dImage from '../assets/arrow-3d.png';
 import arrowForwardImage from '../assets/arrow-forward.png';
 import arrowCurvedRight from '../assets/arrow-curved-right.png';
 import arrowCurvedLeft from '../assets/arrow-curved-left.png';
@@ -43,27 +42,25 @@ const scaleFactor = computed(() => scaleFactors[props.size]);
 function getArrowConfig(direction?: ArrowDirection) {
   switch (direction) {
     case 'right':
-      return { type: 'curved', image: arrowCurvedRight, rotation: 0 };
+      return { type: 'curved', image: arrowCurvedRight };
     case 'left':
-      return { type: 'curved', image: arrowCurvedLeft, rotation: 0 };
-    case 'upward':
-      return { type: '3d', image: arrow3dImage, rotation: 0 };
-    case 'downward':
-      return { type: '3d', image: arrow3dImage, rotation: 180 };
-    case 'forward':
-      return { type: 'forward', image: arrowForwardImage, rotation: 0 };
+      return { type: 'curved', image: arrowCurvedLeft };
+    case 'up-down':
+      return { type: '2d', image: undefined };
+    case 'forward-backward':
+      return { type: 'forward', image: arrowForwardImage };
     default:
-      return { type: '3d', image: arrow3dImage, rotation: 0 };
+      return { type: '2d', image: undefined };
   }
 }
 
 function getArrowStyle(overlay: Overlay) {
-  const config = getArrowConfig(overlay.arrowDirection);
   const baseScale = overlay.scale * scaleFactor.value;
+  const rotation = overlay.rotation ?? 0;
   return {
     left: `${overlay.x * 100}%`,
     top: `${overlay.y * 100}%`,
-    transform: `translate(-50%, -50%) rotate(${config.rotation}deg) scale(${baseScale})`,
+    transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${baseScale})`,
   };
 }
 
@@ -79,17 +76,17 @@ function isCurvedArrow(direction?: ArrowDirection): boolean {
   return direction === 'right' || direction === 'left';
 }
 
-function is3DArrow(direction?: ArrowDirection): boolean {
-  return direction === 'upward' || direction === 'downward' || direction === undefined;
+function is2DArrow(direction?: ArrowDirection): boolean {
+  return direction === 'up-down' || direction === undefined;
 }
 
 function isForwardArrow(direction?: ArrowDirection): boolean {
-  return direction === 'forward';
+  return direction === 'forward-backward';
 }
 
 function getArrowImage(direction?: ArrowDirection): string {
   const config = getArrowConfig(direction);
-  return config.image || arrow3dImage;
+  return config.image || '';
 }
 
 type LabelPosition = 'left' | 'right' | 'top' | 'bottom';
@@ -138,15 +135,22 @@ function getLabelPosition(overlay: Overlay): LabelPosition {
             class="step-thumbnail__arrow-img step-thumbnail__arrow-img--curved"
             draggable="false"
           />
-          <!-- 3D arrows (top/bottom) -->
-          <img 
-            v-else-if="is3DArrow(overlay.arrowDirection)"
-            :src="getArrowImage(overlay.arrowDirection)" 
-            alt="" 
-            class="step-thumbnail__arrow-img"
-            draggable="false"
-          />
-          <!-- Forward arrow -->
+          <!-- 2D arrows (up/down) -->
+          <svg
+            v-else-if="is2DArrow(overlay.arrowDirection)"
+            class="step-thumbnail__arrow-svg"
+            width="60"
+            height="80"
+            viewBox="0 0 450 600"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M225 0 L60 180 L150 180 L150 480 L300 480 L300 180 L390 180 Z"
+              fill="#ffde53"
+            />
+          </svg>
+          <!-- Forward/Backward arrow -->
           <img 
             v-else-if="isForwardArrow(overlay.arrowDirection)"
             :src="getArrowImage(overlay.arrowDirection)" 

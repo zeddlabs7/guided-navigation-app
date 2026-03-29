@@ -4,6 +4,8 @@ import type { Overlay, ArrowDirection } from '@guidenav/types';
 import OverlayCanvas from './OverlayCanvas.vue';
 import OverlayToolbar from './OverlayToolbar.vue';
 import LabelInputModal from './LabelInputModal.vue';
+import OverlayTutorial from './OverlayTutorial.vue';
+import { useTutorialState, useIsMobile } from '../composables/useTutorialState';
 
 type EditorMode = 'view' | 'add-arrow' | 'add-marker' | 'select';
 
@@ -11,10 +13,12 @@ interface Props {
   imageUrl: string;
   overlays: Overlay[];
   readonly?: boolean;
+  userId?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   readonly: false,
+  userId: 'dev-user-placeholder',
 });
 
 const emit = defineEmits<{
@@ -26,6 +30,14 @@ const selectedOverlayId = ref<string | null>(null);
 const showLabelModal = ref(false);
 const pendingMarkerPosition = ref<{ x: number; y: number } | null>(null);
 const editingLabelOverlayId = ref<string | null>(null);
+
+const { hasSeenTutorial, markTutorialSeen } = useTutorialState(props.userId);
+const { isMobile } = useIsMobile();
+const showTutorial = ref(false);
+const pendingAddMode = ref<'arrow' | 'marker' | null>(null);
+
+const hasArrow = computed(() => props.overlays.some(o => o.type === 'arrow'));
+const hasMarker = computed(() => props.overlays.some(o => o.type === 'marker'));
 
 const selectedOverlay = computed(() => {
   if (!selectedOverlayId.value) return null;
@@ -54,14 +66,46 @@ function generateId(): string {
 
 function handleAddArrowClick() {
   if (props.readonly) return;
+  
+  if (isMobile.value && !hasSeenTutorial.value) {
+    pendingAddMode.value = 'arrow';
+    showTutorial.value = true;
+    return;
+  }
+  
   mode.value = mode.value === 'add-arrow' ? 'view' : 'add-arrow';
   selectedOverlayId.value = null;
 }
 
 function handleAddMarkerClick() {
   if (props.readonly) return;
+  
+  if (isMobile.value && !hasSeenTutorial.value) {
+    pendingAddMode.value = 'marker';
+    showTutorial.value = true;
+    return;
+  }
+  
   mode.value = mode.value === 'add-marker' ? 'view' : 'add-marker';
   selectedOverlayId.value = null;
+}
+
+function handleTutorialComplete() {
+  markTutorialSeen();
+  showTutorial.value = false;
+  
+  if (pendingAddMode.value === 'arrow') {
+    mode.value = 'add-arrow';
+  } else if (pendingAddMode.value === 'marker') {
+    mode.value = 'add-marker';
+  }
+  pendingAddMode.value = null;
+}
+
+function handleTutorialSkip() {
+  markTutorialSeen();
+  showTutorial.value = false;
+  pendingAddMode.value = null;
 }
 
 function handleSelectOverlay(id: string | null) {
@@ -81,10 +125,12 @@ function handleAddOverlay(x: number, y: number) {
       x,
       y,
       scale: 1,
+      rotation: 0,
       label: null,
-      arrowDirection: 'upward',
+      arrowDirection: 'up-down',
     };
-    emit('update:overlays', [...props.overlays, newOverlay]);
+    const filteredOverlays = props.overlays.filter(o => o.type !== 'arrow');
+    emit('update:overlays', [...filteredOverlays, newOverlay]);
     selectedOverlayId.value = newOverlay.id;
     mode.value = 'select';
   }
@@ -98,9 +144,11 @@ function handleCanvasTap(x: number, y: number) {
       x,
       y,
       scale: 1,
+      rotation: 0,
       label: null,
     };
-    emit('update:overlays', [...props.overlays, newOverlay]);
+    const filteredOverlays = props.overlays.filter(o => o.type !== 'marker');
+    emit('update:overlays', [...filteredOverlays, newOverlay]);
     selectedOverlayId.value = newOverlay.id;
     mode.value = 'select';
   }
@@ -120,9 +168,11 @@ function handleLabelSave(label: string) {
       x: pendingMarkerPosition.value.x,
       y: pendingMarkerPosition.value.y,
       scale: 1,
+      rotation: 0,
       label,
     };
-    emit('update:overlays', [...props.overlays, newOverlay]);
+    const filteredOverlays = props.overlays.filter(o => o.type !== 'marker');
+    emit('update:overlays', [...filteredOverlays, newOverlay]);
     selectedOverlayId.value = newOverlay.id;
     pendingMarkerPosition.value = null;
     mode.value = 'select';
@@ -203,7 +253,7 @@ watch(() => props.readonly, (isReadonly) => {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M7 17L17 7M17 7H7M17 7V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          Add Arrow
+          {{ hasArrow ? 'Replace Arrow' : 'Add Arrow' }}
         </button>
         
         <button
@@ -212,7 +262,7 @@ watch(() => props.readonly, (isReadonly) => {
           @click="handleAddMarkerClick"
         >
           <span class="overlay-editor__marker-dot" />
-          Add Marker
+          {{ hasMarker ? 'Replace Marker' : 'Add Marker' }}
         </button>
       </div>
       
@@ -237,6 +287,12 @@ watch(() => props.readonly, (isReadonly) => {
       @update:visible="showLabelModal = $event"
       @save="handleLabelSave"
       @cancel="handleLabelCancel"
+    />
+    
+    <OverlayTutorial
+      :visible="showTutorial"
+      @complete="handleTutorialComplete"
+      @skip="handleTutorialSkip"
     />
   </div>
 </template>
