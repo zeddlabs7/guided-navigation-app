@@ -124,6 +124,7 @@ async function handleResendCode() {
 
           <OTPInput
             ref="otpInputRef"
+            v-model="otpCode"
             :length="6"
             :disabled="isLoading"
             :error="error ?? undefined"
