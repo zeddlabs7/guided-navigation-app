@@ -401,12 +401,11 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
             <span>Tap to take or choose a photo</span>
           </button>
           
-          <!-- Native file input with camera capture -->
+          <!-- Native file input - no capture attribute to allow photo library selection on mobile -->
           <input 
             ref="fileInputRef"
             type="file"
             accept="image/jpeg,image/png,image/webp"
-            capture="environment"
             @change="handleFileSelected"
             class="sr-only"
           />
