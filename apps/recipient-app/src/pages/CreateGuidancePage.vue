@@ -85,11 +85,6 @@ const requiresMetadata = computed(() => {
   return ADDRESS_TYPE_STEP_CONFIG[addressType.value].requiresMetadata;
 });
 
-const canProceedFromTitle = computed(() => {
-  const validation = validateGuidanceTitle(title.value);
-  return validation.valid;
-});
-
 const canProceedFromMetadata = computed(() => {
   if (!requiresMetadata.value) return true;
   return buildingNumber.value.trim() !== '' && 
