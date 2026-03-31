@@ -19,7 +19,7 @@ onMounted(async () => {
     // Redirect to first step
     router.replace(`/g/${token}/step/0`);
   } catch (err) {
-    error.value = 'Failed to load guidance';
+    error.value = 'Failed to load address';
     router.replace(`/g/${token}/error`);
   } finally {
     loading.value = false;
@@ -31,7 +31,7 @@ onMounted(async () => {
   <div class="loader-page">
     <div class="loader-content">
       <GSpinner size="lg" />
-      <p class="loader-text">Loading guidance...</p>
+      <p class="loader-text">Loading address...</p>
     </div>
   </div>
 </template>

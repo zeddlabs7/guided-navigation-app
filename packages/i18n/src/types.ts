@@ -75,16 +75,28 @@ export interface LocaleMessages {
     thankYou: string;
   };
   stepTypes: {
-    PIN_CHECK: string;
-    APPROACH: string;
+    LOCATION_CHECK: string;
+    LANDMARK_REFERENCE: string;
+    PARKING_LOCATION: string;
+    BUILDING_ENTRY: string;
+    RECEPTION_OR_SECURITY: string;
+    LOBBY_NAVIGATION: string;
+    ELEVATOR_ENTRY: string;
+    STAIRS_ENTRY: string;
+    FLOOR_NUMBER: string;
+    CORRIDOR_OR_PATH: string;
+    DOOR_IDENTIFICATION: string;
+    DROP_OFF_POINT: string;
     GATE_ENTRY: string;
-    WALK_PATH: string;
-    TURN: string;
-    STAIRS: string;
-    ELEVATOR: string;
-    LANDMARK: string;
-    DOOR_ENTRY: string;
-    RECEPTION: string;
-    DROPOFF_POINT: string;
+    UNIT_OR_DOOR_IDENTIFICATION: string;
+    FLOOR_NAVIGATION: string;
+    OTHER: string;
+  };
+  addressTypes: {
+    APARTMENT_BUILDING: string;
+    VILLA: string;
+    RESIDENTIAL_COMPOUND: string;
+    OFFICE_BUILDING: string;
+    OTHER: string;
   };
 }

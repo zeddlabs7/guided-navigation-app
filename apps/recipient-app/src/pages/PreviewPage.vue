@@ -42,12 +42,21 @@ function formatDate(dateString: string): string {
 
 function getStepTypeLabel(stepType: string): string {
   const labels: Record<string, string> = {
+    'LOCATION_CHECK': 'Location Check',
+    'LANDMARK_REFERENCE': 'Landmark',
+    'PARKING_LOCATION': 'Parking',
+    'BUILDING_ENTRY': 'Building Entry',
+    'RECEPTION_OR_SECURITY': 'Reception',
+    'LOBBY_NAVIGATION': 'Lobby',
+    'ELEVATOR_ENTRY': 'Elevator',
+    'STAIRS_ENTRY': 'Stairs',
+    'FLOOR_NUMBER': 'Floor',
+    'CORRIDOR_OR_PATH': 'Corridor',
+    'DOOR_IDENTIFICATION': 'Door',
+    'DROP_OFF_POINT': 'Drop-off',
     'GATE_ENTRY': 'Gate Entry',
-    'ELEVATOR': 'Elevator',
-    'PARKING': 'Parking',
-    'RECEPTION': 'Reception',
-    'STAIRS': 'Stairs',
-    'HALLWAY': 'Hallway',
+    'UNIT_OR_DOOR_IDENTIFICATION': 'Unit/Door',
+    'FLOOR_NAVIGATION': 'Floor Nav',
     'OTHER': 'Other',
   };
   return labels[stepType] || stepType;
@@ -104,7 +113,7 @@ async function loadPreviewData() {
     ]);
     
     if (!guidanceSet) {
-      error.value = 'Guidance set not found';
+      error.value = 'Address set not found';
       return;
     }
     
@@ -136,7 +145,7 @@ async function handlePublish() {
     await updateGuidanceSet(guidanceSetId, { status: 'PUBLISHED' });
     guidanceStatus.value = 'PUBLISHED';
   } catch (err) {
-    console.error('Failed to publish guidance:', err);
+    console.error('Failed to publish address:', err);
     error.value = 'Failed to publish. Please try again.';
   } finally {
     publishing.value = false;
@@ -151,7 +160,7 @@ async function handleUnpublish() {
     await updateGuidanceSet(guidanceSetId, { status: 'DRAFT' });
     guidanceStatus.value = 'DRAFT';
   } catch (err) {
-    console.error('Failed to unpublish guidance:', err);
+    console.error('Failed to unpublish address:', err);
     error.value = 'Failed to unpublish. Please try again.';
   } finally {
     publishing.value = false;
@@ -221,7 +230,7 @@ function handleShareLink() {
           </div>
           <div class="summary-card__content">
             <h2 class="summary-card__title">{{ guidanceTitle }}</h2>
-            <p class="summary-card__description">Review your guidance before sharing with couriers.</p>
+            <p class="summary-card__description">Review your address before sharing with couriers.</p>
             <div class="summary-card__meta">
               <span>{{ totalSteps }} {{ totalSteps === 1 ? 'step' : 'steps' }}</span>
               <span class="meta-dot">•</span>

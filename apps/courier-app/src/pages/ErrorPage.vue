@@ -8,19 +8,19 @@ const errorType = route.query.type as string | undefined;
 const errorMessages: Record<string, { title: string; message: string }> = {
   EXPIRED: {
     title: 'Link Expired',
-    message: 'This guidance link has expired. Please contact the sender for a new link.',
+    message: 'This address link has expired. Please contact the sender for a new link.',
   },
   REVOKED: {
     title: 'Link Revoked',
-    message: 'This guidance link has been revoked by the sender.',
+    message: 'This address link has been revoked by the sender.',
   },
   NOT_FOUND: {
     title: 'Link Invalid',
-    message: 'This guidance link is not valid. Please check the link and try again.',
+    message: 'This address link is not valid. Please check the link and try again.',
   },
   default: {
     title: 'Something went wrong',
-    message: 'We could not load the guidance. Please try again or contact the sender.',
+    message: 'We could not load the address. Please try again or contact the sender.',
   },
 };
 

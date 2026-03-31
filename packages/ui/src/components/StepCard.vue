@@ -24,34 +24,44 @@ const emit = defineEmits<{
 }>();
 
 const stepTypeColors: Record<StepType, { bg: string; dot: string; text: string }> = {
-  PIN_CHECK: { bg: '#fffbeb', dot: '#ffb900', text: '#bb4d00' },
-  APPROACH: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
+  LOCATION_CHECK: { bg: '#fffbeb', dot: '#ffb900', text: '#bb4d00' },
+  LANDMARK_REFERENCE: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
+  PARKING_LOCATION: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
+  BUILDING_ENTRY: { bg: '#eff6ff', dot: '#2b7fff', text: '#1447e6' },
+  RECEPTION_OR_SECURITY: { bg: '#faf5ff', dot: '#ad46ff', text: '#8200db' },
+  LOBBY_NAVIGATION: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
+  ELEVATOR_ENTRY: { bg: '#faf5ff', dot: '#ad46ff', text: '#8200db' },
+  STAIRS_ENTRY: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
+  FLOOR_NUMBER: { bg: '#eff6ff', dot: '#2b7fff', text: '#1447e6' },
+  CORRIDOR_OR_PATH: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
+  DOOR_IDENTIFICATION: { bg: '#eff6ff', dot: '#2b7fff', text: '#1447e6' },
+  DROP_OFF_POINT: { bg: '#f0fdf4', dot: '#00c950', text: '#008236' },
   GATE_ENTRY: { bg: '#f0fdf4', dot: '#00c950', text: '#008236' },
-  WALK_PATH: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
-  TURN: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
-  STAIRS: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
-  ELEVATOR: { bg: '#faf5ff', dot: '#ad46ff', text: '#8200db' },
-  LANDMARK: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
-  DOOR_ENTRY: { bg: '#eff6ff', dot: '#155dfc', text: '#155dfc' },
-  RECEPTION: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
-  DROPOFF_POINT: { bg: '#f0fdf4', dot: '#00c950', text: '#008236' },
+  UNIT_OR_DOOR_IDENTIFICATION: { bg: '#eff6ff', dot: '#2b7fff', text: '#1447e6' },
+  FLOOR_NAVIGATION: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
+  OTHER: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
 };
 
 const stepTypeLabels: Record<StepType, string> = {
-  PIN_CHECK: 'PIN Check',
-  APPROACH: 'Parking',
+  LOCATION_CHECK: 'Location Check',
+  LANDMARK_REFERENCE: 'Landmark Reference',
+  PARKING_LOCATION: 'Parking Location',
+  BUILDING_ENTRY: 'Building Entry',
+  RECEPTION_OR_SECURITY: 'Reception / Security',
+  LOBBY_NAVIGATION: 'Lobby Navigation',
+  ELEVATOR_ENTRY: 'Elevator Entry',
+  STAIRS_ENTRY: 'Stairs Entry',
+  FLOOR_NUMBER: 'Floor Number',
+  CORRIDOR_OR_PATH: 'Corridor / Path',
+  DOOR_IDENTIFICATION: 'Door Identification',
+  DROP_OFF_POINT: 'Drop-off Point',
   GATE_ENTRY: 'Gate Entry',
-  WALK_PATH: 'Walk Path',
-  TURN: 'Turn',
-  STAIRS: 'Stairs',
-  ELEVATOR: 'Elevator',
-  LANDMARK: 'Landmark',
-  DOOR_ENTRY: 'Door Entry',
-  RECEPTION: 'Reception',
-  DROPOFF_POINT: 'Drop-off',
+  UNIT_OR_DOOR_IDENTIFICATION: 'Unit / Door ID',
+  FLOOR_NAVIGATION: 'Floor Navigation',
+  OTHER: 'Other',
 };
 
-const colors = stepTypeColors[props.stepType] || stepTypeColors.APPROACH;
+const colors = stepTypeColors[props.stepType] || stepTypeColors.OTHER;
 const label = stepTypeLabels[props.stepType] || props.stepType;
 </script>
 

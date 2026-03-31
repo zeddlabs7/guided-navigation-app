@@ -62,7 +62,7 @@ watch(
       }));
     } catch (err) {
       console.error('Failed to load steps:', err);
-      stepsError.value = 'Failed to load guidance steps. Please try again.';
+      stepsError.value = 'Failed to load address steps. Please try again.';
     } finally {
       stepsLoading.value = false;
     }
@@ -162,7 +162,7 @@ async function handleDelete(id: string) {
   try {
     await deleteGuidanceSet(id);
   } catch (err) {
-    console.error('Failed to delete guidance set:', err);
+    console.error('Failed to delete address set:', err);
     guidanceSets.value = previousSets;
     alert('Failed to delete. Please try again.');
   } finally {
@@ -186,14 +186,14 @@ function handleMenu(id: string) {
       <header class="dashboard__header">
         <h1 class="dashboard__title">My Addresses</h1>
         <p class="dashboard__subtitle">
-          Create and manage step-by-step delivery guidance for couriers.
+          Create and manage step-by-step delivery addresses for couriers.
         </p>
       </header>
 
       <div class="dashboard__search">
         <GSearchInput
           v-model="searchQuery"
-          placeholder="Search guidance…"
+          placeholder="Search addresses"
         />
       </div>
 
@@ -225,12 +225,12 @@ function handleMenu(id: string) {
         <GCard padding="lg">
           <div class="empty-state">
             <p class="empty-state__title">
-              {{ searchQuery ? 'No results found' : 'No guidance created yet' }}
+              {{ searchQuery ? 'No results found' : 'No address created yet' }}
             </p>
             <p class="empty-state__description">
               {{ searchQuery 
                 ? 'Try adjusting your search or filter criteria.' 
-                : 'Create your first delivery guidance to help couriers find your location.' 
+                : 'Create your first delivery address to help couriers find your location.' 
               }}
             </p>
           </div>

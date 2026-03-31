@@ -2,6 +2,8 @@ import {
   MAX_STEPS_PER_GUIDANCE,
   IMAGE_CONSTRAINTS,
   type GuidanceStep,
+  type AddressType,
+  ADDRESS_TYPE_STEP_CONFIG,
 } from '@guidenav/types';
 
 export function validateStepCount(currentCount: number): { valid: boolean; error?: string } {
@@ -53,6 +55,60 @@ export function validateGuidanceTitle(title: string): { valid: boolean; error?: 
   return { valid: true };
 }
 
+export function validateStepTitle(title: string): { valid: boolean; error?: string } {
+  const trimmed = title.trim();
+  if (!trimmed) {
+    return { valid: false, error: 'Step title is required' };
+  }
+  if (trimmed.length > 100) {
+    return { valid: false, error: 'Step title must be 100 characters or less' };
+  }
+  return { valid: true };
+}
+
+export function validateStepInstructions(instructions: string): { valid: boolean; error?: string } {
+  const trimmed = instructions.trim();
+  if (!trimmed) {
+    return { valid: false, error: 'Instructions are required' };
+  }
+  if (trimmed.length > 500) {
+    return { valid: false, error: 'Instructions must be 500 characters or less' };
+  }
+  return { valid: true };
+}
+
+export function validateBuildingMetadata(
+  addressType: AddressType,
+  metadata: {
+    buildingNumber?: string;
+    floorNumber?: string;
+    doorNumber?: string;
+  }
+): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  const config = ADDRESS_TYPE_STEP_CONFIG[addressType];
+  
+  if (!config.requiresMetadata) {
+    return { valid: true, errors: [] };
+  }
+  
+  const metadataFields = config.metadataFields || [];
+  
+  if (metadataFields.includes('buildingNumber') && !metadata.buildingNumber?.trim()) {
+    errors.push('Building number is required');
+  }
+  
+  if (metadataFields.includes('floorNumber') && !metadata.floorNumber?.trim()) {
+    errors.push('Floor number is required');
+  }
+  
+  if (metadataFields.includes('doorNumber') && !metadata.doorNumber?.trim()) {
+    errors.push('Door/Unit number is required');
+  }
+  
+  return { valid: errors.length === 0, errors };
+}
+
 export function validateStepOrder(steps: GuidanceStep[]): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
@@ -63,12 +119,12 @@ export function validateStepOrder(steps: GuidanceStep[]): { valid: boolean; erro
   const firstStep = steps.find((s) => s.stepIndex === 0);
   const lastStep = steps.reduce((max, s) => (s.stepIndex > max.stepIndex ? s : max), steps[0]);
 
-  if (firstStep && firstStep.stepType !== 'PIN_CHECK') {
-    errors.push('First step should be PIN_CHECK');
+  if (firstStep && firstStep.stepType !== 'LOCATION_CHECK') {
+    errors.push('First step should be LOCATION_CHECK');
   }
 
-  if (lastStep && lastStep.stepType !== 'DROPOFF_POINT') {
-    errors.push('Last step should be DROPOFF_POINT');
+  if (lastStep && lastStep.stepType !== 'DROP_OFF_POINT') {
+    errors.push('Last step should be DROP_OFF_POINT');
   }
 
   return { valid: errors.length === 0, errors };

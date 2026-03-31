@@ -76,7 +76,7 @@ async function handleResendCode() {
   <div class="login-page">
     <div class="login-container">
       <header class="login-header">
-        <h1 class="login-title">Delivery Guidance</h1>
+        <h1 class="login-title">Delivery Address</h1>
         <p class="login-subtitle">
           {{ currentStep === 'phone' 
             ? 'Sign in with your phone number' 

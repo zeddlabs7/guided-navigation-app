@@ -2,7 +2,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { StepCard, GSpinner } from '@guidenav/ui';
-import type { GuidanceStatus, StepType, GuidanceStep } from '@guidenav/types';
+import type { GuidanceStatus, StepType, GuidanceStep, AddressType } from '@guidenav/types';
+import { ADDRESS_TYPE_LABELS, ADDRESS_TYPE_STEP_CONFIG } from '@guidenav/types';
 import { 
   getGuidanceSet, 
   getGuidanceSteps, 
@@ -16,12 +17,32 @@ const router = useRouter();
 const route = useRoute();
 const guidanceSetId = route.params.guidanceSetId as string;
 
+type FormStep = 'title' | 'addressType' | 'metadata' | 'steps';
+
+const currentFormStep = ref<FormStep>('steps');
 const title = ref('');
 const titleArabic = ref('');
 const status = ref<GuidanceStatus>('DRAFT');
+const addressType = ref<AddressType | null>(null);
+const buildingNumber = ref('');
+const floorNumber = ref('');
+const doorNumber = ref('');
 const loading = ref(true);
 const saving = ref(false);
 const error = ref<string | null>(null);
+
+const addressTypeOptions: { type: AddressType; label: string; icon: string }[] = [
+  { type: 'APARTMENT_BUILDING', label: ADDRESS_TYPE_LABELS.APARTMENT_BUILDING.en, icon: '🏢' },
+  { type: 'VILLA', label: ADDRESS_TYPE_LABELS.VILLA.en, icon: '🏠' },
+  { type: 'RESIDENTIAL_COMPOUND', label: ADDRESS_TYPE_LABELS.RESIDENTIAL_COMPOUND.en, icon: '🏘️' },
+  { type: 'OFFICE_BUILDING', label: ADDRESS_TYPE_LABELS.OFFICE_BUILDING.en, icon: '🏛️' },
+  { type: 'OTHER', label: ADDRESS_TYPE_LABELS.OTHER.en, icon: '📍' },
+];
+
+const requiresMetadata = computed(() => {
+  if (!addressType.value) return false;
+  return ADDRESS_TYPE_STEP_CONFIG[addressType.value].requiresMetadata;
+});
 
 interface StepData {
   id: string;
@@ -46,12 +67,16 @@ async function loadGuidanceSet() {
     ]);
     
     if (!guidanceSet) {
-      error.value = 'Guidance set not found';
+      error.value = 'Address set not found';
       return;
     }
     
     title.value = guidanceSet.title;
     status.value = guidanceSet.status;
+    addressType.value = guidanceSet.addressType || null;
+    buildingNumber.value = guidanceSet.buildingNumber || '';
+    floorNumber.value = guidanceSet.floorNumber || '';
+    doorNumber.value = guidanceSet.doorNumber || '';
     originalSteps.value = guidanceSteps;
     
     steps.value = guidanceSteps.map(step => ({
@@ -63,8 +88,8 @@ async function loadGuidanceSet() {
       overlays: step.overlays || [],
     }));
   } catch (err) {
-    console.error('Failed to load guidance set:', err);
-    error.value = 'Failed to load guidance set. Please try again.';
+    console.error('Failed to load address set:', err);
+    error.value = 'Failed to load address set. Please try again.';
   } finally {
     loading.value = false;
   }
@@ -75,6 +100,7 @@ onMounted(() => {
 });
 
 const stepCount = computed(() => steps.value.length);
+const displayTitle = computed(() => title.value || 'Untitled Address');
 
 const statusConfig: Record<GuidanceStatus, { bg: string; dot: string; text: string; label: string }> = {
   PUBLISHED: { bg: '#f0fdf4', dot: '#00c950', text: '#008236', label: 'Published' },
@@ -83,12 +109,76 @@ const statusConfig: Record<GuidanceStatus, { bg: string; dot: string; text: stri
 };
 
 function handleBack() {
+  if (currentFormStep.value === 'addressType') {
+    currentFormStep.value = 'title';
+  } else if (currentFormStep.value === 'metadata') {
+    currentFormStep.value = 'addressType';
+  } else if (currentFormStep.value === 'steps') {
+    if (requiresMetadata.value) {
+      currentFormStep.value = 'metadata';
+    } else {
+      currentFormStep.value = 'addressType';
+    }
+  } else {
+    router.push('/dashboard');
+  }
+}
+
+function handleGoToDashboard() {
   router.push('/dashboard');
+}
+
+function handleContinueFromTitle() {
+  if (!title.value.trim()) {
+    error.value = 'Title is required';
+    return;
+  }
+  error.value = null;
+  currentFormStep.value = 'addressType';
+}
+
+function handleSelectAddressType(type: AddressType) {
+  addressType.value = type;
+  error.value = null;
+}
+
+function handleContinueFromAddressType() {
+  if (!addressType.value) {
+    error.value = 'Please select an address type';
+    return;
+  }
+  
+  error.value = null;
+  
+  if (ADDRESS_TYPE_STEP_CONFIG[addressType.value].requiresMetadata) {
+    currentFormStep.value = 'metadata';
+  } else {
+    buildingNumber.value = '';
+    floorNumber.value = '';
+    doorNumber.value = '';
+    currentFormStep.value = 'steps';
+  }
+}
+
+function handleContinueFromMetadata() {
+  if (requiresMetadata.value) {
+    if (!buildingNumber.value.trim() || !floorNumber.value.trim() || !doorNumber.value.trim()) {
+      error.value = 'Please fill in all required fields';
+      return;
+    }
+  }
+  error.value = null;
+  currentFormStep.value = 'steps';
 }
 
 async function handleSaveDraft() {
   if (!title.value.trim()) {
     error.value = 'Title is required';
+    return;
+  }
+  
+  if (!addressType.value) {
+    error.value = 'Address type is required';
     return;
   }
   
@@ -98,6 +188,12 @@ async function handleSaveDraft() {
   try {
     await updateGuidanceSet(guidanceSetId, {
       title: title.value.trim(),
+      addressType: addressType.value,
+      ...(requiresMetadata.value && {
+        buildingNumber: buildingNumber.value.trim(),
+        floorNumber: floorNumber.value.trim(),
+        doorNumber: doorNumber.value.trim(),
+      }),
     });
     
     const currentStepIds = steps.value.map(s => s.id);
@@ -115,7 +211,12 @@ function handlePreviewAndPublish() {
 }
 
 function handleAddStep() {
-  router.push(`/guidance/${guidanceSetId}/steps?stepIndex=${steps.value.length}`);
+  const params = new URLSearchParams();
+  params.set('stepIndex', String(steps.value.length));
+  if (addressType.value) {
+    params.set('addressType', addressType.value);
+  }
+  router.push(`/guidance/${guidanceSetId}/steps?${params.toString()}`);
 }
 
 async function handleMoveUp(index: number) {
@@ -153,7 +254,12 @@ async function handleMoveDown(index: number) {
 }
 
 function handleEditStep(stepId: string) {
-  router.push(`/guidance/${guidanceSetId}/steps?edit=${stepId}`);
+  const params = new URLSearchParams();
+  params.set('edit', stepId);
+  if (addressType.value) {
+    params.set('addressType', addressType.value);
+  }
+  router.push(`/guidance/${guidanceSetId}/steps?${params.toString()}`);
 }
 
 async function handleDeleteStep(index: number) {
@@ -192,15 +298,23 @@ async function handleDeleteGuidance() {
 <template>
   <div class="edit-page">
     <header class="edit-header">
-      <button class="edit-header__back" @click="handleBack" aria-label="Go back">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
+      <div class="edit-header__nav">
+        <button class="edit-header__back" @click="handleBack" aria-label="Go back" title="Back">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button class="edit-header__dashboard" @click="handleGoToDashboard" aria-label="Go to dashboard" title="Dashboard">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M9 22V12H15V22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
       
       <div class="edit-header__info">
-        <span class="edit-header__label">Edit Guidance</span>
-        <span class="edit-header__title">{{ title || 'Untitled Guidance' }}</span>
+        <span class="edit-header__label">Edit Address</span>
+        <span class="edit-header__title">{{ displayTitle }}</span>
       </div>
       
       <span 
@@ -219,11 +333,12 @@ async function handleDeleteGuidance() {
       </span>
       
       <button 
+        v-if="currentFormStep === 'steps'"
         class="edit-header__save-btn" 
         @click="handleSaveDraft"
         :disabled="saving || loading"
       >
-        {{ saving ? 'Saving...' : 'Save Draft' }}
+        {{ saving ? 'Saving...' : 'Save' }}
       </button>
     </header>
     
@@ -239,7 +354,7 @@ async function handleDeleteGuidance() {
           <button class="error-state__retry" @click="loadGuidanceSet">
             Try Again
           </button>
-          <button class="error-state__back" @click="handleBack">
+          <button class="error-state__back" @click="() => router.push('/dashboard')">
             Back to Dashboard
           </button>
         </div>
@@ -263,10 +378,64 @@ async function handleDeleteGuidance() {
             Avoid uploading faces, license plates, or private documents.
           </p>
         </div>
+
+        <!-- Progress indicator -->
+        <div class="progress-steps">
+          <div 
+            class="progress-step" 
+            :class="{ 
+              'progress-step--active': currentFormStep === 'title', 
+              'progress-step--completed': currentFormStep !== 'title',
+              'progress-step--clickable': currentFormStep !== 'title'
+            }"
+            @click="currentFormStep !== 'title' && (currentFormStep = 'title')"
+          >
+            <span class="progress-step__number">1</span>
+            <span class="progress-step__label">Title</span>
+          </div>
+          <div class="progress-step__line" :class="{ 'progress-step__line--completed': currentFormStep !== 'title' }" />
+          <div 
+            class="progress-step" 
+            :class="{ 
+              'progress-step--active': currentFormStep === 'addressType', 
+              'progress-step--completed': currentFormStep === 'metadata' || currentFormStep === 'steps',
+              'progress-step--clickable': currentFormStep === 'metadata' || currentFormStep === 'steps'
+            }"
+            @click="(currentFormStep === 'metadata' || currentFormStep === 'steps') && (currentFormStep = 'addressType')"
+          >
+            <span class="progress-step__number">2</span>
+            <span class="progress-step__label">Type</span>
+          </div>
+          <template v-if="requiresMetadata">
+            <div class="progress-step__line" :class="{ 'progress-step__line--completed': currentFormStep === 'metadata' || currentFormStep === 'steps' }" />
+            <div 
+              class="progress-step" 
+              :class="{ 
+                'progress-step--active': currentFormStep === 'metadata',
+                'progress-step--completed': currentFormStep === 'steps',
+                'progress-step--clickable': currentFormStep === 'steps'
+              }"
+              @click="currentFormStep === 'steps' && (currentFormStep = 'metadata')"
+            >
+              <span class="progress-step__number">3</span>
+              <span class="progress-step__label">Details</span>
+            </div>
+          </template>
+          <div class="progress-step__line" :class="{ 'progress-step__line--completed': currentFormStep === 'steps' }" />
+          <div 
+            class="progress-step" 
+            :class="{ 'progress-step--active': currentFormStep === 'steps' }"
+          >
+            <span class="progress-step__number">{{ requiresMetadata ? '4' : '3' }}</span>
+            <span class="progress-step__label">Steps</span>
+          </div>
+        </div>
         
-        <div class="form-section">
+        <!-- Step 1: Title -->
+        <div v-if="currentFormStep === 'title'" class="form-section">
+          <h2 class="section-title">Address Details</h2>
           <div class="form-field">
-            <label class="form-label">Guidance Title</label>
+            <label class="form-label">Address Title <span class="required-star">*</span></label>
             <input 
               v-model="title"
               type="text"
@@ -287,11 +456,106 @@ async function handleDeleteGuidance() {
               :disabled="saving"
             />
           </div>
+          
+          <button 
+            class="continue-btn" 
+            @click="handleContinueFromTitle"
+            :disabled="saving"
+          >
+            Continue
+          </button>
         </div>
         
-        <div class="divider" />
+        <!-- Step 2: Address Type -->
+        <div v-else-if="currentFormStep === 'addressType'" class="form-section">
+          <h2 class="section-title">Address Type</h2>
+          <p class="section-subtitle">What type of address is this?</p>
+          
+          <div class="address-type-grid">
+            <button
+              v-for="option in addressTypeOptions"
+              :key="option.type"
+              class="address-type-card"
+              :class="{ 'address-type-card--selected': addressType === option.type }"
+              @click="handleSelectAddressType(option.type)"
+              :disabled="saving"
+            >
+              <span class="address-type-card__icon">{{ option.icon }}</span>
+              <span class="address-type-card__label">{{ option.label }}</span>
+            </button>
+          </div>
+          
+          <button 
+            class="continue-btn" 
+            @click="handleContinueFromAddressType"
+            :disabled="saving || !addressType"
+          >
+            Continue
+          </button>
+        </div>
         
-        <div class="steps-section">
+        <!-- Step 3: Metadata (for Apartment/Office) -->
+        <div v-else-if="currentFormStep === 'metadata'" class="form-section">
+          <h2 class="section-title">Building Details</h2>
+          <p class="section-subtitle">These details help couriers find you faster</p>
+          
+          <div class="form-field">
+            <label class="form-label">Building Number <span class="required-star">*</span></label>
+            <input 
+              v-model="buildingNumber"
+              type="text"
+              class="form-input"
+              placeholder="e.g. Building 5, Tower A"
+              :disabled="saving"
+            />
+          </div>
+          
+          <div class="form-field">
+            <label class="form-label">Floor Number <span class="required-star">*</span></label>
+            <input 
+              v-model="floorNumber"
+              type="text"
+              class="form-input"
+              placeholder="e.g. 12, Ground Floor, Basement 1"
+              :disabled="saving"
+            />
+          </div>
+          
+          <div class="form-field">
+            <label class="form-label">Door / Unit Number <span class="required-star">*</span></label>
+            <input 
+              v-model="doorNumber"
+              type="text"
+              class="form-input"
+              placeholder="e.g. Apartment 1205, Unit 3B"
+              :disabled="saving"
+            />
+          </div>
+          
+          <button 
+            class="continue-btn" 
+            @click="handleContinueFromMetadata"
+            :disabled="saving"
+          >
+            Continue to Steps
+          </button>
+        </div>
+        
+        <!-- Step 4: Steps -->
+        <div v-else-if="currentFormStep === 'steps'" class="steps-section">
+          <!-- Address Type Summary -->
+          <div v-if="addressType" class="address-summary">
+            <div class="address-summary__type">
+              <span class="address-summary__icon">{{ addressTypeOptions.find(o => o.type === addressType)?.icon }}</span>
+              <span class="address-summary__label">{{ addressTypeOptions.find(o => o.type === addressType)?.label }}</span>
+            </div>
+            <div v-if="buildingNumber || floorNumber || doorNumber" class="address-summary__details">
+              <span v-if="buildingNumber" class="address-summary__detail">Bldg: {{ buildingNumber }}</span>
+              <span v-if="floorNumber" class="address-summary__detail">Floor: {{ floorNumber }}</span>
+              <span v-if="doorNumber" class="address-summary__detail">Unit: {{ doorNumber }}</span>
+            </div>
+          </div>
+          
           <div class="steps-header">
             <h2 class="steps-title">Steps</h2>
             <span class="steps-count">{{ stepCount }}</span>
@@ -332,22 +596,22 @@ async function handleDeleteGuidance() {
             </svg>
             Add Step
           </button>
-        </div>
-        
-        <div class="divider" />
-        
-        <div class="danger-zone">
-          <button class="delete-btn" @click="handleDeleteGuidance" :disabled="saving">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 6H5H21M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Delete Guidance
-          </button>
+          
+          <div class="divider" />
+          
+          <div class="danger-zone">
+            <button class="delete-btn" @click="handleDeleteGuidance" :disabled="saving">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 6H5H21M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Delete Address
+            </button>
+          </div>
         </div>
       </template>
     </main>
     
-    <footer v-if="!loading && title" class="edit-footer">
+    <footer v-if="!loading && title && currentFormStep === 'steps'" class="edit-footer">
       <button 
         class="footer-btn footer-btn--secondary" 
         @click="handleSaveDraft"
@@ -387,6 +651,12 @@ async function handleDeleteGuidance() {
   z-index: 100;
 }
 
+.edit-header__nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .edit-header__back {
   display: flex;
   align-items: center;
@@ -406,11 +676,31 @@ async function handleDeleteGuidance() {
   color: var(--color-text);
 }
 
+.edit-header__dashboard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.edit-header__dashboard:hover {
+  background-color: var(--color-background);
+  color: var(--color-primary);
+}
+
 .edit-header__info {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  flex: 1;
 }
 
 .edit-header__label {
@@ -428,7 +718,6 @@ async function handleDeleteGuidance() {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 180px;
 }
 
 .edit-header__status {
@@ -450,22 +739,20 @@ async function handleDeleteGuidance() {
 }
 
 .edit-header__save-btn {
-  margin-left: auto;
   padding: 8px 16px;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background-color: var(--color-primary);
+  border: none;
   border-radius: var(--radius-lg);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
+  color: white;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
 }
 
 .edit-header__save-btn:hover:not(:disabled) {
-  background-color: var(--color-background);
-  border-color: var(--color-secondary-dark);
+  background-color: var(--color-primary-dark);
 }
 
 .edit-header__save-btn:disabled {
@@ -604,10 +891,95 @@ async function handleDeleteGuidance() {
   line-height: 1.6;
 }
 
+/* Progress Steps */
+.progress-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.progress-step--clickable {
+  cursor: pointer;
+}
+
+.progress-step__number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--color-border-light);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  transition: all 0.2s ease;
+}
+
+.progress-step--active .progress-step__number {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.progress-step--completed .progress-step__number {
+  background-color: var(--color-success);
+  color: white;
+}
+
+.progress-step--clickable:hover .progress-step__number {
+  transform: scale(1.1);
+}
+
+.progress-step__label {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.progress-step--active .progress-step__label {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.progress-step__line {
+  width: 32px;
+  height: 2px;
+  background-color: var(--color-border-light);
+  margin-bottom: 18px;
+  transition: background-color 0.2s ease;
+}
+
+.progress-step__line--completed {
+  background-color: var(--color-success);
+}
+
 .form-section {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.section-title {
+  margin: 0 0 4px 0;
+  font-size: 20px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.section-subtitle {
+  margin: 0 0 12px 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
 }
 
 .form-field {
@@ -626,6 +998,10 @@ async function handleDeleteGuidance() {
 
 .form-label--optional {
   color: var(--color-text-muted);
+}
+
+.required-star {
+  color: #dc2626;
 }
 
 .form-input {
@@ -651,6 +1027,115 @@ async function handleDeleteGuidance() {
 .form-input:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.continue-btn {
+  margin-top: 12px;
+  padding: 14px 24px;
+  background-color: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.continue-btn:hover:not(:disabled) {
+  background-color: var(--color-primary-dark);
+}
+
+.continue-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Address Type Grid */
+.address-type-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.address-type-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px 16px;
+  background-color: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.address-type-card:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-bg);
+}
+
+.address-type-card--selected {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-bg);
+}
+
+.address-type-card:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.address-type-card__icon {
+  font-size: 28px;
+}
+
+.address-type-card__label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  text-align: center;
+}
+
+/* Address Summary */
+.address-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px;
+  background-color: var(--color-primary-bg);
+  border: 1px solid var(--color-primary-light);
+  border-radius: var(--radius-lg);
+  margin-bottom: 16px;
+}
+
+.address-summary__type {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.address-summary__icon {
+  font-size: 18px;
+}
+
+.address-summary__label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+}
+
+.address-summary__details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.address-summary__detail {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
 }
 
 .divider {

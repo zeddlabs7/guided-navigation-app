@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import type { StepType } from '@guidenav/types';
+import type { AddressType } from '@guidenav/types';
+import { 
+  ADDRESS_TYPE_LABELS, 
+  ADDRESS_TYPE_STEP_CONFIG,
+} from '@guidenav/types';
 import { createGuidanceSet } from '@guidenav/services';
 import { validateGuidanceTitle } from '@guidenav/core';
 import { useAuth } from '../composables/useAuth';
@@ -9,30 +13,159 @@ import { useAuth } from '../composables/useAuth';
 const router = useRouter();
 const { userId } = useAuth();
 
+type FormStep = 'title' | 'addressType' | 'metadata' | 'steps';
+
+const currentFormStep = ref<FormStep>('title');
 const title = ref('');
 const titleArabic = ref('');
+const addressType = ref<AddressType | null>(null);
+const buildingNumber = ref('');
+const floorNumber = ref('');
+const doorNumber = ref('');
 const loading = ref(false);
 const error = ref<string | null>(null);
-const showStepTypeSelector = ref(false);
-
-interface StepTypeOption {
-  type: StepType;
-  label: string;
-}
-
-const stepTypeOptions: StepTypeOption[] = [
-  { type: 'APPROACH', label: 'Parking' },
-  { type: 'GATE_ENTRY', label: 'Gate Entry' },
-  { type: 'PIN_CHECK', label: 'PIN Check' },
-  { type: 'ELEVATOR', label: 'Elevator' },
-  { type: 'DOOR_ENTRY', label: 'Door Entry' },
-];
 
 const stepCount = ref(0);
 const displayTitle = computed(() => title.value || 'Untitled Address');
 
+const fieldErrors = ref<Record<string, string>>({});
+const touchedFields = ref<Set<string>>(new Set());
+
+function validateField(field: string): boolean {
+  switch (field) {
+    case 'title':
+      const validation = validateGuidanceTitle(title.value);
+      if (!validation.valid) {
+        fieldErrors.value.title = validation.error || 'Title is required';
+        return false;
+      }
+      delete fieldErrors.value.title;
+      return true;
+    case 'buildingNumber':
+      if (requiresMetadata.value && !buildingNumber.value.trim()) {
+        fieldErrors.value.buildingNumber = 'Building number is required';
+        return false;
+      }
+      delete fieldErrors.value.buildingNumber;
+      return true;
+    case 'floorNumber':
+      if (requiresMetadata.value && !floorNumber.value.trim()) {
+        fieldErrors.value.floorNumber = 'Floor number is required';
+        return false;
+      }
+      delete fieldErrors.value.floorNumber;
+      return true;
+    case 'doorNumber':
+      if (requiresMetadata.value && !doorNumber.value.trim()) {
+        fieldErrors.value.doorNumber = 'Door/Unit number is required';
+        return false;
+      }
+      delete fieldErrors.value.doorNumber;
+      return true;
+    default:
+      return true;
+  }
+}
+
+function handleFieldBlur(field: string) {
+  touchedFields.value.add(field);
+  validateField(field);
+}
+
+const addressTypeOptions: { type: AddressType; label: string; icon: string }[] = [
+  { type: 'APARTMENT_BUILDING', label: ADDRESS_TYPE_LABELS.APARTMENT_BUILDING.en, icon: '🏢' },
+  { type: 'VILLA', label: ADDRESS_TYPE_LABELS.VILLA.en, icon: '🏠' },
+  { type: 'RESIDENTIAL_COMPOUND', label: ADDRESS_TYPE_LABELS.RESIDENTIAL_COMPOUND.en, icon: '🏘️' },
+  { type: 'OFFICE_BUILDING', label: ADDRESS_TYPE_LABELS.OFFICE_BUILDING.en, icon: '🏛️' },
+  { type: 'OTHER', label: ADDRESS_TYPE_LABELS.OTHER.en, icon: '📍' },
+];
+
+const requiresMetadata = computed(() => {
+  if (!addressType.value) return false;
+  return ADDRESS_TYPE_STEP_CONFIG[addressType.value].requiresMetadata;
+});
+
+const canProceedFromTitle = computed(() => {
+  const validation = validateGuidanceTitle(title.value);
+  return validation.valid;
+});
+
+const canProceedFromMetadata = computed(() => {
+  if (!requiresMetadata.value) return true;
+  return buildingNumber.value.trim() !== '' && 
+         floorNumber.value.trim() !== '' && 
+         doorNumber.value.trim() !== '';
+});
+
+const formStepTitle = computed(() => {
+  switch (currentFormStep.value) {
+    case 'title': return 'Address Details';
+    case 'addressType': return 'Address Type';
+    case 'metadata': return 'Building Details';
+    case 'steps': return 'Steps';
+    default: return 'New Address';
+  }
+});
+
 function handleBack() {
+  if (currentFormStep.value === 'addressType') {
+    currentFormStep.value = 'title';
+  } else if (currentFormStep.value === 'metadata') {
+    currentFormStep.value = 'addressType';
+  } else if (currentFormStep.value === 'steps') {
+    currentFormStep.value = requiresMetadata.value ? 'metadata' : 'addressType';
+  } else {
+    router.push('/dashboard');
+  }
+}
+
+function handleGoToDashboard() {
   router.push('/dashboard');
+}
+
+function handleContinueFromTitle() {
+  touchedFields.value.add('title');
+  if (!validateField('title')) {
+    return;
+  }
+  error.value = null;
+  currentFormStep.value = 'addressType';
+}
+
+function handleSelectAddressType(type: AddressType) {
+  addressType.value = type;
+  error.value = null;
+}
+
+function handleContinueFromAddressType() {
+  if (!addressType.value) {
+    error.value = 'Please select an address type';
+    return;
+  }
+  
+  error.value = null;
+  
+  if (ADDRESS_TYPE_STEP_CONFIG[addressType.value].requiresMetadata) {
+    currentFormStep.value = 'metadata';
+  } else {
+    currentFormStep.value = 'steps';
+  }
+}
+
+function handleContinueFromMetadata() {
+  touchedFields.value.add('buildingNumber');
+  touchedFields.value.add('floorNumber');
+  touchedFields.value.add('doorNumber');
+  
+  const buildingValid = validateField('buildingNumber');
+  const floorValid = validateField('floorNumber');
+  const doorValid = validateField('doorNumber');
+  
+  if (!buildingValid || !floorValid || !doorValid) {
+    return;
+  }
+  error.value = null;
+  currentFormStep.value = 'steps';
 }
 
 async function handleSaveDraft() {
@@ -41,9 +174,19 @@ async function handleSaveDraft() {
     return;
   }
   
+  if (!addressType.value) {
+    error.value = 'Please select an address type';
+    return;
+  }
+  
   const validation = validateGuidanceTitle(title.value);
   if (!validation.valid) {
     error.value = validation.error || 'Please enter a valid title';
+    return;
+  }
+  
+  if (requiresMetadata.value && !canProceedFromMetadata.value) {
+    error.value = 'Please fill in building details';
     return;
   }
   
@@ -57,6 +200,12 @@ async function handleSaveDraft() {
       languageOriginal: 'en',
       availabilityMode: 'ANYTIME_TODAY',
       destinationCoordinates: null,
+      addressType: addressType.value,
+      ...(requiresMetadata.value && {
+        buildingNumber: buildingNumber.value.trim(),
+        floorNumber: floorNumber.value.trim(),
+        doorNumber: doorNumber.value.trim(),
+      }),
     });
     
     router.push(`/guidance/${guidanceSetId}/edit`);
@@ -74,12 +223,22 @@ async function handlePreviewAndPublish() {
     return;
   }
   
+  if (!addressType.value) {
+    error.value = 'Please select an address type';
+    return;
+  }
+  
   const validation = validateGuidanceTitle(title.value);
   if (!validation.valid) {
     error.value = validation.error || 'Please enter a valid title';
     return;
   }
   
+  if (requiresMetadata.value && !canProceedFromMetadata.value) {
+    error.value = 'Please fill in building details';
+    return;
+  }
+  
   loading.value = true;
   error.value = null;
   
@@ -90,41 +249,47 @@ async function handlePreviewAndPublish() {
       languageOriginal: 'en',
       availabilityMode: 'ANYTIME_TODAY',
       destinationCoordinates: null,
+      addressType: addressType.value,
+      ...(requiresMetadata.value && {
+        buildingNumber: buildingNumber.value.trim(),
+        floorNumber: floorNumber.value.trim(),
+        doorNumber: doorNumber.value.trim(),
+      }),
     });
     
     router.push(`/guidance/${guidanceSetId}/preview`);
   } catch (err) {
-    console.error('Failed to create guidance set:', err);
+    console.error('Failed to create address set:', err);
     error.value = 'Failed to save. Please try again.';
   } finally {
     loading.value = false;
   }
 }
 
-function handleAddStep() {
-  showStepTypeSelector.value = true;
-}
-
-function handleCloseStepSelector() {
-  showStepTypeSelector.value = false;
-}
-
-async function handleSelectStepType(stepType: StepType) {
+async function handleAddStep() {
   if (!userId.value) {
     error.value = 'Not authenticated';
+    return;
+  }
+  
+  if (!addressType.value) {
+    error.value = 'Please select an address type first';
     return;
   }
   
   const validation = validateGuidanceTitle(title.value);
   if (!validation.valid) {
     error.value = validation.error || 'Please enter a title first';
-    showStepTypeSelector.value = false;
+    return;
+  }
+  
+  if (requiresMetadata.value && !canProceedFromMetadata.value) {
+    error.value = 'Please fill in building details first';
     return;
   }
   
   loading.value = true;
   error.value = null;
-  showStepTypeSelector.value = false;
   
   try {
     const guidanceSetId = await createGuidanceSet(userId.value, {
@@ -133,11 +298,17 @@ async function handleSelectStepType(stepType: StepType) {
       languageOriginal: 'en',
       availabilityMode: 'ANYTIME_TODAY',
       destinationCoordinates: null,
+      addressType: addressType.value,
+      ...(requiresMetadata.value && {
+        buildingNumber: buildingNumber.value.trim(),
+        floorNumber: floorNumber.value.trim(),
+        doorNumber: doorNumber.value.trim(),
+      }),
     });
     
-    router.push(`/guidance/${guidanceSetId}/steps?type=${stepType}`);
+    router.push(`/guidance/${guidanceSetId}/steps?stepIndex=0&addressType=${addressType.value}`);
   } catch (err) {
-    console.error('Failed to create guidance set:', err);
+    console.error('Failed to create address set:', err);
     error.value = 'Failed to save. Please try again.';
   } finally {
     loading.value = false;
@@ -148,11 +319,19 @@ async function handleSelectStepType(stepType: StepType) {
 <template>
   <div class="create-page">
     <header class="create-header">
-      <button class="create-header__back" @click="handleBack" aria-label="Go back">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
+      <div class="create-header__nav">
+        <button class="create-header__back" @click="handleBack" aria-label="Go back" title="Back">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button class="create-header__dashboard" @click="handleGoToDashboard" aria-label="Go to dashboard" title="Dashboard">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M9 22V12H15V22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
       
       <div class="create-header__info">
         <span class="create-header__label">New Address</span>
@@ -160,6 +339,7 @@ async function handleSelectStepType(stepType: StepType) {
       </div>
       
       <button 
+        v-if="currentFormStep === 'steps'"
         class="create-header__save-btn" 
         @click="handleSaveDraft"
         :disabled="loading"
@@ -186,17 +366,49 @@ async function handleSelectStepType(stepType: StepType) {
           Avoid uploading faces, license plates, or private documents.
         </p>
       </div>
+
+      <!-- Progress indicator -->
+      <div class="progress-steps">
+        <div class="progress-step" :class="{ 'progress-step--active': currentFormStep === 'title', 'progress-step--completed': currentFormStep !== 'title' }">
+          <span class="progress-step__number">1</span>
+          <span class="progress-step__label">Title</span>
+        </div>
+        <div class="progress-step__line" :class="{ 'progress-step__line--completed': currentFormStep !== 'title' }" />
+        <div class="progress-step" :class="{ 'progress-step--active': currentFormStep === 'addressType', 'progress-step--completed': currentFormStep === 'metadata' || currentFormStep === 'steps' }">
+          <span class="progress-step__number">2</span>
+          <span class="progress-step__label">Type</span>
+        </div>
+        <template v-if="requiresMetadata">
+          <div class="progress-step__line" :class="{ 'progress-step__line--completed': currentFormStep === 'metadata' || currentFormStep === 'steps' }" />
+          <div class="progress-step" :class="{ 'progress-step--active': currentFormStep === 'metadata', 'progress-step--completed': currentFormStep === 'steps' }">
+            <span class="progress-step__number">3</span>
+            <span class="progress-step__label">Details</span>
+          </div>
+        </template>
+        <div class="progress-step__line" :class="{ 'progress-step__line--completed': currentFormStep === 'steps' }" />
+        <div class="progress-step" :class="{ 'progress-step--active': currentFormStep === 'steps' }">
+          <span class="progress-step__number">{{ requiresMetadata ? '4' : '3' }}</span>
+          <span class="progress-step__label">Steps</span>
+        </div>
+      </div>
       
-      <div class="form-section">
-        <div class="form-field">
-          <label class="form-label">Guidance Title</label>
+      <!-- Step 1: Title -->
+      <div v-if="currentFormStep === 'title'" class="form-section">
+        <h2 class="section-title">{{ formStepTitle }}</h2>
+        <div class="form-field" :class="{ 'form-field--error': fieldErrors.title && touchedFields.has('title') }">
+          <label class="form-label">Address Title <span class="required-star">*</span></label>
           <input 
             v-model="title"
             type="text"
             class="form-input"
+            :class="{ 'form-input--error': fieldErrors.title && touchedFields.has('title') }"
             placeholder="e.g. Al Nakheel Tower – Delivery Guide"
             :disabled="loading"
+            @blur="handleFieldBlur('title')"
           />
+          <span v-if="fieldErrors.title && touchedFields.has('title')" class="field-error">
+            {{ fieldErrors.title }}
+          </span>
         </div>
         
         <div class="form-field">
@@ -210,17 +422,127 @@ async function handleSelectStepType(stepType: StepType) {
             :disabled="loading"
           />
         </div>
+        
+        <button 
+          class="continue-btn" 
+          @click="handleContinueFromTitle"
+          :disabled="loading"
+        >
+          Continue
+        </button>
       </div>
       
-      <div class="divider" />
+      <!-- Step 2: Address Type -->
+      <div v-else-if="currentFormStep === 'addressType'" class="form-section">
+        <h2 class="section-title">{{ formStepTitle }}</h2>
+        <p class="section-subtitle">What type of address is this?</p>
+        
+        <div class="address-type-grid">
+          <button
+            v-for="option in addressTypeOptions"
+            :key="option.type"
+            class="address-type-card"
+            :class="{ 'address-type-card--selected': addressType === option.type }"
+            @click="handleSelectAddressType(option.type)"
+            :disabled="loading"
+          >
+            <span class="address-type-card__icon">{{ option.icon }}</span>
+            <span class="address-type-card__label">{{ option.label }}</span>
+          </button>
+        </div>
+        
+        <button 
+          class="continue-btn" 
+          @click="handleContinueFromAddressType"
+          :disabled="loading || !addressType"
+        >
+          Continue
+        </button>
+      </div>
       
-      <div class="steps-section">
+      <!-- Step 3: Metadata (for Apartment/Office) -->
+      <div v-else-if="currentFormStep === 'metadata'" class="form-section">
+        <h2 class="section-title">{{ formStepTitle }}</h2>
+        <p class="section-subtitle">These details help couriers find you faster</p>
+        
+        <div class="form-field" :class="{ 'form-field--error': fieldErrors.buildingNumber && touchedFields.has('buildingNumber') }">
+          <label class="form-label">Building Number <span class="required-star">*</span></label>
+          <input 
+            v-model="buildingNumber"
+            type="text"
+            class="form-input"
+            :class="{ 'form-input--error': fieldErrors.buildingNumber && touchedFields.has('buildingNumber') }"
+            placeholder="e.g. Building 5, Tower A"
+            :disabled="loading"
+            @blur="handleFieldBlur('buildingNumber')"
+          />
+          <span v-if="fieldErrors.buildingNumber && touchedFields.has('buildingNumber')" class="field-error">
+            {{ fieldErrors.buildingNumber }}
+          </span>
+        </div>
+        
+        <div class="form-field" :class="{ 'form-field--error': fieldErrors.floorNumber && touchedFields.has('floorNumber') }">
+          <label class="form-label">Floor Number <span class="required-star">*</span></label>
+          <input 
+            v-model="floorNumber"
+            type="text"
+            class="form-input"
+            :class="{ 'form-input--error': fieldErrors.floorNumber && touchedFields.has('floorNumber') }"
+            placeholder="e.g. 12, Ground Floor, Basement 1"
+            :disabled="loading"
+            @blur="handleFieldBlur('floorNumber')"
+          />
+          <span v-if="fieldErrors.floorNumber && touchedFields.has('floorNumber')" class="field-error">
+            {{ fieldErrors.floorNumber }}
+          </span>
+        </div>
+        
+        <div class="form-field" :class="{ 'form-field--error': fieldErrors.doorNumber && touchedFields.has('doorNumber') }">
+          <label class="form-label">Door / Unit Number <span class="required-star">*</span></label>
+          <input 
+            v-model="doorNumber"
+            type="text"
+            class="form-input"
+            :class="{ 'form-input--error': fieldErrors.doorNumber && touchedFields.has('doorNumber') }"
+            placeholder="e.g. Apartment 1205, Unit 3B"
+            :disabled="loading"
+            @blur="handleFieldBlur('doorNumber')"
+          />
+          <span v-if="fieldErrors.doorNumber && touchedFields.has('doorNumber')" class="field-error">
+            {{ fieldErrors.doorNumber }}
+          </span>
+        </div>
+        
+        <button 
+          class="continue-btn" 
+          @click="handleContinueFromMetadata"
+          :disabled="loading"
+        >
+          Continue to Steps
+        </button>
+      </div>
+      
+      <!-- Step 3/4: Steps -->
+      <div v-else-if="currentFormStep === 'steps'" class="steps-section">
+        <!-- Address Summary -->
+        <div v-if="addressType" class="address-summary">
+          <div class="address-summary__type">
+            <span class="address-summary__icon">{{ addressTypeOptions.find(o => o.type === addressType)?.icon }}</span>
+            <span class="address-summary__label">{{ addressTypeOptions.find(o => o.type === addressType)?.label }}</span>
+          </div>
+          <div v-if="buildingNumber || floorNumber || doorNumber" class="address-summary__details">
+            <span v-if="buildingNumber" class="address-summary__detail">Bldg: {{ buildingNumber }}</span>
+            <span v-if="floorNumber" class="address-summary__detail">Floor: {{ floorNumber }}</span>
+            <span v-if="doorNumber" class="address-summary__detail">Unit: {{ doorNumber }}</span>
+          </div>
+        </div>
+        
         <div class="steps-header">
           <h2 class="steps-title">Steps</h2>
           <span class="steps-count">{{ stepCount }}</span>
         </div>
         
-        <div v-if="!showStepTypeSelector" class="steps-empty">
+        <div class="steps-empty">
           <div class="steps-empty__icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
@@ -228,29 +550,6 @@ async function handleSelectStepType(stepType: StepType) {
             </svg>
           </div>
           <p class="steps-empty__text">No steps added yet. Tap "Add Step" to begin.</p>
-        </div>
-        
-        <div v-else class="step-type-selector">
-          <div class="step-type-selector__header">
-            <p class="step-type-selector__prompt">Choose a step type to continue</p>
-            <button class="step-type-selector__close" @click="handleCloseStepSelector" aria-label="Close">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
-          </div>
-          
-          <div class="step-type-options">
-            <button 
-              v-for="option in stepTypeOptions"
-              :key="option.type"
-              class="step-type-option"
-              @click="handleSelectStepType(option.type)"
-              :disabled="loading"
-            >
-              {{ option.label }}
-            </button>
-          </div>
         </div>
         
         <button class="add-step-btn" @click="handleAddStep" :disabled="loading">
@@ -262,7 +561,7 @@ async function handleSelectStepType(stepType: StepType) {
       </div>
     </main>
     
-    <footer class="create-footer">
+    <footer v-if="currentFormStep === 'steps'" class="create-footer">
       <button 
         class="footer-btn footer-btn--secondary" 
         @click="handleSaveDraft"
@@ -302,6 +601,12 @@ async function handleSelectStepType(stepType: StepType) {
   z-index: 100;
 }
 
+.create-header__nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .create-header__back {
   display: flex;
   align-items: center;
@@ -319,6 +624,25 @@ async function handleSelectStepType(stepType: StepType) {
 .create-header__back:hover {
   background-color: var(--color-background);
   color: var(--color-text);
+}
+
+.create-header__dashboard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.create-header__dashboard:hover {
+  background-color: var(--color-background);
+  color: var(--color-primary);
 }
 
 .create-header__info {
@@ -442,10 +766,87 @@ async function handleSelectStepType(stepType: StepType) {
   line-height: 1.6;
 }
 
+/* Progress Steps */
+.progress-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.progress-step__number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--color-border-light);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  transition: all 0.2s ease;
+}
+
+.progress-step--active .progress-step__number {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.progress-step--completed .progress-step__number {
+  background-color: var(--color-success);
+  color: white;
+}
+
+.progress-step__label {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.progress-step--active .progress-step__label {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.progress-step__line {
+  width: 40px;
+  height: 2px;
+  background-color: var(--color-border-light);
+  margin-bottom: 18px;
+  transition: background-color 0.2s ease;
+}
+
+.progress-step__line--completed {
+  background-color: var(--color-success);
+}
+
 .form-section {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.section-title {
+  margin: 0 0 4px 0;
+  font-size: 20px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.section-subtitle {
+  margin: 0 0 12px 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
 }
 
 .form-field {
@@ -464,6 +865,20 @@ async function handleSelectStepType(stepType: StepType) {
 
 .form-label--optional {
   color: var(--color-text-muted);
+}
+
+.required-star {
+  color: #dc2626;
+}
+
+.form-field--error {
+  margin-bottom: 4px;
+}
+
+.field-error {
+  font-size: var(--font-size-xs);
+  color: #dc2626;
+  margin-top: 2px;
 }
 
 .form-input {
@@ -489,6 +904,85 @@ async function handleSelectStepType(stepType: StepType) {
 .form-input:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.form-input--error {
+  border-color: #dc2626;
+}
+
+.form-input--error:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.continue-btn {
+  margin-top: 12px;
+  padding: 14px 24px;
+  background-color: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.continue-btn:hover:not(:disabled) {
+  background-color: var(--color-primary-dark);
+}
+
+.continue-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Address Type Grid */
+.address-type-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.address-type-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px 16px;
+  background-color: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.address-type-card:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-bg);
+}
+
+.address-type-card--selected {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-bg);
+}
+
+.address-type-card:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.address-type-card__icon {
+  font-size: 28px;
+}
+
+.address-type-card__label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  text-align: center;
 }
 
 .divider {
@@ -529,6 +1023,45 @@ async function handleSelectStepType(stepType: StepType) {
   border-radius: var(--radius-full);
 }
 
+/* Address Summary */
+.address-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px;
+  background-color: var(--color-primary-bg);
+  border: 1px solid var(--color-primary-light);
+  border-radius: var(--radius-lg);
+  margin-bottom: 16px;
+}
+
+.address-summary__type {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.address-summary__icon {
+  font-size: 18px;
+}
+
+.address-summary__label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+}
+
+.address-summary__details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.address-summary__detail {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
 .steps-empty {
   display: flex;
   flex-direction: column;
@@ -554,75 +1087,6 @@ async function handleSelectStepType(stepType: StepType) {
   margin: 0;
   font-size: var(--font-size-base);
   color: var(--color-text-muted);
-}
-
-.step-type-selector {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-lg);
-  padding: 18px;
-}
-
-.step-type-selector__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.step-type-selector__prompt {
-  margin: 0;
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text);
-}
-
-.step-type-selector__close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: none;
-  border: none;
-  border-radius: var(--radius-sm);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.step-type-selector__close:hover {
-  background-color: var(--color-background);
-  color: var(--color-text);
-}
-
-.step-type-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.step-type-option {
-  padding: 8px 13px;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.step-type-option:hover:not(:disabled) {
-  background-color: var(--color-primary-bg);
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-}
-
-.step-type-option:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 .add-step-btn {
