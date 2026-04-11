@@ -13,9 +13,11 @@ import type { FilterTab } from '@guidenav/ui';
 import type { GuidanceSet, GuidanceStep, GuidanceStatus } from '@guidenav/types';
 import { useGuidanceSets, getAllStepsForGuidanceSets, deleteGuidanceSet } from '@guidenav/services';
 import { useAuth } from '../composables/useAuth';
+import { useAppI18n } from '@guidenav/i18n';
 
 const router = useRouter();
-const { userId } = useAuth();
+const { userId, logout } = useAuth();
+const { t } = useAppI18n();
 
 const searchQuery = ref('');
 const activeFilter = ref('all');
@@ -140,6 +142,11 @@ function handleLanguageToggle() {
   currentLanguage.value = currentLanguage.value === 'en' ? 'ar' : 'en';
 }
 
+async function handleLogout() {
+  await logout();
+  router.push('/login');
+}
+
 function handleEdit(id: string) {
   router.push(`/guidance/${id}/edit`);
 }
@@ -178,9 +185,11 @@ function handleMenu(id: string) {
 <template>
   <AppLayout
     :current-language="currentLanguage"
+    :logout-label="t('auth.logout')"
     @new-click="handleCreateNew"
     @language-toggle="handleLanguageToggle"
     @logo-click="handleLogoClick"
+    @logout="handleLogout"
   >
     <div class="dashboard">
       <header class="dashboard__header">

@@ -120,6 +120,17 @@ function setupShadowDOMStyling() {
         .clear-button:hover {
           color: #6b7280 !important;
         }
+        
+        /* Make the full-window autocomplete dialog background transparent */
+        .full-window-autocomplete-dialog {
+          background: transparent !important;
+          background-color: transparent !important;
+        }
+        
+        /* Also target the dialog backdrop */
+        .full-window-autocomplete-dialog::backdrop {
+          background: transparent !important;
+        }
       `;
       shadow.appendChild(style);
       return shadow;
@@ -317,6 +328,11 @@ async function initializeMap() {
               }
             }
           });
+          
+          // If we have existing location data, populate the search input
+          if (props.modelValue?.formattedAddress) {
+            input.value = props.modelValue.formattedAddress;
+          }
         }
       }
     }, 100);
@@ -525,15 +541,20 @@ function handleUseCurrentLocation() {
   );
 }
 
-watch(() => props.modelValue, (newValue) => {
+watch(() => props.modelValue, (newValue, oldValue) => {
   if (newValue && mapInstance.value) {
-    const position = { 
-      lat: newValue.coordinates.latitude, 
-      lng: newValue.coordinates.longitude 
+    const position = {
+      lat: newValue.coordinates.latitude,
+      lng: newValue.coordinates.longitude
     };
     mapInstance.value.setCenter(position);
     updateMarkerPosition(position);
     showMarker();
+    
+    // Update the search input if the address changed (e.g., when loading existing data)
+    if (newValue.formattedAddress && newValue.formattedAddress !== oldValue?.formattedAddress) {
+      updateSearchInput(newValue.formattedAddress);
+    }
   }
 }, { deep: true });
 

@@ -481,15 +481,6 @@ async function handleDeleteGuidance() {
             </svg>
           </button>
         </div>
-        
-        <div class="warning-banner">
-          <svg class="warning-banner__icon" width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 9V13M12 17H12.01M10.29 3.86L1.82 18C1.64 18.3 1.55 18.64 1.55 19C1.55 19.36 1.64 19.7 1.82 20C2 20.3 2.26 20.56 2.58 20.74C2.9 20.92 3.26 21.01 3.64 21H20.36C20.74 21.01 21.1 20.92 21.42 20.74C21.74 20.56 22 20.3 22.18 20C22.36 19.7 22.45 19.36 22.45 19C22.45 18.64 22.36 18.3 22.18 18L13.71 3.86C13.53 3.56 13.27 3.32 12.95 3.16C12.63 3 12.28 2.92 11.91 2.93C11.54 2.94 11.19 3.04 10.89 3.21C10.59 3.38 10.34 3.63 10.17 3.93L10.29 3.86Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <p class="warning-banner__text">
-            Avoid uploading faces, license plates, or private documents.
-          </p>
-        </div>
 
         <!-- Progress indicator -->
         <div class="progress-steps">
@@ -1032,28 +1023,6 @@ async function handleDeleteGuidance() {
 
 .error-banner__dismiss:hover {
   background-color: #fee2e2;
-}
-
-.warning-banner {
-  display: flex;
-  gap: 12px;
-  padding: 13px 17px;
-  background-color: var(--color-warning-bg);
-  border: 1px solid #fef3c6;
-  border-radius: var(--radius-lg);
-  margin-bottom: 20px;
-}
-
-.warning-banner__icon {
-  flex-shrink: 0;
-  color: var(--color-warning);
-}
-
-.warning-banner__text {
-  margin: 0;
-  font-size: var(--font-size-sm);
-  color: var(--color-warning);
-  line-height: 1.6;
 }
 
 /* Progress Steps */

@@ -501,6 +501,17 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
             </button>
           </div>
           
+          <div class="privacy-banner">
+            <svg class="privacy-banner__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 22C12 22 20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M12 8V12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="12" cy="16" r="1" fill="currentColor"/>
+            </svg>
+            <p class="privacy-banner__text">
+              For privacy, avoid uploading photos with faces, license plates, or private documents.
+            </p>
+          </div>
+          
           <div v-if="imageUrl" class="photo-editor">
             <OverlayEditor
               :image-url="imageUrl"
@@ -756,6 +767,30 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.privacy-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background-color: #fefce8;
+  border: 1px solid #fef08a;
+  border-radius: var(--radius-lg);
+  margin-bottom: 12px;
+}
+
+.privacy-banner__icon {
+  flex-shrink: 0;
+  color: #ca8a04;
+  margin-top: 1px;
+}
+
+.privacy-banner__text {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: #854d0e;
+  line-height: 1.5;
 }
 
 .form-label {
