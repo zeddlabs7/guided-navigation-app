@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { StepCard, GSpinner } from '@guidenav/ui';
-import type { GuidanceStatus, StepType, GuidanceStep, AddressType } from '@guidenav/types';
+import type { GuidanceStatus, StepType, GuidanceStep, AddressType, MetadataFieldConfig, UnitType } from '@guidenav/types';
 import { ADDRESS_TYPE_LABELS, ADDRESS_TYPE_STEP_CONFIG } from '@guidenav/types';
 import { 
   getGuidanceSet, 
@@ -24,12 +24,25 @@ const title = ref('');
 const titleArabic = ref('');
 const status = ref<GuidanceStatus>('DRAFT');
 const addressType = ref<AddressType | null>(null);
-const buildingNumber = ref('');
-const floorNumber = ref('');
-const doorNumber = ref('');
+
+const metadataValues = ref<Record<string, string>>({
+  buildingNumber: '',
+  floorNumber: '',
+  doorNumber: '',
+  compoundName: '',
+  gateNumber: '',
+  unitType: '',
+  villaNumber: '',
+  apartmentNumber: '',
+  locationDescription: '',
+});
+
 const loading = ref(true);
 const saving = ref(false);
 const error = ref<string | null>(null);
+
+const fieldErrors = ref<Record<string, string>>({});
+const touchedFields = ref<Set<string>>(new Set());
 
 const addressTypeOptions: { type: AddressType; label: string; icon: string }[] = [
   { type: 'APARTMENT_BUILDING', label: ADDRESS_TYPE_LABELS.APARTMENT_BUILDING.en, icon: '🏢' },
@@ -39,10 +52,82 @@ const addressTypeOptions: { type: AddressType; label: string; icon: string }[] =
   { type: 'OTHER', label: ADDRESS_TYPE_LABELS.OTHER.en, icon: '📍' },
 ];
 
+const unitTypeOptions: { value: UnitType; label: string }[] = [
+  { value: 'villa', label: 'Villa' },
+  { value: 'apartment', label: 'Apartment' },
+];
+
 const requiresMetadata = computed(() => {
   if (!addressType.value) return false;
   return ADDRESS_TYPE_STEP_CONFIG[addressType.value].requiresMetadata;
 });
+
+const currentFieldConfigs = computed((): MetadataFieldConfig[] => {
+  if (!addressType.value) return [];
+  const config = ADDRESS_TYPE_STEP_CONFIG[addressType.value];
+  return config.metadataFieldConfigs || [];
+});
+
+const visibleFieldConfigs = computed((): MetadataFieldConfig[] => {
+  return currentFieldConfigs.value.filter(fieldConfig => {
+    if (!fieldConfig.dependsOn) return true;
+    return metadataValues.value[fieldConfig.dependsOn.field] === fieldConfig.dependsOn.value;
+  });
+});
+
+const metadataSectionTitle = computed(() => {
+  if (!addressType.value) return 'Details';
+  return ADDRESS_TYPE_STEP_CONFIG[addressType.value].sectionTitle?.en || 'Details';
+});
+
+function validateMetadataField(field: string): boolean {
+  const fieldConfig = currentFieldConfigs.value.find(f => f.field === field);
+  if (!fieldConfig) return true;
+  
+  if (fieldConfig.dependsOn) {
+    const dependentValue = metadataValues.value[fieldConfig.dependsOn.field];
+    if (dependentValue !== fieldConfig.dependsOn.value) {
+      delete fieldErrors.value[field];
+      return true;
+    }
+  }
+  
+  if (fieldConfig.required && !metadataValues.value[field]?.trim()) {
+    fieldErrors.value[field] = `${fieldConfig.label.en} is required`;
+    return false;
+  }
+  
+  delete fieldErrors.value[field];
+  return true;
+}
+
+function handleFieldBlur(field: string) {
+  touchedFields.value.add(field);
+  validateMetadataField(field);
+}
+
+function getFieldShortLabel(field: string): string {
+  const shortLabels: Record<string, string> = {
+    buildingNumber: 'Bldg',
+    floorNumber: 'Floor',
+    doorNumber: 'Unit',
+    compoundName: 'Compound',
+    gateNumber: 'Gate',
+    unitType: 'Type',
+    villaNumber: 'Villa',
+    apartmentNumber: 'Apt',
+    locationDescription: 'Location',
+  };
+  return shortLabels[field] || field;
+}
+
+function getDisplayValue(field: string): string {
+  const value = metadataValues.value[field];
+  if (field === 'unitType') {
+    return value === 'villa' ? 'Villa' : value === 'apartment' ? 'Apartment' : value;
+  }
+  return value;
+}
 
 interface StepData {
   id: string;
@@ -74,9 +159,19 @@ async function loadGuidanceSet() {
     title.value = guidanceSet.title;
     status.value = guidanceSet.status;
     addressType.value = guidanceSet.addressType || null;
-    buildingNumber.value = guidanceSet.buildingNumber || '';
-    floorNumber.value = guidanceSet.floorNumber || '';
-    doorNumber.value = guidanceSet.doorNumber || '';
+    
+    metadataValues.value = {
+      buildingNumber: guidanceSet.buildingNumber || '',
+      floorNumber: guidanceSet.floorNumber || '',
+      doorNumber: guidanceSet.doorNumber || '',
+      compoundName: guidanceSet.compoundName || '',
+      gateNumber: guidanceSet.gateNumber || '',
+      unitType: guidanceSet.unitType || '',
+      villaNumber: guidanceSet.villaNumber || '',
+      apartmentNumber: guidanceSet.apartmentNumber || '',
+      locationDescription: guidanceSet.locationDescription || '',
+    };
+    
     originalSteps.value = guidanceSteps;
     
     steps.value = guidanceSteps.map(step => ({
@@ -153,22 +248,43 @@ function handleContinueFromAddressType() {
   if (ADDRESS_TYPE_STEP_CONFIG[addressType.value].requiresMetadata) {
     currentFormStep.value = 'metadata';
   } else {
-    buildingNumber.value = '';
-    floorNumber.value = '';
-    doorNumber.value = '';
+    Object.keys(metadataValues.value).forEach(key => {
+      metadataValues.value[key] = '';
+    });
     currentFormStep.value = 'steps';
   }
 }
 
 function handleContinueFromMetadata() {
-  if (requiresMetadata.value) {
-    if (!buildingNumber.value.trim() || !floorNumber.value.trim() || !doorNumber.value.trim()) {
-      error.value = 'Please fill in all required fields';
-      return;
+  let allValid = true;
+  
+  for (const fieldConfig of visibleFieldConfigs.value) {
+    touchedFields.value.add(fieldConfig.field);
+    if (!validateMetadataField(fieldConfig.field)) {
+      allValid = false;
     }
   }
+  
+  if (!allValid) {
+    error.value = 'Please fill in all required fields';
+    return;
+  }
+  
   error.value = null;
   currentFormStep.value = 'steps';
+}
+
+function buildMetadataPayload() {
+  const payload: Record<string, string | undefined> = {};
+  
+  for (const fieldConfig of visibleFieldConfigs.value) {
+    const value = metadataValues.value[fieldConfig.field]?.trim();
+    if (value) {
+      payload[fieldConfig.field] = value;
+    }
+  }
+  
+  return payload;
 }
 
 async function handleSaveDraft() {
@@ -189,11 +305,7 @@ async function handleSaveDraft() {
     await updateGuidanceSet(guidanceSetId, {
       title: title.value.trim(),
       addressType: addressType.value,
-      ...(requiresMetadata.value && {
-        buildingNumber: buildingNumber.value.trim(),
-        floorNumber: floorNumber.value.trim(),
-        doorNumber: doorNumber.value.trim(),
-      }),
+      ...(requiresMetadata.value && buildMetadataPayload()),
     });
     
     const currentStepIds = steps.value.map(s => s.id);
@@ -494,43 +606,64 @@ async function handleDeleteGuidance() {
           </button>
         </div>
         
-        <!-- Step 3: Metadata (for Apartment/Office) -->
+        <!-- Step 3: Metadata (Dynamic based on address type) -->
         <div v-else-if="currentFormStep === 'metadata'" class="form-section">
-          <h2 class="section-title">Building Details</h2>
+          <h2 class="section-title">{{ metadataSectionTitle }}</h2>
           <p class="section-subtitle">These details help couriers find you faster</p>
           
-          <div class="form-field">
-            <label class="form-label">Building Number <span class="required-star">*</span></label>
-            <input 
-              v-model="buildingNumber"
-              type="text"
-              class="form-input"
-              placeholder="e.g. Building 5, Tower A"
-              :disabled="saving"
-            />
-          </div>
-          
-          <div class="form-field">
-            <label class="form-label">Floor Number <span class="required-star">*</span></label>
-            <input 
-              v-model="floorNumber"
-              type="text"
-              class="form-input"
-              placeholder="e.g. 12, Ground Floor, Basement 1"
-              :disabled="saving"
-            />
-          </div>
-          
-          <div class="form-field">
-            <label class="form-label">Door / Unit Number <span class="required-star">*</span></label>
-            <input 
-              v-model="doorNumber"
-              type="text"
-              class="form-input"
-              placeholder="e.g. Apartment 1205, Unit 3B"
-              :disabled="saving"
-            />
-          </div>
+          <template v-for="fieldConfig in visibleFieldConfigs" :key="fieldConfig.field">
+            <!-- Unit Type Dropdown -->
+            <div 
+              v-if="fieldConfig.field === 'unitType'" 
+              class="form-field" 
+              :class="{ 'form-field--error': fieldErrors[fieldConfig.field] && touchedFields.has(fieldConfig.field) }"
+            >
+              <label class="form-label">
+                {{ fieldConfig.label.en }}
+                <span v-if="fieldConfig.required" class="required-star">*</span>
+              </label>
+              <select
+                v-model="metadataValues[fieldConfig.field]"
+                class="form-select"
+                :class="{ 'form-select--error': fieldErrors[fieldConfig.field] && touchedFields.has(fieldConfig.field) }"
+                :disabled="saving"
+                @blur="handleFieldBlur(fieldConfig.field)"
+                @change="handleFieldBlur(fieldConfig.field)"
+              >
+                <option value="" disabled>{{ fieldConfig.placeholder.en }}</option>
+                <option v-for="option in unitTypeOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
+              <span v-if="fieldErrors[fieldConfig.field] && touchedFields.has(fieldConfig.field)" class="field-error">
+                {{ fieldErrors[fieldConfig.field] }}
+              </span>
+            </div>
+            
+            <!-- Text Input Fields -->
+            <div 
+              v-else
+              class="form-field" 
+              :class="{ 'form-field--error': fieldErrors[fieldConfig.field] && touchedFields.has(fieldConfig.field) }"
+            >
+              <label class="form-label">
+                {{ fieldConfig.label.en }}
+                <span v-if="fieldConfig.required" class="required-star">*</span>
+              </label>
+              <input 
+                v-model="metadataValues[fieldConfig.field]"
+                type="text"
+                class="form-input"
+                :class="{ 'form-input--error': fieldErrors[fieldConfig.field] && touchedFields.has(fieldConfig.field) }"
+                :placeholder="fieldConfig.placeholder.en"
+                :disabled="saving"
+                @blur="handleFieldBlur(fieldConfig.field)"
+              />
+              <span v-if="fieldErrors[fieldConfig.field] && touchedFields.has(fieldConfig.field)" class="field-error">
+                {{ fieldErrors[fieldConfig.field] }}
+              </span>
+            </div>
+          </template>
           
           <button 
             class="continue-btn" 
@@ -549,10 +682,15 @@ async function handleDeleteGuidance() {
               <span class="address-summary__icon">{{ addressTypeOptions.find(o => o.type === addressType)?.icon }}</span>
               <span class="address-summary__label">{{ addressTypeOptions.find(o => o.type === addressType)?.label }}</span>
             </div>
-            <div v-if="buildingNumber || floorNumber || doorNumber" class="address-summary__details">
-              <span v-if="buildingNumber" class="address-summary__detail">Bldg: {{ buildingNumber }}</span>
-              <span v-if="floorNumber" class="address-summary__detail">Floor: {{ floorNumber }}</span>
-              <span v-if="doorNumber" class="address-summary__detail">Unit: {{ doorNumber }}</span>
+            <div v-if="Object.values(metadataValues).some(v => v)" class="address-summary__details">
+              <template v-for="fieldConfig in visibleFieldConfigs" :key="fieldConfig.field">
+                <span 
+                  v-if="metadataValues[fieldConfig.field]" 
+                  class="address-summary__detail"
+                >
+                  {{ getFieldShortLabel(fieldConfig.field) }}: {{ getDisplayValue(fieldConfig.field) }}
+                </span>
+              </template>
             </div>
           </div>
           
@@ -563,12 +701,39 @@ async function handleDeleteGuidance() {
           
           <div v-if="steps.length === 0" class="steps-empty">
             <div class="steps-empty__icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
-                <path d="M12 8V16M8 12H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 22C12 22 20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 11V8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="12" cy="14" r="1" fill="currentColor"/>
               </svg>
             </div>
-            <p class="steps-empty__text">No steps added yet. Tap "Add Step" to begin.</p>
+            <h3 class="steps-empty__title">Add step-by-step guidance for couriers</h3>
+            <p class="steps-empty__subtitle">Help delivery couriers complete deliveries by adding:</p>
+            <ul class="steps-empty__examples">
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+                  <path d="M21 15L16 10L5 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Photos with arrows pointing to entrances</span>
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Instructions for parking or access codes</span>
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M21 10C21 17 12 23 12 23C12 23 3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.364 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <span>Markers highlighting key landmarks</span>
+              </li>
+            </ul>
           </div>
           
           <div v-else class="steps-list">
@@ -594,7 +759,7 @@ async function handleDeleteGuidance() {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Add Step
+            {{ steps.length === 0 ? 'Add First Step' : 'Add Step' }}
           </button>
           
           <div class="divider" />
@@ -1029,6 +1194,61 @@ async function handleDeleteGuidance() {
   cursor: not-allowed;
 }
 
+.form-input--error {
+  border-color: #dc2626;
+}
+
+.form-input--error:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.form-select {
+  padding: 14px 16px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  padding-right: 40px;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.form-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-select--error {
+  border-color: #dc2626;
+}
+
+.form-select--error:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.form-field--error {
+  margin-bottom: 4px;
+}
+
+.field-error {
+  font-size: var(--font-size-xs);
+  color: #dc2626;
+  margin-top: 2px;
+}
+
 .continue-btn {
   margin-top: 12px;
   padding: 14px 24px;
@@ -1181,7 +1401,7 @@ async function handleDeleteGuidance() {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 48px 32px;
+  padding: 32px 24px;
   text-align: center;
 }
 
@@ -1189,18 +1409,52 @@ async function handleDeleteGuidance() {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  background-color: var(--color-background);
-  border-radius: var(--radius-lg);
-  color: var(--color-text-muted);
+  width: 56px;
+  height: 56px;
+  background-color: var(--color-primary-bg, #eff6ff);
+  border-radius: 50%;
+  color: var(--color-primary, #155dfc);
   margin-bottom: 16px;
 }
 
-.steps-empty__text {
+.steps-empty__title {
+  margin: 0 0 8px;
+  font-size: var(--font-size-lg, 18px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-primary, #101828);
+}
+
+.steps-empty__subtitle {
+  margin: 0 0 20px;
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #6a7282);
+}
+
+.steps-empty__examples {
+  list-style: none;
   margin: 0;
-  font-size: var(--font-size-base);
-  color: var(--color-text-muted);
+  padding: 0;
+  text-align: left;
+  width: 100%;
+  max-width: 280px;
+}
+
+.steps-empty__examples li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #6a7282);
+}
+
+.steps-empty__examples li svg {
+  flex-shrink: 0;
+  color: var(--color-text-muted, #99a1af);
+}
+
+.steps-empty__examples li span {
+  line-height: 1.4;
 }
 
 .steps-list {

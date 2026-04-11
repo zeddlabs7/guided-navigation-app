@@ -17,7 +17,11 @@ export { default as MarkerOverlay } from './components/MarkerOverlay.vue';
 export { default as LabelInputModal } from './components/LabelInputModal.vue';
 export { default as StepThumbnail } from './components/StepThumbnail.vue';
 export { default as OverlayTutorial } from './components/OverlayTutorial.vue';
+export { default as StepTypeDropdown } from './components/StepTypeDropdown.vue';
+export { default as LocationPicker } from './components/LocationPicker.vue';
 
 export { useTutorialState, useIsMobile } from './composables/useTutorialState';
+
+export type { StepTypeOption } from './components/StepTypeDropdown.vue';
 
 export type { FilterTab } from './components/FilterTabs.vue';

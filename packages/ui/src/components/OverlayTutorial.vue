@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
+import type { OverlayTutorialType } from '../composables/useTutorialState';
 
 interface Props {
   visible: boolean;
+  type?: OverlayTutorialType;
 }
 
-defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  type: 'arrow',
+});
 
 const emit = defineEmits<{
   complete: [];
@@ -14,31 +18,57 @@ const emit = defineEmits<{
 
 const currentStep = ref(0);
 
-const steps = [
-  {
-    title: 'Tap to Place',
-    description: 'Tap anywhere on the image to place an arrow or marker.',
-    icon: 'tap',
-  },
+interface TutorialStep {
+  title: string;
+  description: string;
+  icon: string;
+  forTypes: OverlayTutorialType[];
+}
+
+const allSteps: TutorialStep[] = [
   {
     title: 'Drag to Move',
     description: 'Drag the overlay to reposition it on the image.',
     icon: 'drag',
+    forTypes: ['arrow', 'marker'],
   },
   {
     title: 'Resize',
-    description: 'Use the bottom handle to make the overlay larger or smaller.',
+    description: 'Use the bottom handle to make the arrow larger or smaller.',
     icon: 'resize',
+    forTypes: ['arrow'],
   },
   {
     title: 'Rotate',
-    description: 'Use the top handle to rotate arrows to point in any direction.',
+    description: 'Use the top handle to rotate the arrow to point in any direction.',
     icon: 'rotate',
+    forTypes: ['arrow'],
+  },
+  {
+    title: 'Add Label',
+    description: 'Tap the edit button in the toolbar to add a label to your marker.',
+    icon: 'label',
+    forTypes: ['marker'],
   },
 ];
 
-const totalSteps = computed(() => steps.length);
+const steps = computed(() => 
+  allSteps.filter(step => step.forTypes.includes(props.type))
+);
+
+const totalSteps = computed(() => steps.value.length);
 const isLastStep = computed(() => currentStep.value === totalSteps.value - 1);
+const currentStepData = computed(() => steps.value[currentStep.value]);
+
+watch(() => props.visible, (newVal) => {
+  if (newVal) {
+    currentStep.value = 0;
+  }
+});
+
+watch(() => props.type, () => {
+  currentStep.value = 0;
+});
 
 function handleNext() {
   if (isLastStep.value) {
@@ -64,23 +94,16 @@ function handleSkip() {
 <template>
   <Teleport to="body">
     <Transition name="tutorial-overlay">
-      <div v-if="visible" class="tutorial-overlay" @click.self="handleSkip">
+      <div v-if="visible && currentStepData" class="tutorial-overlay" @click.self="handleSkip">
         <div class="tutorial-modal">
           <button class="tutorial-skip" @click="handleSkip">
             Skip
           </button>
           
           <div class="tutorial-content">
-            <div class="tutorial-icon" :class="`tutorial-icon--${steps[currentStep].icon}`">
-              <!-- Tap icon -->
-              <svg v-if="steps[currentStep].icon === 'tap'" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M8 19V14.5M8 14.5V12C8 11.4696 8.21071 10.9609 8.58579 10.5858C8.96086 10.2107 9.46957 10 10 10C10.5304 10 11.0391 10.2107 11.4142 10.5858C11.7893 10.9609 12 11.4696 12 12V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M12 13V11C12 10.4696 12.2107 9.96086 12.5858 9.58579C12.9609 9.21071 13.4696 9 14 9C14.5304 9 15.0391 9.21071 15.4142 9.58579C15.7893 9.96086 16 10.4696 16 11V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M16 12V11C16 10.4696 16.2107 9.96086 16.5858 9.58579C16.9609 9.21071 17.4696 9 18 9C18.5304 9 19.0391 9.21071 19.4142 9.58579C19.7893 9.96086 20 10.4696 20 11V17C20 18.5913 19.3679 20.1174 18.2426 21.2426C17.1174 22.3679 15.5913 23 14 23H12C10.9494 23 9.91317 22.7643 8.96803 22.3105C8.0229 21.8568 7.19252 21.1966 6.53786 20.3786L3.13386 16.0299C2.69125 15.4649 2.51058 14.7398 2.63532 14.0339C2.76006 13.328 3.17848 12.7047 3.78786 12.3219L3.87886 12.2679C4.35003 11.9699 4.8964 11.8149 5.45256 11.8214C6.00872 11.8279 6.55137 11.9958 7.01586 12.3039L8 12.9429" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              
+            <div class="tutorial-icon" :class="`tutorial-icon--${currentStepData.icon}`">
               <!-- Drag icon -->
-              <svg v-else-if="steps[currentStep].icon === 'drag'" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg v-if="currentStepData.icon === 'drag'" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M5 9L2 12L5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M9 5L12 2L15 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M15 19L12 22L9 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -90,20 +113,26 @@ function handleSkip() {
               </svg>
               
               <!-- Resize icon -->
-              <svg v-else-if="steps[currentStep].icon === 'resize'" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg v-else-if="currentStepData.icon === 'resize'" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M21 21L15 15M21 21V15M21 21H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M3 3L9 9M3 3V9M3 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
               
               <!-- Rotate icon -->
-              <svg v-else-if="steps[currentStep].icon === 'rotate'" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg v-else-if="currentStepData.icon === 'rotate'" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M1 4V10H7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M3.51 15C4.15 16.82 5.36 18.38 6.96 19.45C8.56 20.53 10.45 21.06 12.37 20.98C14.29 20.89 16.14 20.19 17.66 18.97C19.17 17.76 20.27 16.09 20.79 14.2C21.32 12.32 21.25 10.32 20.6 8.48C19.95 6.64 18.75 5.06 17.17 3.96C15.59 2.86 13.72 2.29 11.81 2.34C9.89 2.38 8.05 3.03 6.51 4.19L1 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
+              
+              <!-- Label icon (for marker) -->
+              <svg v-else-if="currentStepData.icon === 'label'" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M18.5 2.50001C18.8978 2.10219 19.4374 1.87869 20 1.87869C20.5626 1.87869 21.1022 2.10219 21.5 2.50001C21.8978 2.89784 22.1213 3.4374 22.1213 4.00001C22.1213 4.56262 21.8978 5.10219 21.5 5.50001L12 15L8 16L9 12L18.5 2.50001Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
             </div>
             
-            <h2 class="tutorial-title">{{ steps[currentStep].title }}</h2>
-            <p class="tutorial-description">{{ steps[currentStep].description }}</p>
+            <h2 class="tutorial-title">{{ currentStepData.title }}</h2>
+            <p class="tutorial-description">{{ currentStepData.description }}</p>
           </div>
           
           <div class="tutorial-pagination">
@@ -203,6 +232,11 @@ function handleSkip() {
 .tutorial-icon--resize {
   background-color: #dcfce7;
   color: #16a34a;
+}
+
+.tutorial-icon--label {
+  background-color: #fce7f3;
+  color: #db2777;
 }
 
 .tutorial-title {

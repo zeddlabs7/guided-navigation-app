@@ -17,8 +17,21 @@ const firebaseConfig = {
   useEmulators: import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true',
 };
 
+// Debug: Log Firebase config (remove after debugging)
+console.log('🔥 Firebase Config:', {
+  apiKey: firebaseConfig.apiKey ? `${firebaseConfig.apiKey.substring(0, 10)}...` : 'MISSING',
+  authDomain: firebaseConfig.authDomain || 'MISSING',
+  projectId: firebaseConfig.projectId || 'MISSING',
+  storageBucket: firebaseConfig.storageBucket || 'MISSING',
+  messagingSenderId: firebaseConfig.messagingSenderId || 'MISSING',
+  appId: firebaseConfig.appId ? `${firebaseConfig.appId.substring(0, 20)}...` : 'MISSING',
+  useEmulators: firebaseConfig.useEmulators,
+});
+
 if (firebaseConfig.apiKey) {
   initializeFirebase(firebaseConfig);
+} else {
+  console.error('❌ Firebase API key is missing! Check your .env file.');
 }
 
 const app = createApp(App);

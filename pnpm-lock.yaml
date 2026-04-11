@@ -53,6 +53,9 @@ importers:
 
   apps/recipient-app:
     dependencies:
+      '@googlemaps/js-api-loader':
+        specifier: ^1.16.0
+        version: 1.16.10
       '@guidenav/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -163,6 +166,9 @@ importers:
 
   packages/ui:
     dependencies:
+      '@googlemaps/js-api-loader':
+        specifier: ^1.16.0
+        version: 1.16.10
       '@guidenav/types':
         specifier: workspace:*
         version: link:../types
@@ -1046,6 +1052,9 @@ packages:
   '@google-cloud/storage@7.19.0':
     resolution: {integrity: sha512-n2FjE7NAOYyshogdc7KQOl/VZb4sneqPjWouSyia9CMDdMhRX5+RIbqalNmC7LOLzuLAN89VlF2HvG8na9G+zQ==}
     engines: {node: '>=14'}
+
+  '@googlemaps/js-api-loader@1.16.10':
+    resolution: {integrity: sha512-c2erv2k7P2ilYzMmtYcMgAR21AULosQuUHJbStnrvRk2dG93k5cqptDrh9A8p+ZNlyhiqEOgHW7N9PAizdUM7Q==}
 
   '@grpc/grpc-js@1.14.3':
     resolution: {integrity: sha512-Iq8QQQ/7X3Sac15oB6p0FmUg/klxQvXLeileoqrTRGJYLV+/9tubbr9ipz0GKHjmXVsgFPo/+W+2cA8eNcR+XA==}
@@ -4428,6 +4437,8 @@ snapshots:
       - encoding
       - supports-color
     optional: true
+
+  '@googlemaps/js-api-loader@1.16.10': {}
 
   '@grpc/grpc-js@1.14.3':
     dependencies:

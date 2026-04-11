@@ -128,6 +128,7 @@ export async function createGuidanceStep(
     image: null,
     overlays: [],
     isRequired: true,
+    locationData: input.locationData ?? null,
     deletedAt: null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),

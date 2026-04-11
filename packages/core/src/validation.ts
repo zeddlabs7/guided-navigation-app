@@ -77,13 +77,21 @@ export function validateStepInstructions(instructions: string): { valid: boolean
   return { valid: true };
 }
 
+export interface AddressMetadata {
+  buildingNumber?: string;
+  floorNumber?: string;
+  doorNumber?: string;
+  compoundName?: string;
+  gateNumber?: string;
+  unitType?: 'villa' | 'apartment';
+  villaNumber?: string;
+  apartmentNumber?: string;
+  locationDescription?: string;
+}
+
 export function validateBuildingMetadata(
   addressType: AddressType,
-  metadata: {
-    buildingNumber?: string;
-    floorNumber?: string;
-    doorNumber?: string;
-  }
+  metadata: AddressMetadata
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
   const config = ADDRESS_TYPE_STEP_CONFIG[addressType];
@@ -92,18 +100,22 @@ export function validateBuildingMetadata(
     return { valid: true, errors: [] };
   }
   
-  const metadataFields = config.metadataFields || [];
+  const fieldConfigs = config.metadataFieldConfigs || [];
   
-  if (metadataFields.includes('buildingNumber') && !metadata.buildingNumber?.trim()) {
-    errors.push('Building number is required');
-  }
-  
-  if (metadataFields.includes('floorNumber') && !metadata.floorNumber?.trim()) {
-    errors.push('Floor number is required');
-  }
-  
-  if (metadataFields.includes('doorNumber') && !metadata.doorNumber?.trim()) {
-    errors.push('Door/Unit number is required');
+  for (const fieldConfig of fieldConfigs) {
+    if (!fieldConfig.required) continue;
+    
+    if (fieldConfig.dependsOn) {
+      const dependentValue = metadata[fieldConfig.dependsOn.field as keyof AddressMetadata];
+      if (dependentValue !== fieldConfig.dependsOn.value) {
+        continue;
+      }
+    }
+    
+    const value = metadata[fieldConfig.field as keyof AddressMetadata];
+    if (!value || (typeof value === 'string' && !value.trim())) {
+      errors.push(`${fieldConfig.label.en} is required`);
+    }
   }
   
   return { valid: errors.length === 0, errors };

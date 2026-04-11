@@ -14,7 +14,7 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         dontCacheBustURLsMatching: /\.[a-f0-9]{8}\./,
         sourcemap: false,
-        mode: 'production',
+        mode: 'development',
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*/i,

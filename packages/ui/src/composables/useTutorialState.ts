@@ -1,7 +1,10 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 
-export function useTutorialState(userId: string) {
-  const STORAGE_KEY = `overlay-tutorial-seen:${userId}`;
+export type OverlayTutorialType = 'arrow' | 'marker';
+
+export function useTutorialState(userId: string, overlayType?: OverlayTutorialType) {
+  const suffix = overlayType ? `-${overlayType}` : '';
+  const STORAGE_KEY = `overlay-tutorial-seen${suffix}:${userId}`;
   
   const hasSeenTutorial = ref(false);
   
@@ -20,6 +23,48 @@ export function useTutorialState(userId: string) {
   }
   
   return { hasSeenTutorial, markTutorialSeen, resetTutorial };
+}
+
+export function useOverlayTutorials(userId: string) {
+  const ARROW_KEY = `overlay-tutorial-seen-arrow:${userId}`;
+  const MARKER_KEY = `overlay-tutorial-seen-marker:${userId}`;
+  
+  const hasSeenArrowTutorial = ref(false);
+  const hasSeenMarkerTutorial = ref(false);
+  
+  onMounted(() => {
+    hasSeenArrowTutorial.value = localStorage.getItem(ARROW_KEY) === 'true';
+    hasSeenMarkerTutorial.value = localStorage.getItem(MARKER_KEY) === 'true';
+  });
+  
+  function markArrowTutorialSeen() {
+    localStorage.setItem(ARROW_KEY, 'true');
+    hasSeenArrowTutorial.value = true;
+  }
+  
+  function markMarkerTutorialSeen() {
+    localStorage.setItem(MARKER_KEY, 'true');
+    hasSeenMarkerTutorial.value = true;
+  }
+  
+  function resetArrowTutorial() {
+    localStorage.removeItem(ARROW_KEY);
+    hasSeenArrowTutorial.value = false;
+  }
+  
+  function resetMarkerTutorial() {
+    localStorage.removeItem(MARKER_KEY);
+    hasSeenMarkerTutorial.value = false;
+  }
+  
+  return {
+    hasSeenArrowTutorial,
+    hasSeenMarkerTutorial,
+    markArrowTutorialSeen,
+    markMarkerTutorialSeen,
+    resetArrowTutorial,
+    resetMarkerTutorial,
+  };
 }
 
 export function useIsMobile() {

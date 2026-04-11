@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import type { StepType, Overlay, GuidanceStep, StepImage, AddressType } from '@guidenav/types';
+import type { StepType, Overlay, GuidanceStep, StepImage, AddressType, LocationData } from '@guidenav/types';
 import { 
   STEP_TYPE_LABELS,
+  STEP_TYPE_DEFAULT_INSTRUCTIONS,
   getStepTypesForAddressType,
 } from '@guidenav/types';
-import { OverlayEditor, GSpinner } from '@guidenav/ui';
+import { OverlayEditor, GSpinner, StepTypeDropdown, LocationPicker } from '@guidenav/ui';
+import type { StepTypeOption } from '@guidenav/ui';
+import { isGoogleMapsConfigured } from '../utils/maps';
 import { 
   createGuidanceStep, 
   updateGuidanceStep, 
@@ -29,13 +32,6 @@ const stepIndexParam = route.query.stepIndex as string | undefined;
 const addressTypeParam = route.query.addressType as AddressType | undefined;
 
 const addressType = ref<AddressType | null>(addressTypeParam || null);
-
-interface StepTypeOption {
-  type: StepType;
-  label: string;
-  orderHint: string;
-  orderIndex: number;
-}
 
 const stepTypeOptions = computed<StepTypeOption[]>(() => {
   if (!addressType.value) {
@@ -73,27 +69,26 @@ const suggestedStepType = computed<StepTypeOption | null>(() => {
   return stepTypeOptions.value[stepIndex] || stepTypeOptions.value[0];
 });
 
-const defaultStepType = computed<StepType>(() => {
+const defaultStepType = computed((): StepType => {
   if (route.query.type) {
     return route.query.type as StepType;
   }
   if (suggestedStepType.value) {
-    return suggestedStepType.value.type;
+    return suggestedStepType.value.type as StepType;
   }
   if (stepTypeOptions.value.length > 0) {
-    return stepTypeOptions.value[0].type;
+    return stepTypeOptions.value[0].type as StepType;
   }
-  return 'LOCATION_CHECK';
+  return 'LOCATION_CHECK' as StepType;
 });
 
 const selectedStepType = ref<StepType>(defaultStepType.value);
-const stepTitle = ref('');
-const stepTitleArabic = ref('');
-const instructions = ref('');
+const instructions = ref(STEP_TYPE_DEFAULT_INSTRUCTIONS[defaultStepType.value].en);
 const instructionsArabic = ref('');
 const imageUrl = ref<string | null>(null);
 const imageStoragePath = ref<string | null>(null);
 const overlays = ref<Overlay[]>([]);
+const locationData = ref<LocationData | null>(null);
 const loading = ref(false);
 const saving = ref(false);
 const uploading = ref(false);
@@ -106,10 +101,11 @@ const stepId = ref<string | null>(editStepId || null);
 const stepSaved = ref(false);
 const isNewStep = computed(() => !editStepId);
 const isEditMode = computed(() => !!editStepId);
+const isLocationCheckStep = computed(() => selectedStepType.value === 'LOCATION_CHECK');
+const showLocationPicker = computed(() => isLocationCheckStep.value && isGoogleMapsConfigured());
 
 const fieldErrors = ref<Record<string, string>>({});
 const touchedFields = ref<Set<string>>(new Set());
-const showAllStepTypes = ref(false);
 
 watch(defaultStepType, (newType) => {
   if (!isEditMode.value && !selectedStepType.value) {
@@ -117,14 +113,22 @@ watch(defaultStepType, (newType) => {
   }
 });
 
+watch(selectedStepType, (newType, oldType) => {
+  if (isEditMode.value && existingStep.value) {
+    return;
+  }
+  
+  const oldDefault = oldType ? STEP_TYPE_DEFAULT_INSTRUCTIONS[oldType].en : '';
+  const currentInstructions = instructions.value.trim();
+  
+  if (!currentInstructions || currentInstructions === oldDefault) {
+    instructions.value = STEP_TYPE_DEFAULT_INSTRUCTIONS[newType].en;
+  }
+});
+
 const selectedTypeLabel = computed(() => {
   const option = stepTypeOptions.value.find(o => o.type === selectedStepType.value);
   return option?.label || STEP_TYPE_LABELS[selectedStepType.value]?.en || selectedStepType.value;
-});
-
-const selectedTypeHint = computed(() => {
-  const option = stepTypeOptions.value.find(o => o.type === selectedStepType.value);
-  return option?.orderHint || '';
 });
 
 const stepTypeBadgeStyle = computed(() => {
@@ -149,37 +153,8 @@ const stepTypeBadgeStyle = computed(() => {
   return colors[selectedStepType.value] || { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' };
 });
 
-function getStepTypeColor(type: StepType) {
-  const colors: Partial<Record<StepType, { bg: string; border: string; text: string }>> = {
-    LOCATION_CHECK: { bg: '#fffbeb', border: '#fcd34d', text: '#b45309' },
-    LANDMARK_REFERENCE: { bg: '#f3f4f6', border: '#d1d5db', text: '#4b5563' },
-    PARKING_LOCATION: { bg: '#ecfdf5', border: '#6ee7b7', text: '#047857' },
-    BUILDING_ENTRY: { bg: '#eff6ff', border: '#93c5fd', text: '#1d4ed8' },
-    RECEPTION_OR_SECURITY: { bg: '#faf5ff', border: '#d8b4fe', text: '#7c3aed' },
-    LOBBY_NAVIGATION: { bg: '#f3f4f6', border: '#d1d5db', text: '#4b5563' },
-    ELEVATOR_ENTRY: { bg: '#faf5ff', border: '#d8b4fe', text: '#7c3aed' },
-    STAIRS_ENTRY: { bg: '#f3f4f6', border: '#d1d5db', text: '#4b5563' },
-    FLOOR_NUMBER: { bg: '#eff6ff', border: '#93c5fd', text: '#1d4ed8' },
-    CORRIDOR_OR_PATH: { bg: '#f3f4f6', border: '#d1d5db', text: '#4b5563' },
-    DOOR_IDENTIFICATION: { bg: '#eff6ff', border: '#93c5fd', text: '#1d4ed8' },
-    DROP_OFF_POINT: { bg: '#f0fdf4', border: '#86efac', text: '#15803d' },
-    GATE_ENTRY: { bg: '#ecfdf5', border: '#6ee7b7', text: '#047857' },
-    UNIT_OR_DOOR_IDENTIFICATION: { bg: '#eff6ff', border: '#93c5fd', text: '#1d4ed8' },
-    FLOOR_NAVIGATION: { bg: '#f3f4f6', border: '#d1d5db', text: '#4b5563' },
-    OTHER: { bg: '#f3f4f6', border: '#d1d5db', text: '#4b5563' },
-  };
-  return colors[type] || { bg: '#f3f4f6', border: '#d1d5db', text: '#4b5563' };
-}
-
 function validateField(field: string): boolean {
   switch (field) {
-    case 'stepTitle':
-      if (!stepTitle.value.trim()) {
-        fieldErrors.value.stepTitle = 'Step title is required';
-        return false;
-      }
-      delete fieldErrors.value.stepTitle;
-      return true;
     case 'instructions':
       if (!instructions.value.trim()) {
         fieldErrors.value.instructions = 'Instructions are required';
@@ -198,13 +173,11 @@ function handleFieldBlur(field: string) {
 }
 
 function validateAllFields(): boolean {
-  touchedFields.value.add('stepTitle');
   touchedFields.value.add('instructions');
   
-  const titleValid = validateField('stepTitle');
   const instructionsValid = validateField('instructions');
   
-  return titleValid && instructionsValid;
+  return instructionsValid;
 }
 
 async function loadGuidanceSetAddressType() {
@@ -237,11 +210,11 @@ async function loadExistingStep() {
     
     existingStep.value = step;
     selectedStepType.value = step.stepType;
-    stepTitle.value = step.title || '';
-    instructions.value = step.instructionOriginal;
+    instructions.value = step.instructionOriginal || STEP_TYPE_DEFAULT_INSTRUCTIONS[step.stepType].en;
     imageUrl.value = step.image?.publicUrl || null;
     imageStoragePath.value = step.image?.storagePath || null;
     overlays.value = step.overlays || [];
+    locationData.value = step.locationData || null;
   } catch (err) {
     console.error('Failed to load step:', err);
     error.value = 'Failed to load step. Please try again.';
@@ -273,6 +246,12 @@ async function createNewStep() {
 }
 
 onMounted(async () => {
+  // Set Google Maps API key for LocationPicker component
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  if (apiKey) {
+    (window as unknown as Record<string, string>).__GOOGLE_MAPS_API_KEY__ = apiKey;
+  }
+  
   await loadGuidanceSetAddressType();
   
   if (isEditMode.value) {
@@ -326,10 +305,11 @@ async function handleSaveStep() {
     await updateGuidanceStep(stepId.value, {
       stepType: selectedStepType.value,
       contentType: imageUrl.value ? 'PHOTO' : 'TEXT',
-      title: stepTitle.value.trim(),
+      title: null,
       instructionOriginal: instructions.value.trim(),
       overlays: overlays.value,
       image: pendingImage.value ?? existingStep.value?.image ?? null,
+      locationData: isLocationCheckStep.value ? locationData.value : null,
     });
     
     stepSaved.value = true;
@@ -340,11 +320,6 @@ async function handleSaveStep() {
   } finally {
     saving.value = false;
   }
-}
-
-function handleSelectStepType(type: StepType) {
-  selectedStepType.value = type;
-  showAllStepTypes.value = false;
 }
 
 function triggerFileInput() {
@@ -486,82 +461,31 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
           </button>
         </div>
         
-        <!-- Step Type Selector - Smart Default with Change Option -->
+        <!-- Step Type Selector Dropdown -->
         <div class="form-section">
-          <label class="form-label">Step Type</label>
-          
-          <!-- Compact Selected View -->
-          <div v-if="!showAllStepTypes" class="step-type-selected">
-            <div 
-              class="step-type-selected__badge"
-              :style="{
-                backgroundColor: getStepTypeColor(selectedStepType).bg,
-                borderColor: getStepTypeColor(selectedStepType).border,
-                color: getStepTypeColor(selectedStepType).text,
-              }"
-            >
-              <span class="step-type-selected__label">{{ selectedTypeLabel }}</span>
-              <span v-if="selectedTypeHint" class="step-type-selected__hint">{{ selectedTypeHint }}</span>
-            </div>
-            <button 
-              class="step-type-selected__change"
-              @click="showAllStepTypes = true"
-              :disabled="saving"
-            >
-              Change
-            </button>
-          </div>
-          
-          <!-- Expanded Step Type List -->
-          <div v-else class="step-type-picker">
-            <div class="step-type-picker__header">
-              <span class="step-type-picker__title">Select Step Type</span>
-              <button 
-                class="step-type-picker__close"
-                @click="showAllStepTypes = false"
-                aria-label="Close"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
-            </div>
-            <p class="step-type-picker__hint">Hints show typical delivery order</p>
-            <div class="step-type-picker__list">
-              <button 
-                v-for="option in stepTypeOptions"
-                :key="option.type"
-                class="step-type-picker__option"
-                :class="{ 
-                  'step-type-picker__option--selected': selectedStepType === option.type,
-                  'step-type-picker__option--suggested': suggestedStepType?.type === option.type && selectedStepType !== option.type
-                }"
-                @click="handleSelectStepType(option.type)"
-                :disabled="saving"
-              >
-                <div class="step-type-picker__option-main">
-                  <span class="step-type-picker__option-label">{{ option.label }}</span>
-                  <span v-if="option.orderHint" class="step-type-picker__option-hint">{{ option.orderHint }}</span>
-                </div>
-                <svg 
-                  v-if="selectedStepType === option.type" 
-                  class="step-type-picker__option-check"
-                  width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span 
-                  v-else-if="suggestedStepType?.type === option.type"
-                  class="step-type-picker__option-tag"
-                >
-                  Suggested
-                </span>
-              </button>
-            </div>
-          </div>
+          <StepTypeDropdown
+            v-model="selectedStepType"
+            :options="stepTypeOptions"
+            :suggested-type="suggestedStepType?.type"
+            :disabled="saving"
+          />
         </div>
         
         <div class="divider" />
+        
+        <!-- Location Picker (for LOCATION_CHECK step type) -->
+        <template v-if="showLocationPicker">
+          <div class="form-section">
+            <LocationPicker
+              v-model="locationData"
+              label="Drop-off Location"
+              placeholder="Search for the delivery address..."
+              :disabled="saving"
+            />
+          </div>
+          
+          <div class="divider" />
+        </template>
         
         <!-- Photo Upload -->
         <div class="form-section">
@@ -615,42 +539,15 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
         
         <!-- Form Fields -->
         <div class="form-section">
-          <div class="form-field" :class="{ 'form-field--error': fieldErrors.stepTitle && touchedFields.has('stepTitle') }">
-            <label class="form-label">Step Title <span class="required-star">*</span></label>
-            <input 
-              v-model="stepTitle"
-              type="text"
-              class="form-input"
-              :class="{ 'form-input--error': fieldErrors.stepTitle && touchedFields.has('stepTitle') }"
-              placeholder="e.g. Enter PIN at gate"
-              :disabled="saving"
-              @blur="handleFieldBlur('stepTitle')"
-            />
-            <span v-if="fieldErrors.stepTitle && touchedFields.has('stepTitle')" class="field-error">
-              {{ fieldErrors.stepTitle }}
-            </span>
-          </div>
-          
-          <div class="form-field">
-            <label class="form-label form-label--optional">Arabic Title (optional)</label>
-            <input 
-              v-model="stepTitleArabic"
-              type="text"
-              class="form-input"
-              dir="rtl"
-              placeholder="أدخل العنوان بالعربية"
-              :disabled="saving"
-            />
-          </div>
-          
           <div class="form-field" :class="{ 'form-field--error': fieldErrors.instructions && touchedFields.has('instructions') }">
             <label class="form-label">Instructions <span class="required-star">*</span></label>
+            <p class="form-helper-text">The courier will see these instructions. You may edit them if needed.</p>
             <textarea 
               v-model="instructions"
               class="form-textarea"
               :class="{ 'form-textarea--error': fieldErrors.instructions && touchedFields.has('instructions') }"
               rows="3"
-              placeholder="Describe what the courier should do…"
+              placeholder="Edit the instructions for the courier..."
               :disabled="saving"
               @blur="handleFieldBlur('instructions')"
             />
@@ -883,6 +780,13 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
   margin-top: 2px;
 }
 
+.form-helper-text {
+  margin: 0 0 8px 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
 .remove-btn {
   background: none;
   border: none;
@@ -971,201 +875,6 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
 .form-textarea--error:focus {
   border-color: #dc2626;
   box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
-}
-
-/* Step Type Selected - Compact View */
-.step-type-selected {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-}
-
-.step-type-selected__badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  border: 2px solid;
-  border-radius: var(--radius-md);
-  font-weight: var(--font-weight-semibold);
-}
-
-.step-type-selected__label {
-  font-size: var(--font-size-sm);
-}
-
-.step-type-selected__hint {
-  font-size: 10px;
-  font-weight: var(--font-weight-medium);
-  padding: 2px 6px;
-  background-color: rgba(0, 0, 0, 0.08);
-  border-radius: var(--radius-sm);
-}
-
-.step-type-selected__change {
-  padding: 6px 14px;
-  background-color: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.step-type-selected__change:hover:not(:disabled) {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-}
-
-.step-type-selected__change:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Step Type Picker - Expanded View */
-.step-type-picker {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
-
-.step-type-picker__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background-color: var(--color-background);
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.step-type-picker__title {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text);
-}
-
-.step-type-picker__close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: none;
-  border: none;
-  border-radius: var(--radius-sm);
-  color: var(--color-text-muted);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.step-type-picker__close:hover {
-  background-color: var(--color-surface);
-  color: var(--color-text);
-}
-
-.step-type-picker__hint {
-  margin: 0;
-  padding: 8px 16px;
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.step-type-picker__list {
-  max-height: 280px;
-  overflow-y: auto;
-}
-
-.step-type-picker__option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 12px 16px;
-  background: none;
-  border: none;
-  border-bottom: 1px solid var(--color-border-light);
-  cursor: pointer;
-  transition: background-color 0.1s ease;
-  text-align: left;
-}
-
-.step-type-picker__option:last-child {
-  border-bottom: none;
-}
-
-.step-type-picker__option:hover:not(:disabled) {
-  background-color: var(--color-background);
-}
-
-.step-type-picker__option:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.step-type-picker__option--selected {
-  background-color: var(--color-primary-bg);
-}
-
-.step-type-picker__option--selected:hover:not(:disabled) {
-  background-color: var(--color-primary-bg);
-}
-
-.step-type-picker__option--suggested {
-  background-color: #fffbeb;
-}
-
-.step-type-picker__option--suggested:hover:not(:disabled) {
-  background-color: #fef3c7;
-}
-
-.step-type-picker__option-main {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.step-type-picker__option-label {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text);
-}
-
-.step-type-picker__option-hint {
-  font-size: 10px;
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-muted);
-  padding: 2px 8px;
-  background-color: var(--color-background);
-  border-radius: var(--radius-sm);
-}
-
-.step-type-picker__option--selected .step-type-picker__option-hint {
-  background-color: rgba(0, 0, 0, 0.06);
-}
-
-.step-type-picker__option-check {
-  color: var(--color-primary);
-  flex-shrink: 0;
-}
-
-.step-type-picker__option-tag {
-  font-size: 10px;
-  font-weight: var(--font-weight-semibold);
-  color: #b45309;
-  background-color: #fef3c7;
-  padding: 3px 8px;
-  border-radius: var(--radius-sm);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
 }
 
 .divider {
