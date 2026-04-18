@@ -4,7 +4,6 @@ import { useRouter, useRoute } from 'vue-router';
 import type { StepType, Overlay, GuidanceStep, StepImage, AddressType, LocationData } from '@guidenav/types';
 import { 
   STEP_TYPE_LABELS,
-  STEP_TYPE_DEFAULT_INSTRUCTIONS,
   getStepTypesForAddressType,
 } from '@guidenav/types';
 import { OverlayEditor, GSpinner, StepTypeDropdown, LocationPicker } from '@guidenav/ui';
@@ -83,7 +82,7 @@ const defaultStepType = computed((): StepType => {
 });
 
 const selectedStepType = ref<StepType>(defaultStepType.value);
-const instructions = ref(STEP_TYPE_DEFAULT_INSTRUCTIONS[defaultStepType.value].en);
+const instructions = ref('');
 const instructionsArabic = ref('');
 const imageUrl = ref<string | null>(null);
 const imageStoragePath = ref<string | null>(null);
@@ -113,17 +112,9 @@ watch(defaultStepType, (newType) => {
   }
 });
 
-watch(selectedStepType, (newType, oldType) => {
-  if (isEditMode.value && existingStep.value) {
-    return;
-  }
-  
-  const oldDefault = oldType ? STEP_TYPE_DEFAULT_INSTRUCTIONS[oldType].en : '';
-  const currentInstructions = instructions.value.trim();
-  
-  if (!currentInstructions || currentInstructions === oldDefault) {
-    instructions.value = STEP_TYPE_DEFAULT_INSTRUCTIONS[newType].en;
-  }
+watch(selectedStepType, () => {
+  // Step type changes no longer auto-populate instructions
+  // Users add their own instructions via the placeholder prompt
 });
 
 const selectedTypeLabel = computed(() => {
@@ -210,7 +201,7 @@ async function loadExistingStep() {
     
     existingStep.value = step;
     selectedStepType.value = step.stepType;
-    instructions.value = step.instructionOriginal || STEP_TYPE_DEFAULT_INSTRUCTIONS[step.stepType].en;
+    instructions.value = step.instructionOriginal || '';
     imageUrl.value = step.image?.publicUrl || null;
     imageStoragePath.value = step.image?.storagePath || null;
     overlays.value = step.overlays || [];
@@ -552,13 +543,13 @@ function handleOverlaysUpdate(newOverlays: Overlay[]) {
         <div class="form-section">
           <div class="form-field" :class="{ 'form-field--error': fieldErrors.instructions && touchedFields.has('instructions') }">
             <label class="form-label">Instructions <span class="required-star">*</span></label>
-            <p class="form-helper-text">The courier will see these instructions. You may edit them if needed.</p>
+            <p class="form-helper-text">Add instructions that will help the courier navigate to this location.</p>
             <textarea 
               v-model="instructions"
               class="form-textarea"
               :class="{ 'form-textarea--error': fieldErrors.instructions && touchedFields.has('instructions') }"
               rows="3"
-              placeholder="Edit the instructions for the courier..."
+              placeholder="Enter instructions for the courier..."
               :disabled="saving"
               @blur="handleFieldBlur('instructions')"
             />

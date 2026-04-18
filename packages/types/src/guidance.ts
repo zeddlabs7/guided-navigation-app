@@ -188,70 +188,22 @@ export const STEP_TYPE_LABELS: Record<StepType, { en: string; ar: string }> = {
 };
 
 export const STEP_TYPE_DEFAULT_INSTRUCTIONS: Record<StepType, { en: string; ar: string }> = {
-  LOCATION_CHECK: {
-    en: 'You should see this view when you arrive at the location',
-    ar: 'يجب أن ترى هذا المنظر عند وصولك إلى الموقع',
-  },
-  LANDMARK_REFERENCE: {
-    en: 'Look for this landmark to confirm you are in the right area',
-    ar: 'ابحث عن هذا المعلم للتأكد من أنك في المنطقة الصحيحة',
-  },
-  PARKING_LOCATION: {
-    en: 'Park your vehicle here',
-    ar: 'أوقف مركبتك هنا',
-  },
-  BUILDING_ENTRY: {
-    en: 'Enter the building through this entrance',
-    ar: 'ادخل المبنى من هذا المدخل',
-  },
-  RECEPTION_OR_SECURITY: {
-    en: 'Check in with reception or security at this point',
-    ar: 'سجل حضورك عند الاستقبال أو الأمن هنا',
-  },
-  LOBBY_NAVIGATION: {
-    en: 'Walk through the lobby in this direction',
-    ar: 'امشِ عبر الردهة في هذا الاتجاه',
-  },
-  ELEVATOR_ENTRY: {
-    en: 'Take the elevator from here',
-    ar: 'استخدم المصعد من هنا',
-  },
-  STAIRS_ENTRY: {
-    en: 'Take the stairs from here',
-    ar: 'استخدم الدرج من هنا',
-  },
-  FLOOR_NUMBER: {
-    en: 'Go to this floor',
-    ar: 'اذهب إلى هذا الطابق',
-  },
-  CORRIDOR_OR_PATH: {
-    en: 'Follow this corridor',
-    ar: 'اتبع هذا الممر',
-  },
-  DOOR_IDENTIFICATION: {
-    en: 'Look for this door',
-    ar: 'ابحث عن هذا الباب',
-  },
-  DROP_OFF_POINT: {
-    en: 'Leave the delivery here',
-    ar: 'اترك التوصيل هنا',
-  },
-  GATE_ENTRY: {
-    en: 'Enter through this gate',
-    ar: 'ادخل من هذه البوابة',
-  },
-  UNIT_OR_DOOR_IDENTIFICATION: {
-    en: 'This is the unit/door number',
-    ar: 'هذا هو رقم الوحدة/الباب',
-  },
-  FLOOR_NAVIGATION: {
-    en: 'Navigate through this floor as shown',
-    ar: 'تنقل في هذا الطابق كما هو موضح',
-  },
-  OTHER: {
-    en: 'Follow these instructions',
-    ar: 'اتبع هذه التعليمات',
-  },
+  LOCATION_CHECK: { en: '', ar: '' },
+  LANDMARK_REFERENCE: { en: '', ar: '' },
+  PARKING_LOCATION: { en: '', ar: '' },
+  BUILDING_ENTRY: { en: '', ar: '' },
+  RECEPTION_OR_SECURITY: { en: '', ar: '' },
+  LOBBY_NAVIGATION: { en: '', ar: '' },
+  ELEVATOR_ENTRY: { en: '', ar: '' },
+  STAIRS_ENTRY: { en: '', ar: '' },
+  FLOOR_NUMBER: { en: '', ar: '' },
+  CORRIDOR_OR_PATH: { en: '', ar: '' },
+  DOOR_IDENTIFICATION: { en: '', ar: '' },
+  DROP_OFF_POINT: { en: '', ar: '' },
+  GATE_ENTRY: { en: '', ar: '' },
+  UNIT_OR_DOOR_IDENTIFICATION: { en: '', ar: '' },
+  FLOOR_NAVIGATION: { en: '', ar: '' },
+  OTHER: { en: '', ar: '' },
 };
 
 export const ADDRESS_TYPE_LABELS: Record<AddressType, { en: string; ar: string }> = {

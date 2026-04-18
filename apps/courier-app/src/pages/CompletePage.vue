@@ -44,8 +44,8 @@ async function handleConfirmDelivery() {
     const phoneNumber = getRecipientPhoneNumber();
     if (phoneNumber) {
       const message = isRtl.value
-        ? 'مرحبًا، لقد وصلت إلى نقطة التسليم وتم تأكيد التوصيل.'
-        : 'Hello, I have arrived at the drop-off point and confirmed the delivery.';
+        ? 'مرحبًا، لقد وصلت إلى نقطة التسليم وتم تأكيد التوصيل. يرجى الاطلاع على الصورة المرفقة.'
+        : 'Hello, I have arrived at the drop-off point and confirmed the delivery. Please see photo attached.';
       openWhatsApp(phoneNumber, message);
     }
 
@@ -150,6 +150,13 @@ function handleContactRecipient() {
         </svg>
         <span>{{ isConfirming ? (isRtl ? 'جاري التأكيد...' : 'Confirming...') : (isRtl ? 'تأكيد التوصيل' : 'Confirm Delivery') }}</span>
       </button>
+
+      <p v-if="!deliveryConfirmed" class="whatsapp-hint">
+        <svg class="whatsapp-hint-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>{{ isRtl ? 'سيفتح واتساب لإرسال صورة التوصيل للمستلم' : 'This will open WhatsApp to send a delivery photo to the recipient' }}</span>
+      </p>
 
       <button class="action-button action-button--contact" @click="handleContactRecipient">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -363,5 +370,23 @@ function handleContactRecipient() {
 
 .action-button--contact:hover {
   background-color: var(--color-background);
+}
+
+.whatsapp-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  margin: 0;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+  line-height: 1.4;
+}
+
+.whatsapp-hint-icon {
+  flex-shrink: 0;
+  color: #25D366;
 }
 </style>
