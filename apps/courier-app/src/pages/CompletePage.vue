@@ -28,8 +28,9 @@ async function handleConfirmDelivery() {
 
   isConfirming.value = true;
 
-  try {
-    if (guidanceSet.value) {
+  // Log analytics (don't block WhatsApp if this fails)
+  if (guidanceSet.value) {
+    try {
       await logAnalyticsEvent({
         app: 'COURIER',
         eventType: 'DELIVERY_CONFIRMED',
@@ -39,22 +40,22 @@ async function handleConfirmDelivery() {
           timestamp: new Date().toISOString(),
         },
       });
+    } catch (error) {
+      console.error('Failed to log analytics:', error);
     }
-
-    const phoneNumber = getRecipientPhoneNumber();
-    if (phoneNumber) {
-      const message = isRtl.value
-        ? 'مرحبًا، لقد وصلت إلى نقطة التسليم وتم تأكيد التوصيل. يرجى الاطلاع على الصورة المرفقة.'
-        : 'Hello, I have arrived at the drop-off point and confirmed the delivery. Please see photo attached.';
-      openWhatsApp(phoneNumber, message);
-    }
-
-    deliveryConfirmed.value = true;
-  } catch (error) {
-    console.error('Failed to confirm delivery:', error);
-  } finally {
-    isConfirming.value = false;
   }
+
+  // Open WhatsApp with delivery confirmation message
+  const phoneNumber = getRecipientPhoneNumber();
+  if (phoneNumber) {
+    const message = isRtl.value
+      ? 'مرحبًا، لقد وصلت إلى نقطة التسليم وتم تأكيد التوصيل. يرجى الاطلاع على الصورة المرفقة.'
+      : 'Hello, I have arrived at the drop-off point and confirmed the delivery. Please see photo attached.';
+    openWhatsApp(phoneNumber, message);
+  }
+
+  deliveryConfirmed.value = true;
+  isConfirming.value = false;
 }
 
 function handleContactRecipient() {

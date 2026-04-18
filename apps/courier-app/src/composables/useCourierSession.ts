@@ -3,6 +3,7 @@ import type { GuidanceSet, GuidanceStep, ShareLink, Language } from '@guidenav/t
 
 const shareLink = ref<ShareLink | null>(null);
 const guidanceSet = ref<GuidanceSet | null>(null);
+const allSteps = ref<GuidanceStep[]>([]);
 const steps = ref<GuidanceStep[]>([]);
 const isLoading = ref(false);
 const error = ref<string | null>(null);
@@ -36,7 +37,10 @@ export function useCourierSession() {
   ) {
     shareLink.value = newShareLink;
     guidanceSet.value = newGuidanceSet;
-    steps.value = newSteps.sort((a, b) => a.stepIndex - b.stepIndex);
+    // Store all steps for coordinate lookup
+    allSteps.value = newSteps.sort((a, b) => a.stepIndex - b.stepIndex);
+    // Filter out LOCATION_CHECK steps for display as they're handled by Open Maps on the landing page
+    steps.value = allSteps.value.filter(step => step.stepType !== 'LOCATION_CHECK');
     error.value = null;
   }
 
@@ -94,6 +98,7 @@ export function useCourierSession() {
   function clearSession() {
     shareLink.value = null;
     guidanceSet.value = null;
+    allSteps.value = [];
     steps.value = [];
     token.value = null;
     error.value = null;
@@ -111,7 +116,7 @@ export function useCourierSession() {
 
   function getDestinationCoordinates(): { latitude: number; longitude: number } | null {
     // First, try to get coordinates from a LOCATION_CHECK step (more precise)
-    const locationCheckStep = steps.value.find(step => step.stepType === 'LOCATION_CHECK');
+    const locationCheckStep = allSteps.value.find(step => step.stepType === 'LOCATION_CHECK');
     if (locationCheckStep?.locationData?.coordinates) {
       return locationCheckStep.locationData.coordinates;
     }
