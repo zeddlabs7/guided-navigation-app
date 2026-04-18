@@ -1,28 +1,66 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { GSpinner } from '@guidenav/ui';
+import {
+  validateShareLinkToken,
+  getGuidanceSet,
+  getGuidanceSteps,
+  incrementAccessCount,
+} from '@guidenav/services';
+import { useCourierSession } from '@/composables/useCourierSession';
 
 const router = useRouter();
 const route = useRoute();
 const token = route.params.token as string;
 
-const loading = ref(true);
-const error = ref<string | null>(null);
+const { setSession, setLoading, setError, setToken } = useCourierSession();
 
 onMounted(async () => {
-  try {
-    // TODO: Validate token and load guidance
-    // For now, simulate loading and redirect to first step
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+  setLoading(true);
+  setToken(token);
 
-    // Redirect to first step
-    router.replace(`/g/${token}/step/0`);
+  try {
+    const validationResult = await validateShareLinkToken(token);
+
+    if (!validationResult.valid || !validationResult.shareLink) {
+      const errorType = validationResult.error || 'NOT_FOUND';
+      router.replace(`/g/${token}/error?type=${errorType}`);
+      return;
+    }
+
+    const shareLink = validationResult.shareLink;
+
+    const guidanceSet = await getGuidanceSet(shareLink.guidanceSetId);
+
+    if (!guidanceSet) {
+      router.replace(`/g/${token}/error?type=NOT_FOUND`);
+      return;
+    }
+
+    if (guidanceSet.status === 'DISABLED') {
+      router.replace(`/g/${token}/error?type=GUIDANCE_DISABLED`);
+      return;
+    }
+
+    const steps = await getGuidanceSteps(shareLink.guidanceSetId);
+
+    if (steps.length === 0) {
+      router.replace(`/g/${token}/error?type=NO_STEPS`);
+      return;
+    }
+
+    setSession(shareLink, guidanceSet, steps);
+
+    await incrementAccessCount(shareLink.id);
+
+    router.replace(`/g/${token}/landing`);
   } catch (err) {
-    error.value = 'Failed to load address';
-    router.replace(`/g/${token}/error`);
+    console.error('Failed to load guidance:', err);
+    setError('Failed to load guidance');
+    router.replace(`/g/${token}/error?type=LOAD_FAILED`);
   } finally {
-    loading.value = false;
+    setLoading(false);
   }
 });
 </script>
@@ -31,7 +69,7 @@ onMounted(async () => {
   <div class="loader-page">
     <div class="loader-content">
       <GSpinner size="lg" />
-      <p class="loader-text">Loading address...</p>
+      <p class="loader-text">Loading Arriveo...</p>
     </div>
   </div>
 </template>
@@ -52,5 +90,6 @@ onMounted(async () => {
 .loader-text {
   margin-top: var(--spacing-lg);
   color: var(--color-text-muted);
+  font-size: var(--font-size-base);
 }
 </style>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { GButton, GCard, GInput, OTPInput } from '@guidenav/ui';
+import { GButton, GCard, OTPInput, PhoneInput } from '@guidenav/ui';
 import { useAuth } from '@/composables/useAuth';
 
 const router = useRouter();
@@ -21,16 +21,8 @@ const phoneNumber = ref('');
 const otpCode = ref('');
 const otpInputRef = ref<InstanceType<typeof OTPInput> | null>(null);
 
-const formattedPhone = computed(() => {
-  let phone = phoneNumber.value.trim();
-  if (phone && !phone.startsWith('+')) {
-    phone = '+' + phone;
-  }
-  return phone;
-});
-
 const isPhoneValid = computed(() => {
-  const phone = formattedPhone.value;
+  const phone = phoneNumber.value;
   return phone.length >= 10 && /^\+[1-9]\d{1,14}$/.test(phone);
 });
 
@@ -44,7 +36,7 @@ onMounted(() => {
 
 async function handleSendCode() {
   clearError();
-  const success = await sendOTP(formattedPhone.value);
+  const success = await sendOTP(phoneNumber.value);
   if (success) {
     currentStep.value = 'otp';
   }
@@ -68,7 +60,7 @@ function handleBackToPhone() {
 async function handleResendCode() {
   clearError();
   otpInputRef.value?.clear();
-  await sendOTP(formattedPhone.value);
+  await sendOTP(phoneNumber.value);
 }
 </script>
 
@@ -76,7 +68,7 @@ async function handleResendCode() {
   <div class="login-page">
     <div class="login-container">
       <header class="login-header">
-        <h1 class="login-title">Delivery Address</h1>
+        <h1 class="login-title">Arriveo</h1>
         <p class="login-subtitle">
           {{ currentStep === 'phone' 
             ? 'Sign in with your phone number' 
@@ -92,18 +84,13 @@ async function handleResendCode() {
           class="login-form" 
           @submit.prevent="handleSendCode"
         >
-          <GInput
+          <PhoneInput
             v-model="phoneNumber"
-            type="tel"
             label="Phone Number"
-            placeholder="+1234567890"
+            placeholder="Enter phone number"
             :error="error ?? undefined"
             :disabled="isLoading"
           />
-
-          <p class="phone-hint">
-            Enter your phone number with country code (e.g., +1 for US)
-          </p>
 
           <GButton
             type="submit"
@@ -119,7 +106,7 @@ async function handleResendCode() {
         <!-- OTP Verification Step -->
         <div v-else class="login-form">
           <p class="otp-sent-message">
-            Code sent to <strong>{{ formattedPhone }}</strong>
+            Code sent to <strong>{{ phoneNumber }}</strong>
           </p>
 
           <OTPInput
@@ -204,12 +191,6 @@ async function handleResendCode() {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
-}
-
-.phone-hint {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-  margin: calc(-1 * var(--spacing-sm)) 0 0 0;
 }
 
 .otp-sent-message {

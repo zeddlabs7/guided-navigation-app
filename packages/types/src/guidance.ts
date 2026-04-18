@@ -73,6 +73,7 @@ export interface GuidanceSet {
   villaNumber?: string;
   apartmentNumber?: string;
   locationDescription?: string;
+  recipientPhoneNumber?: string;
 }
 
 export interface StepImage {
@@ -128,6 +129,7 @@ export type CreateGuidanceSetInput = Pick<
   villaNumber?: string;
   apartmentNumber?: string;
   locationDescription?: string;
+  recipientPhoneNumber?: string;
 };
 
 export type UpdateGuidanceSetInput = Partial<
@@ -150,6 +152,7 @@ export type UpdateGuidanceSetInput = Partial<
     | 'villaNumber'
     | 'apartmentNumber'
     | 'locationDescription'
+    | 'recipientPhoneNumber'
   >
 >;
 

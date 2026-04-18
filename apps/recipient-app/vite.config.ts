@@ -34,8 +34,8 @@ export default defineConfig({
       },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'Delivery Guidance',
-        short_name: 'GuideNav',
+        name: 'Arriveo',
+        short_name: 'Arriveo',
         description: 'Create visual delivery guidance for couriers',
         theme_color: '#2563eb',
         background_color: '#ffffff',

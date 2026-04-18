@@ -168,9 +168,8 @@ async function handleUnpublish() {
 }
 
 function handleShareLink() {
-  const shareUrl = `${window.location.origin}/view/${guidanceSetId}`;
-  navigator.clipboard.writeText(shareUrl);
-  alert('Link copied to clipboard!');
+  // Redirect to the share page where users can generate proper share links
+  router.push(`/guidance/${guidanceSetId}/share`);
 }
 </script>
 

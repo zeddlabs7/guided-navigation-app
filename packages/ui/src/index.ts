@@ -19,6 +19,7 @@ export { default as StepThumbnail } from './components/StepThumbnail.vue';
 export { default as OverlayTutorial } from './components/OverlayTutorial.vue';
 export { default as StepTypeDropdown } from './components/StepTypeDropdown.vue';
 export { default as LocationPicker } from './components/LocationPicker.vue';
+export { default as PhoneInput } from './components/PhoneInput.vue';
 
 export { useTutorialState, useIsMobile } from './composables/useTutorialState';
 

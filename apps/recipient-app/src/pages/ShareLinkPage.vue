@@ -1,28 +1,51 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { GButton, GCard, GBadge, GSpinner } from '@guidenav/ui';
-import { getGuidanceSet } from '@guidenav/services';
+import {
+  getGuidanceSet,
+  createShareLink,
+  getShareLinkForGuidance,
+  revokeShareLink,
+} from '@guidenav/services';
 
 const router = useRouter();
 const route = useRoute();
 const guidanceSetId = route.params.guidanceSetId as string;
 
 const guidanceTitle = ref('');
-const shareLink = ref<string | null>(null);
+const shareToken = ref<string | null>(null);
+const shareLinkId = ref<string | null>(null);
 const linkStatus = ref<'ACTIVE' | 'EXPIRED' | 'REVOKED' | null>(null);
 const copied = ref(false);
 const loading = ref(true);
 const generating = ref(false);
+const revoking = ref(false);
+
+const courierAppUrl = computed(() => {
+  if (!shareToken.value) return null;
+  
+  // In production, this would be the courier app domain
+  // For local development, use port 3001
+  const baseUrl = import.meta.env.VITE_COURIER_APP_URL || 'http://localhost:3001';
+  return `${baseUrl}/g/${shareToken.value}`;
+});
 
 onMounted(async () => {
   try {
     const guidanceSet = await getGuidanceSet(guidanceSetId);
     if (guidanceSet) {
       guidanceTitle.value = guidanceSet.title;
+      
+      // Check for existing active share link
       if (guidanceSet.status === 'PUBLISHED') {
-        shareLink.value = `${window.location.origin}/view/${guidanceSetId}`;
-        linkStatus.value = 'ACTIVE';
+        const existingLink = await getShareLinkForGuidance(guidanceSetId);
+        if (existingLink && existingLink.status === 'ACTIVE') {
+          shareLinkId.value = existingLink.id;
+          linkStatus.value = 'ACTIVE';
+          // Note: We can't retrieve the original token from the hash
+          // User needs to regenerate if they lost the link
+        }
       }
     }
   } catch (err) {
@@ -42,16 +65,31 @@ function handleGoToDashboard() {
 
 async function handleGenerateLink() {
   generating.value = true;
-  setTimeout(() => {
-    shareLink.value = `${window.location.origin}/view/${guidanceSetId}`;
+  try {
+    // If there's an existing link, revoke it first
+    if (shareLinkId.value) {
+      await revokeShareLink(shareLinkId.value);
+    }
+    
+    // Create new share link
+    const result = await createShareLink({
+      guidanceSetId,
+      expiryDurationMinutes: 1440, // 24 hours
+    });
+    
+    shareToken.value = result.token;
+    shareLinkId.value = result.shareLinkId;
     linkStatus.value = 'ACTIVE';
+  } catch (err) {
+    console.error('Failed to generate share link:', err);
+  } finally {
     generating.value = false;
-  }, 1000);
+  }
 }
 
 async function handleCopyLink() {
-  if (shareLink.value) {
-    await navigator.clipboard.writeText(shareLink.value);
+  if (courierAppUrl.value) {
+    await navigator.clipboard.writeText(courierAppUrl.value);
     copied.value = true;
     setTimeout(() => {
       copied.value = false;
@@ -60,8 +98,19 @@ async function handleCopyLink() {
 }
 
 async function handleRevokeLink() {
-  shareLink.value = null;
-  linkStatus.value = null;
+  if (!shareLinkId.value) return;
+  
+  revoking.value = true;
+  try {
+    await revokeShareLink(shareLinkId.value);
+    shareToken.value = null;
+    shareLinkId.value = null;
+    linkStatus.value = null;
+  } catch (err) {
+    console.error('Failed to revoke share link:', err);
+  } finally {
+    revoking.value = false;
+  }
 }
 </script>
 
@@ -105,22 +154,22 @@ async function handleRevokeLink() {
         </div>
 
         <GCard padding="lg">
-          <div v-if="!shareLink" class="no-link">
+          <div v-if="!courierAppUrl" class="no-link">
             <div class="no-link__icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M10 13C10.4295 13.5741 10.9774 14.0492 11.6066 14.3929C12.2357 14.7367 12.9315 14.9411 13.6467 14.9923C14.3618 15.0435 15.0796 14.9404 15.7513 14.6898C16.4231 14.4392 17.0331 14.0471 17.54 13.54L20.54 10.54C21.4508 9.59699 21.9548 8.33397 21.9434 7.02299C21.932 5.71201 21.4061 4.45794 20.4791 3.5309C19.5521 2.60386 18.298 2.07802 16.987 2.06663C15.676 2.05523 14.413 2.55921 13.47 3.47L11.75 5.18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M14 11C13.5705 10.4259 13.0226 9.95083 12.3934 9.60707C11.7643 9.26331 11.0685 9.05889 10.3533 9.00768C9.63821 8.95646 8.92041 9.05964 8.24866 9.31023C7.5769 9.56082 6.96689 9.95294 6.46 10.46L3.46 13.46C2.54921 14.403 2.04524 15.666 2.05663 16.977C2.06802 18.288 2.59387 19.5421 3.52091 20.4691C4.44795 21.3961 5.70201 21.922 7.01299 21.9334C8.32398 21.9448 9.58699 21.4408 10.53 20.53L12.24 18.82" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <p class="no-link__title">No active share link</p>
-            <p class="no-link__text">Generate a link to share your address with couriers</p>
+            <p class="no-link__title">{{ shareLinkId ? 'Link generated but token not available' : 'No active share link' }}</p>
+            <p class="no-link__text">{{ shareLinkId ? 'Generate a new link to get a shareable URL' : 'Generate a link to share your address with couriers' }}</p>
             <GButton
               variant="primary"
               full-width
               :loading="generating"
               @click="handleGenerateLink"
             >
-              Generate Share Link
+              {{ shareLinkId ? 'Regenerate Share Link' : 'Generate Share Link' }}
             </GButton>
           </div>
 
@@ -134,7 +183,7 @@ async function handleRevokeLink() {
             <div class="link-url">
               <input
                 type="text"
-                :value="shareLink"
+                :value="courierAppUrl"
                 readonly
                 class="link-input"
               />
@@ -146,11 +195,15 @@ async function handleRevokeLink() {
               </GButton>
             </div>
 
+            <p class="link-hint">
+              This link opens the courier delivery guide app.
+            </p>
+
             <div class="link-actions">
               <GButton variant="secondary" @click="handleGenerateLink" :loading="generating">
                 Regenerate
               </GButton>
-              <GButton variant="danger" @click="handleRevokeLink">
+              <GButton variant="danger" @click="handleRevokeLink" :loading="revoking">
                 Revoke
               </GButton>
             </div>
@@ -333,6 +386,13 @@ async function handleRevokeLink() {
   background-color: var(--color-background);
   font-family: monospace;
   color: var(--color-text-secondary);
+}
+
+.link-hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+  margin: 0;
 }
 
 .link-actions {

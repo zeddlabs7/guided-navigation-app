@@ -10,7 +10,8 @@ export type AnalyticsEventType =
   | 'LINK_REVOKED'
   | 'GUIDANCE_PUBLISHED'
   | 'GUIDANCE_CREATED'
-  | 'FEEDBACK_SUBMITTED';
+  | 'FEEDBACK_SUBMITTED'
+  | 'DELIVERY_CONFIRMED';
 
 export interface AnalyticsEvent {
   id: string;

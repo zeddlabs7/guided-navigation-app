@@ -7,3 +7,4 @@ export { useGuidanceSteps } from './guidance/useGuidanceSteps';
 export * from './share-links';
 export * from './analytics';
 export * from './storage';
+export * from './feedback';
