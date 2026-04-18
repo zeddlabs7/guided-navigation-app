@@ -7,6 +7,7 @@ const steps = ref<GuidanceStep[]>([]);
 const isLoading = ref(false);
 const error = ref<string | null>(null);
 const currentLanguage = ref<Language>('en');
+const recipientPhoneNumber = ref<string | null>(null);
 
 export function useCourierSession() {
   const token = ref<string | null>(null);
@@ -97,13 +98,25 @@ export function useCourierSession() {
     token.value = null;
     error.value = null;
     isLoading.value = false;
+    recipientPhoneNumber.value = null;
+  }
+
+  function setRecipientPhoneNumber(phone: string | null) {
+    recipientPhoneNumber.value = phone;
   }
 
   function getRecipientPhoneNumber(): string | null {
-    return guidanceSet.value?.recipientPhoneNumber ?? null;
+    return recipientPhoneNumber.value;
   }
 
   function getDestinationCoordinates(): { latitude: number; longitude: number } | null {
+    // First, try to get coordinates from a LOCATION_CHECK step (more precise)
+    const locationCheckStep = steps.value.find(step => step.stepType === 'LOCATION_CHECK');
+    if (locationCheckStep?.locationData?.coordinates) {
+      return locationCheckStep.locationData.coordinates;
+    }
+    
+    // Fallback to guidance set destination coordinates
     return guidanceSet.value?.destinationCoordinates ?? null;
   }
 
@@ -128,6 +141,7 @@ export function useCourierSession() {
     setLanguage,
     getAvailabilityText,
     clearSession,
+    setRecipientPhoneNumber,
     getRecipientPhoneNumber,
     getDestinationCoordinates,
   };

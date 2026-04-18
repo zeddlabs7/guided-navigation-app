@@ -7,7 +7,9 @@ import {
   createShareLink,
   getShareLinkForGuidance,
   revokeShareLink,
+  updateGuidanceSet,
 } from '@guidenav/services';
+import type { AvailabilityMode } from '@guidenav/types';
 
 const router = useRouter();
 const route = useRoute();
@@ -21,6 +23,31 @@ const copied = ref(false);
 const loading = ref(true);
 const generating = ref(false);
 const revoking = ref(false);
+
+// Availability mode state
+const showAvailabilityModal = ref(false);
+const selectedAvailability = ref<AvailabilityMode>('ANYTIME_TODAY');
+const currentAvailability = ref<AvailabilityMode>('ANYTIME_TODAY');
+const availabilityStartTime = ref('09:00');
+const availabilityEndTime = ref('17:00');
+
+const availabilityOptions: { value: AvailabilityMode; label: string; description: string }[] = [
+  {
+    value: 'ANYTIME_TODAY',
+    label: 'Available Anytime',
+    description: 'I can receive deliveries at any time today',
+  },
+  {
+    value: 'TIME_WINDOW',
+    label: 'Specific Time Window',
+    description: 'I can only receive deliveries during specific hours',
+  },
+  {
+    value: 'NOT_AVAILABLE_TODAY',
+    label: 'Not Available Today',
+    description: 'I cannot receive deliveries today',
+  },
+];
 
 const courierAppUrl = computed(() => {
   if (!shareToken.value) return null;
@@ -36,6 +63,8 @@ onMounted(async () => {
     const guidanceSet = await getGuidanceSet(guidanceSetId);
     if (guidanceSet) {
       guidanceTitle.value = guidanceSet.title;
+      currentAvailability.value = guidanceSet.availabilityMode || 'ANYTIME_TODAY';
+      selectedAvailability.value = currentAvailability.value;
       
       // Check for existing active share link
       if (guidanceSet.status === 'PUBLISHED') {
@@ -43,8 +72,6 @@ onMounted(async () => {
         if (existingLink && existingLink.status === 'ACTIVE') {
           shareLinkId.value = existingLink.id;
           linkStatus.value = 'ACTIVE';
-          // Note: We can't retrieve the original token from the hash
-          // User needs to regenerate if they lost the link
         }
       }
     }
@@ -63,9 +90,44 @@ function handleGoToDashboard() {
   router.push('/dashboard');
 }
 
-async function handleGenerateLink() {
+function openAvailabilityModal() {
+  selectedAvailability.value = currentAvailability.value;
+  showAvailabilityModal.value = true;
+}
+
+function closeAvailabilityModal() {
+  showAvailabilityModal.value = false;
+}
+
+async function handleConfirmAndGenerate() {
   generating.value = true;
+  showAvailabilityModal.value = false;
+  
   try {
+    // Update availability mode on the guidance set
+    const updateData: { availabilityMode: AvailabilityMode; availabilityStartTs?: string; availabilityEndTs?: string } = {
+      availabilityMode: selectedAvailability.value,
+    };
+    
+    // Add time window if selected
+    if (selectedAvailability.value === 'TIME_WINDOW') {
+      const today = new Date();
+      const [startHour, startMin] = availabilityStartTime.value.split(':').map(Number);
+      const [endHour, endMin] = availabilityEndTime.value.split(':').map(Number);
+      
+      const startDate = new Date(today);
+      startDate.setHours(startHour, startMin, 0, 0);
+      
+      const endDate = new Date(today);
+      endDate.setHours(endHour, endMin, 0, 0);
+      
+      updateData.availabilityStartTs = startDate.toISOString();
+      updateData.availabilityEndTs = endDate.toISOString();
+    }
+    
+    await updateGuidanceSet(guidanceSetId, updateData);
+    currentAvailability.value = selectedAvailability.value;
+    
     // If there's an existing link, revoke it first
     if (shareLinkId.value) {
       await revokeShareLink(shareLinkId.value);
@@ -85,6 +147,10 @@ async function handleGenerateLink() {
   } finally {
     generating.value = false;
   }
+}
+
+async function handleGenerateLink() {
+  openAvailabilityModal();
 }
 
 async function handleCopyLink() {
@@ -211,6 +277,75 @@ async function handleRevokeLink() {
         </GCard>
       </template>
     </main>
+    
+    <!-- Availability Mode Modal -->
+    <Teleport to="body">
+      <div v-if="showAvailabilityModal" class="modal-overlay" @click.self="closeAvailabilityModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 class="modal-title">Set Availability</h2>
+            <p class="modal-subtitle">Let couriers know when you can receive deliveries</p>
+          </div>
+          
+          <div class="availability-options">
+            <label
+              v-for="option in availabilityOptions"
+              :key="option.value"
+              class="availability-option"
+              :class="{ 'availability-option--selected': selectedAvailability === option.value }"
+            >
+              <input
+                type="radio"
+                :value="option.value"
+                v-model="selectedAvailability"
+                class="availability-radio"
+              />
+              <div class="availability-option__content">
+                <div class="availability-option__icon">
+                  <svg v-if="option.value === 'ANYTIME_TODAY'" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M22 4L12 14.01l-3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <svg v-else-if="option.value === 'TIME_WINDOW'" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                  <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <div class="availability-option__text">
+                  <span class="availability-option__label">{{ option.label }}</span>
+                  <span class="availability-option__description">{{ option.description }}</span>
+                </div>
+              </div>
+            </label>
+          </div>
+          
+          <!-- Time Window Inputs -->
+          <div v-if="selectedAvailability === 'TIME_WINDOW'" class="time-window-inputs">
+            <div class="time-input-group">
+              <label class="time-label">From</label>
+              <input type="time" v-model="availabilityStartTime" class="time-input" />
+            </div>
+            <div class="time-input-group">
+              <label class="time-label">To</label>
+              <input type="time" v-model="availabilityEndTime" class="time-input" />
+            </div>
+          </div>
+          
+          <div class="modal-actions">
+            <GButton variant="secondary" @click="closeAvailabilityModal">
+              Cancel
+            </GButton>
+            <GButton variant="primary" @click="handleConfirmAndGenerate" :loading="generating">
+              {{ shareLinkId ? 'Update & Regenerate' : 'Generate Link' }}
+            </GButton>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -399,5 +534,186 @@ async function handleRevokeLink() {
   display: flex;
   gap: var(--spacing-md);
   justify-content: center;
+}
+
+/* Availability Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+  animation: slideUp 0.3s ease;
+}
+
+@media (min-width: 640px) {
+  .modal-overlay {
+    align-items: center;
+  }
+  
+  .modal-content {
+    border-radius: var(--radius-xl);
+    max-height: 85vh;
+  }
+}
+
+.modal-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.modal-title {
+  margin: 0 0 4px;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.modal-subtitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.availability-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.availability-option {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.availability-option:hover {
+  border-color: var(--color-primary-light);
+  background-color: var(--color-background);
+}
+
+.availability-option--selected {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-bg);
+}
+
+.availability-radio {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.availability-option__content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+}
+
+.availability-option__icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: white;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+
+.availability-option--selected .availability-option__icon {
+  background-color: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.availability-option__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.availability-option__label {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.availability-option__description {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.time-window-inputs {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background-color: var(--color-background);
+  border-radius: var(--radius-lg);
+}
+
+.time-input-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.time-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.time-input {
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  background-color: white;
+  color: var(--color-text);
+}
+
+.time-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-bg);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
 }
 </style>

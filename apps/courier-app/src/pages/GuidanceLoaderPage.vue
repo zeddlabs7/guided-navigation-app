@@ -7,6 +7,7 @@ import {
   getGuidanceSet,
   getGuidanceSteps,
   incrementAccessCount,
+  getUser,
 } from '@guidenav/services';
 import { useCourierSession } from '@/composables/useCourierSession';
 
@@ -14,7 +15,18 @@ const router = useRouter();
 const route = useRoute();
 const token = route.params.token as string;
 
-const { setSession, setLoading, setError, setToken } = useCourierSession();
+const { setSession, setLoading, setError, setToken, setRecipientPhoneNumber } = useCourierSession();
+
+async function fetchAndStoreRecipientPhone(recipientUserId: string) {
+  try {
+    const user = await getUser(recipientUserId);
+    if (user?.phoneNumber) {
+      setRecipientPhoneNumber(user.phoneNumber);
+    }
+  } catch (err) {
+    console.error('Failed to fetch recipient phone number:', err);
+  }
+}
 
 onMounted(async () => {
   setLoading(true);
@@ -37,6 +49,8 @@ onMounted(async () => {
       router.replace(`/g/${token}/error?type=NOT_FOUND`);
       return;
     }
+
+    await fetchAndStoreRecipientPhone(guidanceSet.recipientUserId);
 
     if (guidanceSet.status === 'DISABLED') {
       router.replace(`/g/${token}/error?type=GUIDANCE_DISABLED`);
@@ -84,6 +98,9 @@ onMounted(async () => {
 }
 
 .loader-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
 }
 
