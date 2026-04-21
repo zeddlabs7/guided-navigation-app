@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "guided-navigation-app"
+  },
+  "targets": {
+    "guided-navigation-app": {
+      "hosting": {
+        "recipient": ["guided-navigation-app"],
+        "courier": ["guidenav-courier"],
+        "admin": ["guidenav-admin"],
+        "landing": ["guidenav-landing"]
+      }
+    }
   }
 }

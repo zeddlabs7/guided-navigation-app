@@ -18,6 +18,14 @@
       ]
     },
     {
+      "collectionGroup": "guidanceSets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "deletedAt", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "guidanceSteps",
       "queryScope": "COLLECTION",
       "fields": [

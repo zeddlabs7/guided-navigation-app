@@ -1,0 +1,29 @@
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+.landing-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-lg);
+}
+
+@media (max-width: 768px) {
+  .landing-container {
+    padding: 0 var(--spacing-md);
+  }
+}
+
+section {
+  padding: var(--spacing-2xl) 0;
+}
+
+@media (min-width: 768px) {
+  section {
+    padding: 5rem 0;
+  }
+}
