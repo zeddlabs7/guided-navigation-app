@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ArrowOverlay, MarkerOverlay } from '@guidenav/ui';
 import { STEP_TYPE_LABELS } from '@guidenav/types';
@@ -24,6 +24,12 @@ const {
 const showFeedbackModal = ref(false);
 const imageLoaded = ref(false);
 const imageError = ref(false);
+
+onMounted(() => {
+  if (!guidanceSet.value) {
+    router.replace(`/g/${token.value}`);
+  }
+});
 
 const currentStep = computed(() => getStepByIndex(currentIndex.value));
 const isFirstStep = computed(() => currentIndex.value === 0);
@@ -97,6 +103,10 @@ function handleBackToLanding() {
   router.push(`/g/${token.value}/landing`);
 }
 
+function handleHome() {
+  router.push(`/g/${token.value}/landing`);
+}
+
 function handleImageLoad() {
   imageLoaded.value = true;
 }
@@ -116,9 +126,16 @@ function handleImageError() {
         </svg>
       </button>
       <span class="header-title">{{ guidanceTitle }}</span>
-      <button class="header-language" @click="toggleLanguage">
-        {{ languageToggleLabel }}
-      </button>
+      <div class="header-actions">
+        <button class="header-home" @click="handleHome" :aria-label="isRtl ? 'الرئيسية' : 'Home'">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1h-5v-7h-6v7H4a1 1 0 01-1-1V9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button class="header-language" @click="toggleLanguage">
+          {{ languageToggleLabel }}
+        </button>
+      </div>
     </header>
 
     <!-- Availability Banner -->
@@ -303,6 +320,32 @@ function handleImageError() {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  flex-shrink: 0;
+}
+
+.header-home {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: white;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease;
+}
+
+.header-home:hover {
+  background-color: var(--color-background);
 }
 
 .header-language {

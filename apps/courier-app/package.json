@@ -11,6 +11,7 @@
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix"
   },
   "dependencies": {
+    "@googlemaps/js-api-loader": "^1.16.0",
     "@guidenav/core": "workspace:*",
     "@guidenav/i18n": "workspace:*",
     "@guidenav/services": "workspace:*",

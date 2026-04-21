@@ -47,6 +47,9 @@ importers:
 
   apps/courier-app:
     dependencies:
+      '@googlemaps/js-api-loader':
+        specifier: ^1.16.0
+        version: 1.16.10
       '@guidenav/core':
         specifier: workspace:*
         version: link:../../packages/core

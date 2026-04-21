@@ -4,14 +4,23 @@
  */
 export function openWhatsApp(phoneNumber: string, message?: string): void {
   const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
-  
+
   let url = `https://wa.me/${cleanNumber}`;
-  
+
   if (message) {
     url += `?text=${encodeURIComponent(message)}`;
   }
-  
-  window.open(url, '_blank');
+
+  // Using a synthetic anchor click is the most reliable way to open a new
+  // tab/app from a user-gesture handler — `window.open` gets blocked by
+  // popup blockers and iOS Safari in some cases.
+  const link = document.createElement('a');
+  link.href = url;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 /**

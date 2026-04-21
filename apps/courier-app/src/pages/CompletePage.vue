@@ -1,17 +1,20 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { ref, computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { logAnalyticsEvent } from '@guidenav/services';
 import { useCourierSession } from '@/composables/useCourierSession';
 import { openWhatsApp } from '@/utils/contact';
 
 const route = useRoute();
+const router = useRouter();
 const token = route.params.token as string;
 
 const {
   guidanceSet,
   dropOffStep,
+  totalSteps,
   currentLanguage,
+  toggleLanguage,
   getRecipientPhoneNumber,
 } = useCourierSession();
 
@@ -19,39 +22,49 @@ const isRtl = computed(() => currentLanguage.value === 'ar');
 const deliveryConfirmed = ref(false);
 const isConfirming = ref(false);
 
+onMounted(() => {
+  if (!guidanceSet.value) {
+    router.replace(`/g/${token}`);
+  }
+});
+
 const dropOffImage = computed(() => dropOffStep.value?.image?.publicUrl);
 
 const guidanceTitle = computed(() => guidanceSet.value?.title || 'Arriveo');
 
-async function handleConfirmDelivery() {
+const languageToggleLabel = computed(() => (isRtl.value ? 'English' : 'عربي'));
+
+function handleConfirmDelivery() {
   if (isConfirming.value || deliveryConfirmed.value) return;
 
   isConfirming.value = true;
 
-  // Log analytics (don't block WhatsApp if this fails)
-  if (guidanceSet.value) {
-    try {
-      await logAnalyticsEvent({
-        app: 'COURIER',
-        eventType: 'DELIVERY_CONFIRMED',
-        guidanceSetId: guidanceSet.value.id,
-        metadata: {
-          token,
-          timestamp: new Date().toISOString(),
-        },
-      });
-    } catch (error) {
-      console.error('Failed to log analytics:', error);
-    }
-  }
-
-  // Open WhatsApp with delivery confirmation message
+  // Open WhatsApp synchronously FIRST so the browser keeps the user-gesture
+  // context — any `await` before window.open() causes mobile browsers
+  // (and popup blockers) to silently block the new tab/app launch.
   const phoneNumber = getRecipientPhoneNumber();
   if (phoneNumber) {
     const message = isRtl.value
       ? 'مرحبًا، لقد وصلت إلى نقطة التسليم وتم تأكيد التوصيل. يرجى الاطلاع على الصورة المرفقة.'
       : 'Hello, I have arrived at the drop-off point and confirmed the delivery. Please see photo attached.';
     openWhatsApp(phoneNumber, message);
+  } else {
+    console.warn('No recipient phone number available — skipping WhatsApp.');
+  }
+
+  // Fire-and-forget analytics so it never delays or blocks the WhatsApp launch.
+  if (guidanceSet.value) {
+    logAnalyticsEvent({
+      app: 'COURIER',
+      eventType: 'DELIVERY_CONFIRMED',
+      guidanceSetId: guidanceSet.value.id,
+      metadata: {
+        token,
+        timestamp: new Date().toISOString(),
+      },
+    }).catch((error) => {
+      console.error('Failed to log analytics:', error);
+    });
   }
 
   deliveryConfirmed.value = true;
@@ -64,19 +77,41 @@ function handleContactRecipient() {
     openWhatsApp(phoneNumber);
   }
 }
+
+function handleBack() {
+  const stepCount = totalSteps.value;
+  if (stepCount > 0) {
+    router.push(`/g/${token}/step/${stepCount - 1}`);
+  } else {
+    router.push(`/g/${token}/landing`);
+  }
+}
+
+function handleHome() {
+  router.push(`/g/${token}/landing`);
+}
 </script>
 
 <template>
   <div class="complete-page" :dir="isRtl ? 'rtl' : 'ltr'">
     <!-- Header -->
     <header class="complete-header">
-      <div class="header-icon">
+      <button class="header-back" @click="handleBack" :aria-label="isRtl ? 'رجوع' : 'Back'">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M3 11l18-9-9 18-2-8-7-1z" fill="currentColor"/>
+          <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-      </div>
+      </button>
       <span class="header-title">{{ guidanceTitle }}</span>
-      <div class="header-spacer"></div>
+      <div class="header-actions">
+        <button class="header-home" @click="handleHome" :aria-label="isRtl ? 'الرئيسية' : 'Home'">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1h-5v-7h-6v7H4a1 1 0 01-1-1V9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button class="header-language" @click="toggleLanguage">
+          {{ languageToggleLabel }}
+        </button>
+      </div>
     </header>
 
     <!-- Drop-off Image -->
@@ -187,16 +222,23 @@ function handleContactRecipient() {
   gap: var(--spacing-sm);
 }
 
-.header-icon {
+.header-back {
   width: 32px;
   height: 32px;
   border-radius: var(--radius-md);
+  border: none;
   background-color: var(--color-primary);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
   flex-shrink: 0;
+  transition: background-color 0.15s ease;
+}
+
+.header-back:hover {
+  opacity: 0.9;
 }
 
 .header-title {
@@ -207,10 +249,48 @@ function handleContactRecipient() {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: center;
 }
 
-.header-spacer {
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  flex-shrink: 0;
+}
+
+.header-home {
   width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: white;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease;
+}
+
+.header-home:hover {
+  background-color: var(--color-background);
+}
+
+.header-language {
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: white;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+[dir="rtl"] .header-back svg {
+  transform: scaleX(-1);
 }
 
 /* Drop-off Image */
