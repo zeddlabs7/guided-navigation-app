@@ -78,16 +78,11 @@ export function useAuth() {
   }
 
   async function sendOTP(phoneNumber: string): Promise<boolean> {
-    if (!recaptchaVerifier) {
-      error.value = 'reCAPTCHA not initialized';
-      return false;
-    }
-
     error.value = null;
     loading.value = true;
 
     try {
-      confirmationResult = await sendOTPService(phoneNumber, recaptchaVerifier);
+      confirmationResult = await sendOTPService(phoneNumber, recaptchaVerifier ?? undefined);
       loading.value = false;
       return true;
     } catch (e: unknown) {

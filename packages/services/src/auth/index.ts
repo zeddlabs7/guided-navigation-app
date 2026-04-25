@@ -38,7 +38,7 @@ export function clearRecaptchaVerifier(): void {
 
 export async function sendOTP(
   phoneNumber: string,
-  verifier: RecaptchaVerifier
+  verifier?: RecaptchaVerifier
 ): Promise<ConfirmationResult> {
   const auth = getFirebaseAuth();
   return signInWithPhoneNumber(auth, phoneNumber, verifier);
