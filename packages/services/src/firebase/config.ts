@@ -1,5 +1,5 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getAuth, connectAuthEmulator, type Auth } from 'firebase/auth';
+import { getAuth, connectAuthEmulator, initializeRecaptchaConfig, type Auth } from 'firebase/auth';
 import { initializeFirestore, connectFirestoreEmulator, persistentLocalCache, persistentMultipleTabManager, type Firestore } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator, type FirebaseStorage } from 'firebase/storage';
 
@@ -43,6 +43,10 @@ export function getFirebaseAuth(): Auth {
     auth = getAuth(getFirebaseApp());
     if (useEmulators && !emulatorsConnected) {
       connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
+    } else {
+      initializeRecaptchaConfig(auth).catch((e) => {
+        console.warn('Failed to initialize reCAPTCHA config:', e);
+      });
     }
   }
   return auth;
