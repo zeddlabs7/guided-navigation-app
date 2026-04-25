@@ -100,8 +100,23 @@ export function useAuth() {
         error.value = 'Too many attempts. Please try again later.';
       } else if (firebaseError.code === 'auth/captcha-check-failed') {
         error.value = 'Verification failed. Please refresh and try again.';
+      } else if (firebaseError.code === 'auth/network-request-failed') {
+        error.value = 'Network error. Please check your connection and try again.';
+      } else if (firebaseError.code === 'auth/quota-exceeded') {
+        error.value = 'SMS quota exceeded. Please try again later.';
+      } else if (firebaseError.code === 'auth/missing-client-identifier') {
+        error.value = 'Verification setup error. Please refresh the page and try again.';
+      } else if (firebaseError.code === 'auth/operation-not-allowed') {
+        error.value = 'Phone authentication is not enabled. Please contact support.';
       } else {
-        error.value = firebaseError.message || 'Failed to send verification code.';
+        error.value = firebaseError.message || 'Failed to send verification code. Please try again.';
+      }
+      
+      try {
+        clearRecaptchaVerifier();
+        recaptchaVerifier = initRecaptchaVerifier('recaptcha-container');
+      } catch {
+        // Best-effort reCAPTCHA reset
       }
       
       return false;
