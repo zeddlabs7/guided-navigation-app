@@ -1,4 +1,4 @@
-export { initializeFirebase, getFirebaseApp, getFirebaseAuth, getFirebaseFirestore, getFirebaseStorage } from './firebase/config';
+export { initializeFirebase, getFirebaseApp, getFirebaseAuth, getFirebaseFirestore, getFirebaseStorage, getFirebaseFunctions } from './firebase/config';
 export * from './auth';
 export * from './users';
 export * from './guidance';

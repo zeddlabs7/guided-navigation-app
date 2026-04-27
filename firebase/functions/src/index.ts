@@ -5,3 +5,4 @@ admin.initializeApp();
 export * from './share-links';
 export * from './analytics';
 export * from './feedback';
+export * from './whatsapp-otp';

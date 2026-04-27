@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { GButton, GCard, OTPInput, PhoneInput } from '@guidenav/ui';
 import { useAuth } from '@/composables/useAuth';
@@ -11,20 +11,52 @@ const {
   isAuthenticated,
   setupRecaptcha, 
   sendOTP, 
-  verifyOTP, 
+  verifyOTP,
+  sendWhatsAppCode,
+  verifyWhatsAppCode,
   clearError 
 } = useAuth();
 
-type Step = 'phone' | 'otp';
+type Step = 'phone' | 'otp' | 'whatsapp-otp';
 const currentStep = ref<Step>('phone');
 const phoneNumber = ref('');
 const otpCode = ref('');
 const otpInputRef = ref<InstanceType<typeof OTPInput> | null>(null);
+const whatsappOtpInputRef = ref<InstanceType<typeof OTPInput> | null>(null);
+const whatsappCountdown = ref(30);
+const showWhatsAppFallback = ref(false);
+let countdownTimer: ReturnType<typeof setInterval> | null = null;
 
 const isPhoneValid = computed(() => {
   const phone = phoneNumber.value;
   return phone.length >= 10 && /^\+[1-9]\d{1,14}$/.test(phone);
 });
+
+const subtitle = computed(() => {
+  if (currentStep.value === 'phone') return 'Sign in with your phone number';
+  if (currentStep.value === 'whatsapp-otp') return 'Enter the WhatsApp verification code';
+  return 'Enter the verification code';
+});
+
+function startWhatsAppCountdown() {
+  whatsappCountdown.value = 30;
+  showWhatsAppFallback.value = false;
+  stopCountdown();
+  countdownTimer = setInterval(() => {
+    whatsappCountdown.value--;
+    if (whatsappCountdown.value <= 0) {
+      showWhatsAppFallback.value = true;
+      stopCountdown();
+    }
+  }, 1000);
+}
+
+function stopCountdown() {
+  if (countdownTimer) {
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+  }
+}
 
 onMounted(() => {
   setupRecaptcha('recaptcha-container');
@@ -34,11 +66,16 @@ onMounted(() => {
   }
 });
 
+onUnmounted(() => {
+  stopCountdown();
+});
+
 async function handleSendCode() {
   clearError();
   const success = await sendOTP(phoneNumber.value);
   if (success) {
     currentStep.value = 'otp';
+    startWhatsAppCountdown();
   }
 }
 
@@ -46,6 +83,7 @@ async function handleVerifyCode(code: string) {
   otpCode.value = code;
   const success = await verifyOTP(code);
   if (success) {
+    stopCountdown();
     router.push('/dashboard');
   } else {
     otpInputRef.value?.clear();
@@ -54,6 +92,7 @@ async function handleVerifyCode(code: string) {
 
 function handleBackToPhone() {
   currentStep.value = 'phone';
+  stopCountdown();
   clearError();
 }
 
@@ -61,6 +100,33 @@ async function handleResendCode() {
   clearError();
   otpInputRef.value?.clear();
   await sendOTP(phoneNumber.value);
+  startWhatsAppCountdown();
+}
+
+async function handleSendWhatsApp() {
+  clearError();
+  stopCountdown();
+  const success = await sendWhatsAppCode(phoneNumber.value);
+  if (success) {
+    currentStep.value = 'whatsapp-otp';
+    otpCode.value = '';
+  }
+}
+
+async function handleVerifyWhatsAppCode(code: string) {
+  otpCode.value = code;
+  const success = await verifyWhatsAppCode(phoneNumber.value, code);
+  if (success) {
+    router.push('/dashboard');
+  } else {
+    whatsappOtpInputRef.value?.clear();
+  }
+}
+
+async function handleResendWhatsApp() {
+  clearError();
+  whatsappOtpInputRef.value?.clear();
+  await sendWhatsAppCode(phoneNumber.value);
 }
 </script>
 
@@ -69,12 +135,7 @@ async function handleResendCode() {
     <div class="login-container">
       <header class="login-header">
         <h1 class="login-title">Arriveo</h1>
-        <p class="login-subtitle">
-          {{ currentStep === 'phone' 
-            ? 'Sign in with your phone number' 
-            : 'Enter the verification code' 
-          }}
-        </p>
+        <p class="login-subtitle">{{ subtitle }}</p>
       </header>
 
       <GCard padding="lg">
@@ -103,8 +164,8 @@ async function handleResendCode() {
           </GButton>
         </form>
 
-        <!-- OTP Verification Step -->
-        <div v-else class="login-form">
+        <!-- SMS OTP Verification Step -->
+        <div v-else-if="currentStep === 'otp'" class="login-form">
           <p class="otp-sent-message">
             Code sent to <strong>{{ phoneNumber }}</strong>
           </p>
@@ -136,6 +197,68 @@ async function handleResendCode() {
               @click="handleResendCode"
             >
               Resend Code
+            </GButton>
+
+            <GButton
+              variant="ghost"
+              size="sm"
+              :disabled="isLoading"
+              @click="handleBackToPhone"
+            >
+              Change Number
+            </GButton>
+          </div>
+
+          <div class="whatsapp-fallback">
+            <p v-if="!showWhatsAppFallback" class="whatsapp-countdown">
+              Didn't receive? Use WhatsApp in {{ whatsappCountdown }}s...
+            </p>
+            <GButton
+              v-else
+              variant="ghost"
+              full-width
+              :loading="isLoading"
+              :disabled="isLoading"
+              @click="handleSendWhatsApp"
+            >
+              Didn't receive? Send code via WhatsApp
+            </GButton>
+          </div>
+        </div>
+
+        <!-- WhatsApp OTP Verification Step -->
+        <div v-else-if="currentStep === 'whatsapp-otp'" class="login-form">
+          <p class="otp-sent-message">
+            Code sent via WhatsApp to <strong>{{ phoneNumber }}</strong>
+          </p>
+
+          <OTPInput
+            ref="whatsappOtpInputRef"
+            v-model="otpCode"
+            :length="6"
+            :disabled="isLoading"
+            :error="error ?? undefined"
+            @complete="handleVerifyWhatsAppCode"
+          />
+
+          <GButton
+            variant="primary"
+            full-width
+            :loading="isLoading"
+            :disabled="otpCode.length !== 6 || isLoading"
+            @click="handleVerifyWhatsAppCode(otpCode)"
+          >
+            Verify Code
+          </GButton>
+
+          <div class="otp-actions">
+            <GButton
+              variant="ghost"
+              size="sm"
+              :disabled="isLoading"
+              @click="handleResendWhatsApp"
+            >
+              Resend WhatsApp Code
             </GButton>
 
             <GButton
@@ -207,6 +330,18 @@ async function handleResendCode() {
   display: flex;
   justify-content: center;
   gap: var(--spacing-md);
+}
+
+.whatsapp-fallback {
+  text-align: center;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+  padding-top: var(--spacing-md);
+}
+
+.whatsapp-countdown {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm, 0.875rem);
+  margin: 0;
 }
 
 #recaptcha-container {

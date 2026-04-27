@@ -57,5 +57,10 @@ service cloud.firestore {
       allow create: if true;
       allow update, delete: if false;
     }
+
+    // WhatsApp OTP codes - admin SDK only, no client access
+    match /whatsappOtpCodes/{phoneHash} {
+      allow read, write: if false;
+    }
   }
 }

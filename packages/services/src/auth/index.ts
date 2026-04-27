@@ -69,3 +69,5 @@ export function getCurrentUser(): User | null {
 }
 
 export type { ConfirmationResult, User, Unsubscribe, UserCredential, RecaptchaVerifier };
+
+export { sendWhatsAppOTP, verifyWhatsAppOTP } from './whatsapp-otp';

@@ -7,6 +7,8 @@ import {
   onAuthStateChange,
   signOut as signOutService,
   getOrCreateUser,
+  sendWhatsAppOTP as sendWhatsAppOTPService,
+  verifyWhatsAppOTP as verifyWhatsAppOTPService,
   type User as FirebaseUser,
   type ConfirmationResult,
 } from '@guidenav/services';
@@ -165,6 +167,58 @@ export function useAuth() {
     }
   }
 
+  async function sendWhatsAppCode(phone: string): Promise<boolean> {
+    error.value = null;
+    loading.value = true;
+
+    try {
+      await sendWhatsAppOTPService(phone);
+      loading.value = false;
+      return true;
+    } catch (e: unknown) {
+      loading.value = false;
+      const fnError = e as { code?: string; message?: string };
+
+      if (fnError.code === 'functions/resource-exhausted') {
+        error.value = 'Too many requests. Please try again later.';
+      } else if (fnError.code === 'functions/invalid-argument') {
+        error.value = 'Invalid phone number format.';
+      } else {
+        error.value = fnError.message || 'Failed to send WhatsApp code. Please try again.';
+      }
+
+      return false;
+    }
+  }
+
+  async function verifyWhatsAppCode(phone: string, code: string): Promise<boolean> {
+    error.value = null;
+    loading.value = true;
+
+    try {
+      await verifyWhatsAppOTPService(phone, code);
+      loading.value = false;
+      return true;
+    } catch (e: unknown) {
+      loading.value = false;
+      const fnError = e as { code?: string; message?: string };
+
+      if (fnError.code === 'functions/permission-denied') {
+        error.value = 'Invalid code. Please try again.';
+      } else if (fnError.code === 'functions/deadline-exceeded') {
+        error.value = 'Code expired. Please request a new one.';
+      } else if (fnError.code === 'functions/resource-exhausted') {
+        error.value = 'Too many failed attempts. Please request a new code.';
+      } else if (fnError.code === 'functions/not-found') {
+        error.value = 'No code found. Please request a new one.';
+      } else {
+        error.value = fnError.message || 'Verification failed. Please try again.';
+      }
+
+      return false;
+    }
+  }
+
   function clearError() {
     error.value = null;
   }
@@ -182,6 +236,8 @@ export function useAuth() {
     setupRecaptcha,
     sendOTP,
     verifyOTP,
+    sendWhatsAppCode,
+    verifyWhatsAppCode,
     logout,
     clearError,
   };

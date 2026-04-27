@@ -2,11 +2,13 @@ import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator, initializeRecaptchaConfig, type Auth } from 'firebase/auth';
 import { initializeFirestore, connectFirestoreEmulator, persistentLocalCache, persistentMultipleTabManager, type Firestore } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator, type FirebaseStorage } from 'firebase/storage';
+import { getFunctions as _getFunctions, connectFunctionsEmulator, type Functions } from 'firebase/functions';
 
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let firestore: Firestore | null = null;
 let storage: FirebaseStorage | null = null;
+let functions: Functions | null = null;
 let emulatorsConnected = false;
 
 export interface FirebaseConfig {
@@ -75,4 +77,14 @@ export function getFirebaseStorage(): FirebaseStorage {
     }
   }
   return storage;
+}
+
+export function getFirebaseFunctions(): Functions {
+  if (!functions) {
+    functions = _getFunctions(getFirebaseApp());
+    if (useEmulators) {
+      connectFunctionsEmulator(functions, 'localhost', 5001);
+    }
+  }
+  return functions;
 }
