@@ -62,5 +62,15 @@ service cloud.firestore {
     match /whatsappOtpCodes/{phoneHash} {
       allow read, write: if false;
     }
+
+    // WhatsApp verification sessions - admin SDK only
+    match /whatsappVerifySessions/{sessionId} {
+      allow read, write: if false;
+    }
+
+    // WhatsApp verification token lookups - admin SDK only
+    match /whatsappVerifyTokens/{tokenHash} {
+      allow read, write: if false;
+    }
   }
 }

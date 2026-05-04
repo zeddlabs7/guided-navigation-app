@@ -103,7 +103,7 @@ export const sendWhatsAppOTP = functions.https.onCall(async (data: SendData) => 
           type: 'template',
           template: {
             name: templateName,
-            language: { code: 'en' },
+            language: { code: 'en_US' },
             components: [
               {
                 type: 'body',
@@ -121,7 +121,10 @@ export const sendWhatsAppOTP = functions.https.onCall(async (data: SendData) => 
     if (!response.ok) {
       const errorBody = await response.text();
       functions.logger.error('WhatsApp API error', { status: response.status, body: errorBody });
-      throw new functions.https.HttpsError('internal', 'Failed to send WhatsApp message');
+      throw new functions.https.HttpsError(
+        'internal',
+        `WhatsApp API ${response.status}: ${errorBody}`
+      );
     }
 
     functions.logger.info('WhatsApp OTP sent', { phoneNumber, messageStatus: response.status });

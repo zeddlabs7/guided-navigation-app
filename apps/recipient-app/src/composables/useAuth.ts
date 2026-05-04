@@ -7,8 +7,10 @@ import {
   onAuthStateChange,
   signOut as signOutService,
   getOrCreateUser,
-  sendWhatsAppOTP as sendWhatsAppOTPService,
-  verifyWhatsAppOTP as verifyWhatsAppOTPService,
+  createVerificationSession as createSessionService,
+  getVerificationStatus as getStatusService,
+  completeWhatsAppVerification as completeVerifyService,
+  retryVerificationSession as retrySessionService,
   type User as FirebaseUser,
   type ConfirmationResult,
 } from '@guidenav/services';
@@ -25,6 +27,11 @@ let confirmationResult: ConfirmationResult | null = null;
 let recaptchaVerifier: RecaptchaVerifier | null = null;
 let authInitPromise: Promise<void> | null = null;
 let authInitResolve: (() => void) | null = null;
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+const verifySessionId = ref<string | null>(null);
+const verifyWhatsappUrl = ref<string | null>(null);
+const verifyStatus = ref<'idle' | 'pending' | 'verified' | 'expired'>('idle');
 
 authInitPromise = new Promise((resolve) => {
   authInitResolve = resolve;
@@ -157,6 +164,10 @@ export function useAuth() {
 
   async function logout(): Promise<void> {
     error.value = null;
+    stopPolling();
+    verifySessionId.value = null;
+    verifyWhatsappUrl.value = null;
+    verifyStatus.value = 'idle';
     try {
       clearRecaptchaVerifier();
       confirmationResult = null;
@@ -167,12 +178,16 @@ export function useAuth() {
     }
   }
 
-  async function sendWhatsAppCode(phone: string): Promise<boolean> {
+  async function startWhatsAppVerify(phone: string): Promise<boolean> {
     error.value = null;
     loading.value = true;
+    stopPolling();
 
     try {
-      await sendWhatsAppOTPService(phone);
+      const { sessionId, whatsappUrl } = await createSessionService(phone);
+      verifySessionId.value = sessionId;
+      verifyWhatsappUrl.value = whatsappUrl;
+      verifyStatus.value = 'pending';
       loading.value = false;
       return true;
     } catch (e: unknown) {
@@ -184,35 +199,79 @@ export function useAuth() {
       } else if (fnError.code === 'functions/invalid-argument') {
         error.value = 'Invalid phone number format.';
       } else {
-        error.value = fnError.message || 'Failed to send WhatsApp code. Please try again.';
+        error.value = fnError.message || 'Failed to start verification. Please try again.';
       }
 
       return false;
     }
   }
 
-  async function verifyWhatsAppCode(phone: string, code: string): Promise<boolean> {
+  function startPolling(onVerified: () => void): void {
+    stopPolling();
+    pollTimer = setInterval(async () => {
+      if (!verifySessionId.value) return;
+
+      try {
+        const result = await getStatusService(verifySessionId.value);
+        verifyStatus.value = result.status === 'verified' ? 'verified'
+          : result.status === 'expired' ? 'expired'
+          : 'pending';
+
+        if (result.status === 'verified') {
+          stopPolling();
+          loading.value = true;
+          try {
+            await completeVerifyService(verifySessionId.value);
+            loading.value = false;
+            onVerified();
+          } catch {
+            loading.value = false;
+            error.value = 'Verified but sign-in failed. Please try again.';
+          }
+        } else if (result.status === 'expired') {
+          stopPolling();
+          error.value = 'Verification expired. Please try again.';
+        }
+      } catch {
+        // Silently retry on next poll interval
+      }
+    }, 2500);
+  }
+
+  function stopPolling(): void {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  }
+
+  async function retryWhatsAppVerify(): Promise<boolean> {
+    if (!verifySessionId.value) {
+      error.value = 'No session to retry.';
+      return false;
+    }
+
     error.value = null;
     loading.value = true;
+    stopPolling();
 
     try {
-      await verifyWhatsAppOTPService(phone, code);
+      const { sessionId, whatsappUrl } = await retrySessionService(
+        verifySessionId.value,
+      );
+      verifySessionId.value = sessionId;
+      verifyWhatsappUrl.value = whatsappUrl;
+      verifyStatus.value = 'pending';
       loading.value = false;
       return true;
     } catch (e: unknown) {
       loading.value = false;
       const fnError = e as { code?: string; message?: string };
 
-      if (fnError.code === 'functions/permission-denied') {
-        error.value = 'Invalid code. Please try again.';
-      } else if (fnError.code === 'functions/deadline-exceeded') {
-        error.value = 'Code expired. Please request a new one.';
-      } else if (fnError.code === 'functions/resource-exhausted') {
-        error.value = 'Too many failed attempts. Please request a new code.';
-      } else if (fnError.code === 'functions/not-found') {
-        error.value = 'No code found. Please request a new one.';
+      if (fnError.code === 'functions/resource-exhausted') {
+        error.value = 'Too many requests. Please try again later.';
       } else {
-        error.value = fnError.message || 'Verification failed. Please try again.';
+        error.value = fnError.message || 'Failed to retry. Please try again.';
       }
 
       return false;
@@ -231,13 +290,18 @@ export function useAuth() {
     isAuthenticated,
     isLoading,
     error: authError,
+    verifySessionId: readonly(verifySessionId),
+    verifyWhatsappUrl: readonly(verifyWhatsappUrl),
+    verifyStatus: readonly(verifyStatus),
     initialize,
     waitForAuthInit,
     setupRecaptcha,
     sendOTP,
     verifyOTP,
-    sendWhatsAppCode,
-    verifyWhatsAppCode,
+    startWhatsAppVerify,
+    startPolling,
+    stopPolling,
+    retryWhatsAppVerify,
     logout,
     clearError,
   };

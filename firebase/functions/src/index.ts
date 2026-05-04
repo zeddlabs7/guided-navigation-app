@@ -6,3 +6,4 @@ export * from './share-links';
 export * from './analytics';
 export * from './feedback';
 export * from './whatsapp-otp';
+export * from './whatsapp-verify';

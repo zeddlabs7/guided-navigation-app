@@ -5,24 +5,27 @@ import { GButton, GCard, OTPInput, PhoneInput } from '@guidenav/ui';
 import { useAuth } from '@/composables/useAuth';
 
 const router = useRouter();
-const { 
-  isLoading, 
-  error, 
+const {
+  isLoading,
+  error,
   isAuthenticated,
-  setupRecaptcha, 
-  sendOTP, 
+  verifyWhatsappUrl,
+  verifyStatus,
+  setupRecaptcha,
+  sendOTP,
   verifyOTP,
-  sendWhatsAppCode,
-  verifyWhatsAppCode,
-  clearError 
+  startWhatsAppVerify,
+  startPolling,
+  stopPolling,
+  retryWhatsAppVerify,
+  clearError,
 } = useAuth();
 
-type Step = 'phone' | 'otp' | 'whatsapp-otp';
+type Step = 'phone' | 'otp' | 'whatsapp-verify';
 const currentStep = ref<Step>('phone');
 const phoneNumber = ref('');
 const otpCode = ref('');
 const otpInputRef = ref<InstanceType<typeof OTPInput> | null>(null);
-const whatsappOtpInputRef = ref<InstanceType<typeof OTPInput> | null>(null);
 const whatsappCountdown = ref(30);
 const showWhatsAppFallback = ref(false);
 let countdownTimer: ReturnType<typeof setInterval> | null = null;
@@ -34,7 +37,7 @@ const isPhoneValid = computed(() => {
 
 const subtitle = computed(() => {
   if (currentStep.value === 'phone') return 'Sign in with your phone number';
-  if (currentStep.value === 'whatsapp-otp') return 'Enter the WhatsApp verification code';
+  if (currentStep.value === 'whatsapp-verify') return 'Verify via WhatsApp';
   return 'Enter the verification code';
 });
 
@@ -60,7 +63,7 @@ function stopCountdown() {
 
 onMounted(() => {
   setupRecaptcha('recaptcha-container');
-  
+
   if (isAuthenticated.value) {
     router.push('/dashboard');
   }
@@ -68,6 +71,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   stopCountdown();
+  stopPolling();
 });
 
 async function handleSendCode() {
@@ -93,6 +97,7 @@ async function handleVerifyCode(code: string) {
 function handleBackToPhone() {
   currentStep.value = 'phone';
   stopCountdown();
+  stopPolling();
   clearError();
 }
 
@@ -103,30 +108,32 @@ async function handleResendCode() {
   startWhatsAppCountdown();
 }
 
-async function handleSendWhatsApp() {
+async function handleStartWhatsAppVerify() {
   clearError();
   stopCountdown();
-  const success = await sendWhatsAppCode(phoneNumber.value);
+  const success = await startWhatsAppVerify(phoneNumber.value);
   if (success) {
-    currentStep.value = 'whatsapp-otp';
-    otpCode.value = '';
+    currentStep.value = 'whatsapp-verify';
+    startPolling(() => {
+      router.push('/dashboard');
+    });
   }
 }
 
-async function handleVerifyWhatsAppCode(code: string) {
-  otpCode.value = code;
-  const success = await verifyWhatsAppCode(phoneNumber.value, code);
-  if (success) {
-    router.push('/dashboard');
-  } else {
-    whatsappOtpInputRef.value?.clear();
+function handleOpenWhatsApp() {
+  if (verifyWhatsappUrl.value) {
+    window.open(verifyWhatsappUrl.value, '_blank');
   }
 }
 
-async function handleResendWhatsApp() {
+async function handleRetryVerify() {
   clearError();
-  whatsappOtpInputRef.value?.clear();
-  await sendWhatsAppCode(phoneNumber.value);
+  const success = await retryWhatsAppVerify();
+  if (success) {
+    startPolling(() => {
+      router.push('/dashboard');
+    });
+  }
 }
 </script>
 
@@ -219,46 +226,53 @@ async function handleResendWhatsApp() {
               full-width
               :loading="isLoading"
               :disabled="isLoading"
-              @click="handleSendWhatsApp"
+              @click="handleStartWhatsAppVerify"
             >
-              Didn't receive? Send code via WhatsApp
+              Didn't receive? Verify via WhatsApp
             </GButton>
           </div>
         </div>
 
-        <!-- WhatsApp OTP Verification Step -->
-        <div v-else-if="currentStep === 'whatsapp-otp'" class="login-form">
+        <!-- WhatsApp Verification Step -->
+        <div v-else-if="currentStep === 'whatsapp-verify'" class="login-form">
           <p class="otp-sent-message">
-            Code sent via WhatsApp to <strong>{{ phoneNumber }}</strong>
+            Verify your number <strong>{{ phoneNumber }}</strong> via WhatsApp
           </p>
 
-          <OTPInput
-            ref="whatsappOtpInputRef"
-            v-model="otpCode"
-            :length="6"
-            :disabled="isLoading"
-            :error="error ?? undefined"
-            @complete="handleVerifyWhatsAppCode"
-          />
+          <p class="verify-instructions">
+            Tap the button below to open WhatsApp and send a pre-filled verification message. Once sent, you'll be signed in automatically.
+          </p>
 
           <GButton
             variant="primary"
             full-width
-            :loading="isLoading"
-            :disabled="otpCode.length !== 6 || isLoading"
-            @click="handleVerifyWhatsAppCode(otpCode)"
+            :disabled="isLoading || !verifyWhatsappUrl"
+            @click="handleOpenWhatsApp"
           >
-            Verify Code
+            Open WhatsApp to Verify
           </GButton>
+
+          <div v-if="verifyStatus === 'pending'" class="verify-waiting">
+            <div class="verify-spinner" />
+            <p class="verify-waiting-text">Waiting for verification...</p>
+          </div>
+
+          <div v-if="verifyStatus === 'verified'" class="verify-success">
+            <p>Verified! Signing you in...</p>
+          </div>
+
+          <p v-if="error" class="verify-error">{{ error }}</p>
 
           <div class="otp-actions">
             <GButton
+              v-if="verifyStatus === 'expired'"
               variant="ghost"
               size="sm"
+              :loading="isLoading"
               :disabled="isLoading"
-              @click="handleResendWhatsApp"
+              @click="handleRetryVerify"
             >
-              Resend WhatsApp Code
+              Try Again
             </GButton>
 
             <GButton
@@ -340,6 +354,57 @@ async function handleResendWhatsApp() {
 
 .whatsapp-countdown {
   color: var(--color-text-muted);
+  font-size: var(--font-size-sm, 0.875rem);
+  margin: 0;
+}
+
+.verify-instructions {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm, 0.875rem);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.verify-waiting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.verify-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--color-border, #e5e7eb);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.verify-waiting-text {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm, 0.875rem);
+  margin: 0;
+}
+
+.verify-success {
+  text-align: center;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.verify-success p {
+  margin: 0;
+}
+
+.verify-error {
+  text-align: center;
+  color: var(--color-error, #ef4444);
   font-size: var(--font-size-sm, 0.875rem);
   margin: 0;
 }
