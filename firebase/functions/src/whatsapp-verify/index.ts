@@ -271,7 +271,20 @@ export const whatsappVerifyWebhook = functions.https.onRequest(
       const value = changes?.value;
       const message = value?.messages?.[0];
 
-      if (!message || message.type !== 'text') return;
+      if (!message) {
+        functions.logger.info('Webhook: no message in payload (status update)', {
+          hasStatuses: !!(value?.statuses),
+        });
+        return;
+      }
+
+      if (message.type !== 'text') {
+        functions.logger.info('Webhook: non-text message ignored', {
+          type: message.type,
+          from: message.from,
+        });
+        return;
+      }
 
       const messageId: string = message.id;
       const senderRaw: string = message.from;
@@ -292,6 +305,11 @@ export const whatsappVerifyWebhook = functions.https.onRequest(
       const receivedToken = match[1].toLowerCase();
       const receivedHash = hashToken(receivedToken);
       const senderPhone = normalizeToE164(senderRaw);
+
+      functions.logger.info('Webhook: parsed VERIFY message', {
+        from: senderPhone,
+        tokenPrefix: receivedToken.substring(0, 3) + '***',
+      });
 
       // Look up token
       const tokenDoc = await db

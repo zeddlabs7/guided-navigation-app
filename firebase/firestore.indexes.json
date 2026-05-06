@@ -65,6 +65,22 @@
         { "fieldPath": "guidanceSetId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "whatsappVerifySessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "expectedPhone", "order": "ASCENDING" },
+        { "fieldPath": "createdAtMs", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "whatsappVerifySessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "expectedPhone", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

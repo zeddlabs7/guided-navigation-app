@@ -35,6 +35,12 @@ const isPhoneValid = computed(() => {
   return phone.length >= 10 && /^\+[1-9]\d{1,14}$/.test(phone);
 });
 
+const verifyToken = computed(() => {
+  if (!verifyWhatsappUrl.value) return '';
+  const match = verifyWhatsappUrl.value.match(/VERIFY%20([a-f0-9]+)/i);
+  return match ? match[1] : '';
+});
+
 const subtitle = computed(() => {
   if (currentStep.value === 'phone') return 'Sign in with your phone number';
   if (currentStep.value === 'whatsapp-verify') return 'Verify via WhatsApp';
@@ -240,7 +246,7 @@ async function handleRetryVerify() {
           </p>
 
           <p class="verify-instructions">
-            Tap the button below to open WhatsApp and send a pre-filled verification message. Once sent, you'll be signed in automatically.
+            Tap the button below to open WhatsApp. Send the pre-filled message to verify your number.
           </p>
 
           <GButton
@@ -251,6 +257,11 @@ async function handleRetryVerify() {
           >
             Open WhatsApp to Verify
           </GButton>
+
+          <div v-if="verifyToken" class="verify-code-fallback">
+            <p class="verify-code-label">If the message isn't pre-filled, send this manually:</p>
+            <code class="verify-code-value">VERIFY {{ verifyToken }}</code>
+          </div>
 
           <div v-if="verifyStatus === 'pending'" class="verify-waiting">
             <div class="verify-spinner" />
@@ -364,6 +375,28 @@ async function handleRetryVerify() {
   font-size: var(--font-size-sm, 0.875rem);
   margin: 0;
   line-height: 1.5;
+}
+
+.verify-code-fallback {
+  text-align: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-surface, #f9fafb);
+  border: 1px dashed var(--color-border, #e5e7eb);
+  border-radius: 8px;
+}
+
+.verify-code-label {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs, 0.75rem);
+  margin: 0 0 var(--spacing-xs) 0;
+}
+
+.verify-code-value {
+  font-size: var(--font-size-lg, 1.125rem);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--color-text);
+  user-select: all;
 }
 
 .verify-waiting {
