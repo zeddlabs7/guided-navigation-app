@@ -7,7 +7,7 @@ const db = admin.firestore();
 const SESSIONS_COLLECTION = 'whatsappVerifySessions';
 const TOKENS_COLLECTION = 'whatsappVerifyTokens';
 const TOKEN_EXPIRY_MINUTES = 3;
-const MAX_SESSIONS_PER_HOUR = 3;
+const MAX_SESSIONS_PER_HOUR = 100;
 const MAX_VERIFY_ATTEMPTS = 5;
 const GRAPH_API_VERSION = 'v21.0';
 
