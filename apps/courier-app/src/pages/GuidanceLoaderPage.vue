@@ -2,13 +2,7 @@
 import { onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { GSpinner } from '@guidenav/ui';
-import {
-  validateShareLinkToken,
-  getGuidanceSet,
-  getGuidanceSteps,
-  incrementAccessCount,
-  getUser,
-} from '@guidenav/services';
+import { loadGuidanceByToken } from '@guidenav/services';
 import { useCourierSession } from '@/composables/useCourierSession';
 
 const router = useRouter();
@@ -17,61 +11,24 @@ const token = route.params.token as string;
 
 const { setSession, setLoading, setError, setToken, setRecipientPhoneNumber } = useCourierSession();
 
-async function fetchAndStoreRecipientPhone(recipientUserId: string) {
-  try {
-    const user = await getUser(recipientUserId);
-    if (user?.phoneNumber) {
-      setRecipientPhoneNumber(user.phoneNumber);
-    }
-  } catch (err) {
-    console.error('Failed to fetch recipient phone number:', err);
-  }
-}
-
 onMounted(async () => {
   setLoading(true);
   setToken(token);
 
   try {
-    const validationResult = await validateShareLinkToken(token);
+    const result = await loadGuidanceByToken(token);
 
-    if (!validationResult.valid || !validationResult.shareLink) {
-      const errorType = validationResult.error || 'NOT_FOUND';
+    if (!result.valid || !result.shareLink || !result.guidanceSet || !result.steps) {
+      const errorType = result.error || 'NOT_FOUND';
       router.replace(`/g/${token}/error?type=${errorType}`);
       return;
     }
 
-    const shareLink = validationResult.shareLink;
-
-    // Fire-and-forget: don't block navigation for analytics
-    incrementAccessCount(shareLink.id).catch((err) => {
-      console.error('Failed to increment access count:', err);
-    });
-
-    const [guidanceSet, steps] = await Promise.all([
-      getGuidanceSet(shareLink.guidanceSetId),
-      getGuidanceSteps(shareLink.guidanceSetId),
-    ]);
-
-    if (!guidanceSet) {
-      router.replace(`/g/${token}/error?type=NOT_FOUND`);
-      return;
+    if (result.recipientPhoneNumber) {
+      setRecipientPhoneNumber(result.recipientPhoneNumber);
     }
 
-    if (guidanceSet.status === 'DISABLED') {
-      router.replace(`/g/${token}/error?type=GUIDANCE_DISABLED`);
-      return;
-    }
-
-    if (steps.length === 0) {
-      router.replace(`/g/${token}/error?type=NO_STEPS`);
-      return;
-    }
-
-    // Fetch phone number in background — not needed before navigation
-    fetchAndStoreRecipientPhone(guidanceSet.recipientUserId);
-
-    setSession(shareLink, guidanceSet, steps);
+    setSession(result.shareLink, result.guidanceSet, result.steps);
 
     router.replace(`/g/${token}/landing`);
   } catch (err) {

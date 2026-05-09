@@ -9,8 +9,9 @@ import {
   serverTimestamp,
   increment,
 } from 'firebase/firestore';
-import { getFirebaseFirestore } from '../firebase/config';
-import type { ShareLink, CreateShareLinkInput, ShareLinkValidationResult } from '@guidenav/types';
+import { httpsCallable } from 'firebase/functions';
+import { getFirebaseFirestore, getFirebaseFunctions } from '../firebase/config';
+import type { ShareLink, CreateShareLinkInput, ShareLinkValidationResult, GuidanceSet, GuidanceStep } from '@guidenav/types';
 import { DEFAULT_LINK_EXPIRY_MINUTES } from '@guidenav/types';
 
 const SHARE_LINKS_COLLECTION = 'shareLinks';
@@ -117,4 +118,23 @@ export async function incrementAccessCount(shareLinkId: string): Promise<void> {
     lastAccessedAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+}
+
+export interface LoadGuidanceByTokenResult {
+  valid: boolean;
+  error?: string;
+  shareLink?: ShareLink;
+  guidanceSet?: GuidanceSet;
+  steps?: GuidanceStep[];
+  recipientPhoneNumber?: string | null;
+}
+
+export async function loadGuidanceByToken(token: string): Promise<LoadGuidanceByTokenResult> {
+  const functions = getFirebaseFunctions();
+  const fn = httpsCallable<{ token: string }, LoadGuidanceByTokenResult>(
+    functions,
+    'loadGuidanceByToken',
+  );
+  const result = await fn({ token });
+  return result.data;
 }

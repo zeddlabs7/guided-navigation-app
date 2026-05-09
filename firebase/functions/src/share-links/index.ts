@@ -105,6 +105,94 @@ export const validateShareLink = functions.https.onCall(async (data: { token: st
   };
 });
 
+export const loadGuidanceByToken = functions.https.onCall(async (data: { token: string }) => {
+  const { token } = data;
+
+  if (!token) {
+    throw new functions.https.HttpsError('invalid-argument', 'Token is required');
+  }
+
+  const tokenHash = hashToken(token);
+
+  const shareLinksQuery = await db
+    .collection('shareLinks')
+    .where('tokenHash', '==', tokenHash)
+    .limit(1)
+    .get();
+
+  if (shareLinksQuery.empty) {
+    return { valid: false, error: 'NOT_FOUND' };
+  }
+
+  const shareLinkDoc = shareLinksQuery.docs[0];
+  const shareLinkData = shareLinkDoc.data();
+
+  if (shareLinkData.status === 'REVOKED') {
+    return { valid: false, error: 'REVOKED' };
+  }
+
+  if (new Date(shareLinkData.expiresAt) < new Date()) {
+    return { valid: false, error: 'EXPIRED' };
+  }
+
+  const shareLink = { id: shareLinkDoc.id, ...shareLinkData };
+  const guidanceSetId = shareLinkData.guidanceSetId;
+
+  const [guidanceSetSnap, stepsSnapshot] = await Promise.all([
+    db.collection('guidanceSets').doc(guidanceSetId).get(),
+    db.collection('guidanceSteps')
+      .where('guidanceSetId', '==', guidanceSetId)
+      .where('deletedAt', '==', null)
+      .orderBy('stepIndex', 'asc')
+      .get(),
+    // Fire-and-forget: increment access count in parallel
+    shareLinkDoc.ref.update({
+      accessCount: admin.firestore.FieldValue.increment(1),
+      lastAccessedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }),
+  ]);
+
+  if (!guidanceSetSnap.exists) {
+    return { valid: false, error: 'NOT_FOUND' };
+  }
+
+  const guidanceSetData = guidanceSetSnap.data() as admin.firestore.DocumentData;
+  const guidanceSet = { id: guidanceSetSnap.id, ...guidanceSetData };
+
+  if (guidanceSetData.status === 'DISABLED') {
+    return { valid: false, error: 'GUIDANCE_DISABLED' };
+  }
+
+  const steps = stepsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+  if (steps.length === 0) {
+    return { valid: false, error: 'NO_STEPS' };
+  }
+
+  // Fetch recipient phone number (best-effort, don't fail if missing)
+  let recipientPhoneNumber: string | null = null;
+  try {
+    const recipientUserId = guidanceSetData.recipientUserId as string;
+    if (recipientUserId) {
+      const userSnap = await db.collection('users').doc(recipientUserId).get();
+      if (userSnap.exists) {
+        recipientPhoneNumber = userSnap.data()?.phoneNumber ?? null;
+      }
+    }
+  } catch (err) {
+    functions.logger.warn('Failed to fetch recipient phone:', err);
+  }
+
+  return {
+    valid: true,
+    shareLink,
+    guidanceSet,
+    steps,
+    recipientPhoneNumber,
+  };
+});
+
 export const revokeShareLink = functions.https.onCall(
   async (data: { shareLinkId: string }, context) => {
     if (!context.auth) {
