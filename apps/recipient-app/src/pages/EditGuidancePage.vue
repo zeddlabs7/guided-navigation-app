@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { StepCard, GSpinner } from '@guidenav/ui';
 import type { GuidanceStatus, StepType, GuidanceStep, AddressType, MetadataFieldConfig, UnitType } from '@guidenav/types';
@@ -104,6 +104,15 @@ function validateMetadataField(field: string): boolean {
 function handleFieldBlur(field: string) {
   touchedFields.value.add(field);
   validateMetadataField(field);
+}
+
+function scrollToFirstError() {
+  nextTick(() => {
+    const firstError = document.querySelector('.form-field--error');
+    if (firstError) {
+      firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  });
 }
 
 function getFieldShortLabel(field: string): string {
@@ -267,6 +276,7 @@ function handleContinueFromMetadata() {
   
   if (!allValid) {
     error.value = 'Please fill in all required fields';
+    scrollToFirstError();
     return;
   }
   

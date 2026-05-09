@@ -292,10 +292,13 @@ function handleImageError() {
 .playback-header {
   display: flex;
   align-items: center;
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: calc(env(safe-area-inset-top, 0px) + var(--spacing-sm)) var(--spacing-md) var(--spacing-sm);
   background-color: white;
   border-bottom: 1px solid var(--color-border);
   gap: var(--spacing-sm);
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 
 .header-back {
@@ -366,6 +369,9 @@ function handleImageError() {
   gap: var(--spacing-xs);
   padding: var(--spacing-sm) var(--spacing-md);
   background-color: #f0fdf4;
+  position: sticky;
+  top: 0;
+  z-index: 19;
 }
 
 .availability-icon {
@@ -595,7 +601,7 @@ function handleImageError() {
 .playback-footer {
   display: flex;
   gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md) var(--spacing-lg);
+  padding: var(--spacing-sm) var(--spacing-md) calc(env(safe-area-inset-bottom, 0px) + var(--spacing-lg));
   background-color: white;
   border-top: 1px solid var(--color-border);
 }

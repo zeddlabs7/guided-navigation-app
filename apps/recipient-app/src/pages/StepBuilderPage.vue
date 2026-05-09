@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import type { StepType, Overlay, GuidanceStep, StepImage, AddressType, LocationData } from '@guidenav/types';
 import { 
@@ -171,6 +171,15 @@ function validateAllFields(): boolean {
   return instructionsValid;
 }
 
+function scrollToFirstError() {
+  nextTick(() => {
+    const firstError = document.querySelector('.form-field--error');
+    if (firstError) {
+      firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  });
+}
+
 async function loadGuidanceSetAddressType() {
   if (addressType.value) return;
   
@@ -271,6 +280,7 @@ function handleBack() {
 
 async function handleSaveStep() {
   if (!validateAllFields()) {
+    scrollToFirstError();
     return;
   }
   

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import type { AddressType, MetadataFieldConfig, UnitType } from '@guidenav/types';
 import { 
@@ -107,6 +107,15 @@ function handleFieldBlur(field: string) {
   validateField(field);
 }
 
+function scrollToFirstError() {
+  nextTick(() => {
+    const firstError = document.querySelector('.form-field--error');
+    if (firstError) {
+      firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  });
+}
+
 const addressTypeOptions: { type: AddressType; label: string; icon: string }[] = [
   { type: 'APARTMENT_BUILDING', label: ADDRESS_TYPE_LABELS.APARTMENT_BUILDING.en, icon: '🏢' },
   { type: 'VILLA', label: ADDRESS_TYPE_LABELS.VILLA.en, icon: '🏠' },
@@ -165,6 +174,7 @@ function handleGoToDashboard() {
 function handleContinueFromTitle() {
   touchedFields.value.add('title');
   if (!validateField('title')) {
+    scrollToFirstError();
     return;
   }
   error.value = null;
@@ -202,6 +212,7 @@ function handleContinueFromMetadata() {
   }
   
   if (!allValid) {
+    scrollToFirstError();
     return;
   }
   error.value = null;

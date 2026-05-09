@@ -1,10 +1,9 @@
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import { createI18nInstance } from '@guidenav/i18n';
-import { initializeFirebase } from '@guidenav/services';
+import { initializeFirebase, getFirebaseFirestore } from '@guidenav/services';
 import App from './App.vue';
 import router from './router';
-import '@guidenav/ui/styles';
 import './styles/main.css';
 
 const firebaseConfig = {
@@ -18,6 +17,7 @@ const firebaseConfig = {
 
 if (firebaseConfig.apiKey) {
   initializeFirebase(firebaseConfig);
+  getFirebaseFirestore();
 }
 
 const app = createApp(App);

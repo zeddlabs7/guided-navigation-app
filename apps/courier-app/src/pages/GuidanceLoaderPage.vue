@@ -43,30 +43,35 @@ onMounted(async () => {
 
     const shareLink = validationResult.shareLink;
 
-    const guidanceSet = await getGuidanceSet(shareLink.guidanceSetId);
+    // Fire-and-forget: don't block navigation for analytics
+    incrementAccessCount(shareLink.id).catch((err) => {
+      console.error('Failed to increment access count:', err);
+    });
+
+    const [guidanceSet, steps] = await Promise.all([
+      getGuidanceSet(shareLink.guidanceSetId),
+      getGuidanceSteps(shareLink.guidanceSetId),
+    ]);
 
     if (!guidanceSet) {
       router.replace(`/g/${token}/error?type=NOT_FOUND`);
       return;
     }
 
-    await fetchAndStoreRecipientPhone(guidanceSet.recipientUserId);
-
     if (guidanceSet.status === 'DISABLED') {
       router.replace(`/g/${token}/error?type=GUIDANCE_DISABLED`);
       return;
     }
-
-    const steps = await getGuidanceSteps(shareLink.guidanceSetId);
 
     if (steps.length === 0) {
       router.replace(`/g/${token}/error?type=NO_STEPS`);
       return;
     }
 
-    setSession(shareLink, guidanceSet, steps);
+    // Fetch phone number in background — not needed before navigation
+    fetchAndStoreRecipientPhone(guidanceSet.recipientUserId);
 
-    await incrementAccessCount(shareLink.id);
+    setSession(shareLink, guidanceSet, steps);
 
     router.replace(`/g/${token}/landing`);
   } catch (err) {

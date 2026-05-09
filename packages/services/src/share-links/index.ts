@@ -1,13 +1,13 @@
 import {
   collection,
   doc,
-  getDoc,
   getDocs,
   addDoc,
   updateDoc,
   query,
   where,
   serverTimestamp,
+  increment,
 } from 'firebase/firestore';
 import { getFirebaseFirestore } from '../firebase/config';
 import type { ShareLink, CreateShareLinkInput, ShareLinkValidationResult } from '@guidenav/types';
@@ -112,14 +112,9 @@ export async function revokeShareLink(shareLinkId: string): Promise<void> {
 export async function incrementAccessCount(shareLinkId: string): Promise<void> {
   const db = getFirebaseFirestore();
   const docRef = doc(db, SHARE_LINKS_COLLECTION, shareLinkId);
-  const docSnap = await getDoc(docRef);
-
-  if (docSnap.exists()) {
-    const currentCount = docSnap.data().accessCount || 0;
-    await updateDoc(docRef, {
-      accessCount: currentCount + 1,
-      lastAccessedAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-  }
+  await updateDoc(docRef, {
+    accessCount: increment(1),
+    lastAccessedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
 }
