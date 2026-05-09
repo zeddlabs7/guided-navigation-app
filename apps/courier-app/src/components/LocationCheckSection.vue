@@ -335,8 +335,8 @@ onBeforeUnmount(() => {
   flex-direction: column;
   background-color: #0f172a;
   color: white;
-  padding-top: calc(env(safe-area-inset-top) + var(--spacing-md));
-  padding-bottom: calc(env(safe-area-inset-bottom) + var(--spacing-md));
+  padding-top: var(--spacing-md);
+  padding-bottom: var(--spacing-md);
   padding-left: var(--spacing-md);
   padding-right: var(--spacing-md);
   gap: var(--spacing-sm);

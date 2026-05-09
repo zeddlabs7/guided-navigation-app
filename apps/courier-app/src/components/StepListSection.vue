@@ -111,8 +111,7 @@ const rows = computed<StepRow[]>(() =>
   display: flex;
   flex-direction: column;
   background-color: var(--color-background);
-  padding: calc(env(safe-area-inset-top) + var(--spacing-md)) var(--spacing-md)
-    calc(env(safe-area-inset-bottom) + var(--spacing-md));
+  padding: var(--spacing-md) var(--spacing-md) var(--spacing-md);
   gap: var(--spacing-md);
 }
 

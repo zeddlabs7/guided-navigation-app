@@ -92,8 +92,8 @@ function handleSelectStep(index: number) {
 <style scoped>
 .landing-page {
   position: relative;
-  height: 100dvh;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   background-color: var(--color-background);

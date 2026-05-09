@@ -170,7 +170,7 @@ function iconFor(field: MetadataFieldType): string {
   display: flex;
   flex-direction: column;
   background: linear-gradient(180deg, #f8fafc 0%, #ffffff 60%, #eff6ff 100%);
-  padding: calc(env(safe-area-inset-top) + var(--spacing-md)) var(--spacing-lg) var(--spacing-lg);
+  padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg);
   position: relative;
 }
 
