@@ -165,13 +165,13 @@ defineExpose({ clear, focusInput });
 
 .otp-input:focus {
   outline: none;
-  border-color: var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #2c3e50);
   box-shadow: 0 0 0 3px var(--color-primary-light, rgba(37, 99, 235, 0.1));
   transform: scale(1.05);
 }
 
 .otp-input--filled {
-  border-color: var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #2c3e50);
   background-color: var(--color-primary-light, rgba(37, 99, 235, 0.05));
 }
 

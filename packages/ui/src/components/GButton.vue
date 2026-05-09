@@ -80,12 +80,12 @@ function handleClick(event: MouseEvent) {
 }
 
 .g-button--primary {
-  background-color: var(--color-primary, #155dfc);
+  background-color: var(--color-primary, #2c3e50);
   color: white;
 }
 
 .g-button--primary:hover:not(:disabled) {
-  background-color: var(--color-primary-dark, #1249d6);
+  background-color: var(--color-primary-dark, #1a252f);
 }
 
 .g-button--secondary {
@@ -108,7 +108,7 @@ function handleClick(event: MouseEvent) {
 
 .g-button--ghost {
   background-color: transparent;
-  color: var(--color-primary, #155dfc);
+  color: var(--color-primary, #2c3e50);
 }
 
 .g-button--ghost:hover:not(:disabled) {

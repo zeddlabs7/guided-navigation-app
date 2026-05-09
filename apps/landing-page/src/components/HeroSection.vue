@@ -8,12 +8,7 @@ const isMenuOpen = ref(false);
   <header class="hero">
     <nav class="hero__nav landing-container">
       <div class="hero__logo">
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="16" cy="16" r="14" fill="var(--color-primary)" />
-          <path d="M16 8L22 20H10L16 8Z" fill="white" />
-          <circle cx="16" cy="22" r="2" fill="white" />
-        </svg>
-        <span class="hero__brand">Arriveo</span>
+        <img src="/logo-eng.png" alt="Arriveo" class="hero__logo-img" />
       </div>
       
       <button class="hero__menu-toggle" @click="isMenuOpen = !isMenuOpen" aria-label="Toggle menu">
@@ -122,13 +117,12 @@ const isMenuOpen = ref(false);
 .hero__logo {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
 }
 
-.hero__brand {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text);
+.hero__logo-img {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
 }
 
 .hero__menu-toggle {

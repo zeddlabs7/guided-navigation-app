@@ -261,9 +261,6 @@ export const whatsappVerifyWebhook = functions.https.onRequest(
       return;
     }
 
-    // Always return 200 immediately to Meta
-    res.sendStatus(200);
-
     try {
       const body = req.body;
       const entry = body?.entry?.[0];
@@ -275,138 +272,149 @@ export const whatsappVerifyWebhook = functions.https.onRequest(
         functions.logger.info('Webhook: no message in payload (status update)', {
           hasStatuses: !!(value?.statuses),
         });
-        return;
-      }
-
-      if (message.type !== 'text') {
+      } else if (message.type !== 'text') {
         functions.logger.info('Webhook: non-text message ignored', {
           type: message.type,
           from: message.from,
         });
-        return;
-      }
-
-      const messageId: string = message.id;
-      const senderRaw: string = message.from;
-      const text: string = (message.text?.body ?? '').trim();
-
-      // Parse "VERIFY <TOKEN>" — case-insensitive on "VERIFY", exact on token
-      const match = text.match(/^VERIFY\s+([a-f0-9]{6})$/i);
-      if (!match) {
-        await sendWhatsAppReply(
-          normalizeToE164(senderRaw),
-          'Invalid format. Please use the verification link from the app.',
-          config.accessToken,
-          config.phoneNumberId,
-        );
-        return;
-      }
-
-      const receivedToken = match[1].toLowerCase();
-      const receivedHash = hashToken(receivedToken);
-      const senderPhone = normalizeToE164(senderRaw);
-
-      functions.logger.info('Webhook: parsed VERIFY message', {
-        from: senderPhone,
-        tokenPrefix: receivedToken.substring(0, 3) + '***',
-      });
-
-      // Look up token
-      const tokenDoc = await db
-        .collection(TOKENS_COLLECTION)
-        .doc(receivedHash)
-        .get();
-
-      if (!tokenDoc.exists) {
-        await sendWhatsAppReply(
-          senderPhone,
-          'Verification failed. Please request a new link in the app.',
-          config.accessToken,
-          config.phoneNumberId,
-        );
-        return;
-      }
-
-      const tokenData = tokenDoc.data()!;
-      const sessionId: string = tokenData.sessionId;
-
-      // Run atomic transaction on the session
-      const sessionRef = db.collection(SESSIONS_COLLECTION).doc(sessionId);
-      const tokenRef = db.collection(TOKENS_COLLECTION).doc(receivedHash);
-
-      let verified = false;
-
-      await db.runTransaction(async (tx) => {
-        const sessionSnap = await tx.get(sessionRef);
-        if (!sessionSnap.exists) return;
-
-        const session = sessionSnap.data()!;
-
-        // Deduplicate webhook delivery
-        if ((session.webhookMessageIds as string[]).includes(messageId)) {
-          verified = session.status === 'verified';
-          return;
-        }
-
-        // Check session validity
-        if (session.status !== 'pending') return;
-        if (session.consumed) return;
-        if (Date.now() > session.expiresAt) {
-          tx.update(sessionRef, { status: 'expired' });
-          tx.update(tokenRef, { consumed: true });
-          return;
-        }
-        if (session.attemptCount >= MAX_VERIFY_ATTEMPTS) {
-          tx.update(sessionRef, { status: 'expired' });
-          tx.update(tokenRef, { consumed: true });
-          return;
-        }
-
-        // Verify sender phone matches expected phone
-        if (session.expectedPhone !== senderPhone) {
-          tx.update(sessionRef, {
-            attemptCount: admin.firestore.FieldValue.increment(1),
-            webhookMessageIds:
-              admin.firestore.FieldValue.arrayUnion(messageId),
-          });
-          return;
-        }
-
-        // All checks passed — mark verified
-        tx.update(sessionRef, {
-          status: 'verified',
-          consumed: true,
-          verifiedPhone: senderPhone,
-          verifiedAt: admin.firestore.FieldValue.serverTimestamp(),
-          webhookMessageIds:
-            admin.firestore.FieldValue.arrayUnion(messageId),
-        });
-        tx.update(tokenRef, { consumed: true });
-        verified = true;
-      });
-
-      if (verified) {
-        await sendWhatsAppReply(
-          senderPhone,
-          'Verified ✅ You can return to the app.',
-          config.accessToken,
-          config.phoneNumberId,
-        );
-        functions.logger.info('Verification successful', {
-          sessionId,
-          phone: senderPhone,
-        });
       } else {
-        await sendWhatsAppReply(
-          senderPhone,
-          'Verification failed. Please request a new link in the app.',
-          config.accessToken,
-          config.phoneNumberId,
-        );
+        const messageId: string = message.id;
+        const senderRaw: string = message.from;
+        const text: string = (message.text?.body ?? '').trim();
+
+        const match = text.match(/^VERIFY\s+([a-f0-9]{6})$/i);
+        if (!match) {
+          functions.logger.info('Webhook: text did not match VERIFY pattern', {
+            from: senderRaw,
+            textLength: text.length,
+          });
+          await sendWhatsAppReply(
+            normalizeToE164(senderRaw),
+            'Invalid format. Please use the verification link from the app.',
+            config.accessToken,
+            config.phoneNumberId,
+          );
+        } else {
+          const receivedToken = match[1].toLowerCase();
+          const receivedHash = hashToken(receivedToken);
+          const senderPhone = normalizeToE164(senderRaw);
+
+          functions.logger.info('Webhook: parsed VERIFY message', {
+            from: senderPhone,
+            tokenPrefix: receivedToken.substring(0, 3) + '***',
+          });
+
+          const tokenDoc = await db
+            .collection(TOKENS_COLLECTION)
+            .doc(receivedHash)
+            .get();
+
+          if (!tokenDoc.exists) {
+            functions.logger.warn('Webhook: token not found in DB', {
+              hashPrefix: receivedHash.substring(0, 8),
+            });
+            await sendWhatsAppReply(
+              senderPhone,
+              'Verification failed. Please request a new link in the app.',
+              config.accessToken,
+              config.phoneNumberId,
+            );
+          } else {
+            const tokenData = tokenDoc.data()!;
+            const sessionId: string = tokenData.sessionId;
+
+            functions.logger.info('Webhook: token found, checking session', {
+              sessionId,
+              tokenConsumed: tokenData.consumed,
+            });
+
+            const sessionRef = db.collection(SESSIONS_COLLECTION).doc(sessionId);
+            const tokenRef = db.collection(TOKENS_COLLECTION).doc(receivedHash);
+
+            let verified = false;
+            let failReason = '';
+
+            await db.runTransaction(async (tx) => {
+              const sessionSnap = await tx.get(sessionRef);
+              if (!sessionSnap.exists) { failReason = 'session_not_found'; return; }
+
+              const session = sessionSnap.data()!;
+
+              if ((session.webhookMessageIds as string[]).includes(messageId)) {
+                verified = session.status === 'verified';
+                failReason = 'duplicate_webhook';
+                return;
+              }
+
+              if (session.status !== 'pending') { failReason = `status_is_${session.status}`; return; }
+              if (session.consumed) { failReason = 'already_consumed'; return; }
+              if (Date.now() > session.expiresAt) {
+                failReason = 'expired';
+                tx.update(sessionRef, { status: 'expired' });
+                tx.update(tokenRef, { consumed: true });
+                return;
+              }
+              if (session.attemptCount >= MAX_VERIFY_ATTEMPTS) {
+                failReason = 'max_attempts';
+                tx.update(sessionRef, { status: 'expired' });
+                tx.update(tokenRef, { consumed: true });
+                return;
+              }
+
+              if (session.expectedPhone !== senderPhone) {
+                failReason = `phone_mismatch:expected=${session.expectedPhone},got=${senderPhone}`;
+                tx.update(sessionRef, {
+                  attemptCount: admin.firestore.FieldValue.increment(1),
+                  webhookMessageIds:
+                    admin.firestore.FieldValue.arrayUnion(messageId),
+                });
+                return;
+              }
+
+              tx.update(sessionRef, {
+                status: 'verified',
+                consumed: true,
+                verifiedPhone: senderPhone,
+                verifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+                webhookMessageIds:
+                  admin.firestore.FieldValue.arrayUnion(messageId),
+              });
+              tx.update(tokenRef, { consumed: true });
+              verified = true;
+            });
+
+            if (verified) {
+              functions.logger.info('Verification successful', {
+                sessionId,
+                phone: senderPhone,
+              });
+              await sendWhatsAppReply(
+                senderPhone,
+                'Verified ✅ You can return to the app.',
+                config.accessToken,
+                config.phoneNumberId,
+              );
+            } else {
+              functions.logger.warn('Verification failed', {
+                sessionId,
+                phone: senderPhone,
+                reason: failReason,
+              });
+              await sendWhatsAppReply(
+                senderPhone,
+                'Verification failed. Please request a new link in the app.',
+                config.accessToken,
+                config.phoneNumberId,
+              );
+            }
+          }
+        }
       }
     } catch (err) {
       functions.logger.error('Webhook processing error', { error: err });
     }
+
+    res.sendStatus(200);
   },
 );
 

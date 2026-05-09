@@ -16,7 +16,7 @@ withDefaults(defineProps<Props>(), {
 .g-spinner {
   border-radius: 50%;
   border: 2px solid var(--color-border, #e5e7eb);
-  border-top-color: var(--color-primary, #2563eb);
+  border-top-color: var(--color-primary, #2c3e50);
   animation: spin 0.75s linear infinite;
 }
 

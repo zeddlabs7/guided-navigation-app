@@ -65,7 +65,7 @@ function setupShadowDOMStyling() {
         
         /* Focus state for the container */
         .input-container:focus-within {
-          border-color: #2563eb !important;
+          border-color: #2c3e50 !important;
           box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
         }
         
@@ -265,7 +265,7 @@ async function initializeMap() {
     
     // Create a styled pin using Google's PinElement
     const pin = new PinElement({
-      background: '#2563eb',
+      background: '#2c3e50',
       borderColor: '#1d4ed8',
       glyphColor: '#ffffff',
       scale: 1.2,
@@ -768,7 +768,7 @@ defineExpose({
 
 .location-picker__autocomplete-container :deep(input:focus) {
   outline: none;
-  border-color: var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #2c3e50);
   box-shadow: 0 0 0 3px var(--color-primary-light, rgba(37, 99, 235, 0.1));
 }
 
@@ -792,8 +792,8 @@ defineExpose({
 }
 
 .location-picker__location-btn:hover:not(:disabled) {
-  border-color: var(--color-primary, #2563eb);
-  color: var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #2c3e50);
+  color: var(--color-primary, #2c3e50);
 }
 
 .location-picker__location-btn:disabled {
@@ -849,7 +849,7 @@ defineExpose({
   width: 32px;
   height: 32px;
   border: 3px solid var(--color-border, #d1d5db);
-  border-top-color: var(--color-primary, #2563eb);
+  border-top-color: var(--color-primary, #2c3e50);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -878,7 +878,7 @@ defineExpose({
 
 .location-picker__hint svg {
   flex-shrink: 0;
-  color: var(--color-primary, #2563eb);
+  color: var(--color-primary, #2c3e50);
 }
 
 .location-picker__selected {
@@ -901,7 +901,7 @@ defineExpose({
 
 .location-picker__selected-icon {
   flex-shrink: 0;
-  color: var(--color-primary, #2563eb);
+  color: var(--color-primary, #2c3e50);
   margin-top: 2px;
 }
 

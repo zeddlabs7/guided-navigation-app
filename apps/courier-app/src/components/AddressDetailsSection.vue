@@ -86,8 +86,11 @@ function iconFor(field: MetadataFieldType): string {
   <section class="address-section" :id="'landing-section-1'">
     <header class="address-header">
       <div class="brand">
-        <span class="brand-dot" aria-hidden="true"></span>
-        <span class="brand-name">Arriveo</span>
+        <img 
+          :src="isRtl ? '/logo-ar.png' : '/logo-eng.png'" 
+          alt="Arriveo" 
+          class="brand-logo" 
+        />
       </div>
       <button class="language-toggle" type="button" @click="props.onToggleLanguage">
         {{ languageToggleLabel }}
@@ -181,18 +184,12 @@ function iconFor(field: MetadataFieldType): string {
 .brand {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  font-weight: 700;
-  font-size: var(--font-size-lg);
-  color: var(--color-text);
 }
 
-.brand-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+.brand-logo {
+  height: 32px;
+  width: auto;
+  object-fit: contain;
 }
 
 .language-toggle {

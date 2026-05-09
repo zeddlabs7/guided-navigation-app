@@ -26,8 +26,7 @@ const navigate = (path: string) => {
   <aside class="sidebar">
     <div class="sidebar-header">
       <div class="logo">
-        <span class="logo-icon">A</span>
-        <span class="logo-text">Arriveo Admin</span>
+        <img src="/logo-eng.png" alt="Arriveo Admin" class="logo-img" />
       </div>
     </div>
     
@@ -95,26 +94,12 @@ const navigate = (path: string) => {
 .logo {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
 }
 
-.logo-icon {
-  width: 32px;
-  height: 32px;
-  background: var(--color-primary);
-  color: white;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: var(--font-size-lg);
-}
-
-.logo-text {
-  font-weight: 600;
-  font-size: var(--font-size-lg);
-  color: var(--color-text);
+.logo-img {
+  height: 36px;
+  width: auto;
+  object-fit: contain;
 }
 
 .sidebar-nav {

@@ -157,12 +157,12 @@ function getDirectionLabel(direction?: ArrowDirection): string {
 }
 
 .overlay-toolbar__btn--done {
-  color: #155dfc;
+  color: #2c3e50;
 }
 
 .overlay-toolbar__btn--done:hover {
   background-color: #eff6ff;
-  color: #1249d6;
+  color: #1a252f;
 }
 
 .overlay-toolbar__btn--direction {

@@ -54,11 +54,11 @@ onUnmounted(() => {
 <template>
   <header class="app-header">
     <button class="app-header__logo" @click="emit('logo-click')" aria-label="Home">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2L4 7V22H20V7L12 2Z" fill="white" stroke="white" stroke-width="2" stroke-linejoin="round"/>
-        <path d="M3 11L12 4L21 11" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M12 22V14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      </svg>
+      <img 
+        :src="currentLanguage === 'ar' ? '/logo-ar.png' : '/logo-eng.png'" 
+        alt="Arriveo" 
+        class="app-header__logo-img" 
+      />
     </button>
     
     <div class="app-header__spacer" />
@@ -132,22 +132,22 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  background-color: var(--color-primary);
+  height: 36px;
+  background: none;
   border: none;
-  border-radius: var(--radius-lg);
   cursor: pointer;
-  color: white;
-  transition: background-color 0.2s ease;
+  padding: 0;
+  transition: opacity 0.2s ease;
 }
 
 .app-header__logo:hover {
-  background-color: var(--color-primary-dark);
+  opacity: 0.8;
 }
 
-.app-header__logo svg {
-  color: var(--color-primary);
+.app-header__logo-img {
+  height: 32px;
+  width: auto;
+  object-fit: contain;
 }
 
 .app-header__spacer {

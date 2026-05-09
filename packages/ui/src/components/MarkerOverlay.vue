@@ -119,7 +119,7 @@ function handleClick(event: PointerEvent) {
 }
 
 .marker-overlay--selected .marker-overlay__dot {
-  box-shadow: 0 0 0 3px #155dfc, 0 2px 8px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 0 0 3px #2c3e50, 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
 .marker-overlay__dot-inner {

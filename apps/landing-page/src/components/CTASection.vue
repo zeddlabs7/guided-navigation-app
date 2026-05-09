@@ -44,7 +44,7 @@
 }
 
 .cta__card {
-  background: linear-gradient(135deg, var(--color-primary) 0%, #1249d6 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, #1a252f 100%);
   border-radius: var(--radius-xl);
   padding: var(--spacing-2xl);
   display: grid;

@@ -1186,7 +1186,7 @@ async function handleAddStep() {
   height: 56px;
   background-color: var(--color-primary-bg, #eff6ff);
   border-radius: 50%;
-  color: var(--color-primary, #155dfc);
+  color: var(--color-primary, #2c3e50);
   margin-bottom: 16px;
 }
 

@@ -16,7 +16,7 @@ const props = withDefaults(defineProps<{
 }>(), {});
 
 const colors = [
-  '#155dfc',
+  '#2c3e50',
   '#008236',
   '#bb4d00',
   '#8200db',

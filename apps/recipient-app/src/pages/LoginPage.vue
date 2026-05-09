@@ -147,7 +147,7 @@ async function handleRetryVerify() {
   <div class="login-page">
     <div class="login-container">
       <header class="login-header">
-        <h1 class="login-title">Arriveo</h1>
+        <img src="/logo-eng.png" alt="Arriveo" class="login-logo" />
         <p class="login-subtitle">{{ subtitle }}</p>
       </header>
 
@@ -323,11 +323,11 @@ async function handleRetryVerify() {
   margin-bottom: var(--spacing-xl);
 }
 
-.login-title {
-  font-size: var(--font-size-2xl);
-  font-weight: 700;
-  margin: 0 0 var(--spacing-sm) 0;
-  color: var(--color-primary);
+.login-logo {
+  height: 56px;
+  width: auto;
+  object-fit: contain;
+  margin-bottom: var(--spacing-sm);
 }
 
 .login-subtitle {

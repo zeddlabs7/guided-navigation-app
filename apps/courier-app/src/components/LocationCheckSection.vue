@@ -165,7 +165,7 @@ function renderCourierMarker(coords: Coordinates) {
   }
 
   const pin = new PinElementClass.value({
-    background: '#2563eb',
+    background: '#2c3e50',
     borderColor: '#1d4ed8',
     glyphColor: '#ffffff',
     scale: 1.1,
@@ -467,7 +467,7 @@ onBeforeUnmount(() => {
 }
 
 .legend-dot--courier {
-  background-color: #2563eb;
+  background-color: #2c3e50;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3);
 }
 

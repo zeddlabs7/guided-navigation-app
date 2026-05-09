@@ -1,16 +1,16 @@
 :root {
-  /* Primary - matches Figma #155dfc */
-  --color-primary: #155dfc;
-  --color-primary-dark: #1249d6;
-  --color-primary-light: #eff6ff;
-  --color-primary-bg: #eff6ff;
+  /* Primary - Arriveo brand #2c3e50 */
+  --color-primary: #2c3e50;
+  --color-primary-dark: #1a252f;
+  --color-primary-light: #eef1f4;
+  --color-primary-bg: #eef1f4;
 
   /* Secondary */
   --color-secondary: #e5e7eb;
   --color-secondary-dark: #d1d5db;
 
-  /* Text - matches Figma */
-  --color-text: #101828;
+  /* Text */
+  --color-text: #1a252f;
   --color-text-secondary: #4a5565;
   --color-text-muted: #99a1af;
   --color-text-light: #d1d5dc;
@@ -35,8 +35,8 @@
   --color-danger: #dc2626;
   --color-danger-bg: #fee2e2;
   
-  --color-info: #155dfc;
-  --color-info-bg: #eff6ff;
+  --color-info: #2c3e50;
+  --color-info-bg: #eef1f4;
 
   /* Step type colors - from Figma */
   --color-step-parking: #99a1af;
@@ -94,7 +94,7 @@
   /* Shadows - matches Figma */
   --shadow-sm: 0px 1px 2px 0px rgba(0, 0, 0, 0.1);
   --shadow-md: 0px 1px 3px 0px rgba(0, 0, 0, 0.1), 0px 1px 2px 0px rgba(0, 0, 0, 0.1);
-  --shadow-button: 0px 1px 3px 0px #bedbff, 0px 1px 2px 0px #bedbff;
+  --shadow-button: 0px 1px 3px 0px rgba(44, 62, 80, 0.3), 0px 1px 2px 0px rgba(44, 62, 80, 0.2);
 }
 
 *,

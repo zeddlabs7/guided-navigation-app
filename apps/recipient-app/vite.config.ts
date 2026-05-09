@@ -37,7 +37,7 @@ export default defineConfig({
         name: 'Arriveo',
         short_name: 'Arriveo',
         description: 'Create visual delivery guidance for couriers',
-        theme_color: '#2563eb',
+        theme_color: '#2c3e50',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',

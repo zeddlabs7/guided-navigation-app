@@ -66,7 +66,7 @@ function handleInput(event: Event) {
 
 .g-input:focus {
   outline: none;
-  border-color: var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #2c3e50);
   box-shadow: 0 0 0 3px var(--color-primary-light, rgba(37, 99, 235, 0.1));
 }
 

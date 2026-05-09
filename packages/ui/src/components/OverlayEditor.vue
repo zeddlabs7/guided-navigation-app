@@ -401,19 +401,19 @@ watch(() => props.readonly, (isReadonly) => {
 }
 
 .overlay-editor__add-btn:hover {
-  border-color: #155dfc;
-  color: #155dfc;
+  border-color: #2c3e50;
+  color: #2c3e50;
 }
 
 .overlay-editor__add-btn--active {
-  background-color: #155dfc;
-  border-color: #155dfc;
+  background-color: #2c3e50;
+  border-color: #2c3e50;
   color: white;
 }
 
 .overlay-editor__add-btn--active:hover {
-  background-color: #1249d6;
-  border-color: #1249d6;
+  background-color: #1a252f;
+  border-color: #1a252f;
   color: white;
 }
 

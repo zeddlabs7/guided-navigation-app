@@ -221,7 +221,7 @@ function handleSkip() {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #155dfc;
+  color: #2c3e50;
 }
 
 .tutorial-icon--rotate {
@@ -269,7 +269,7 @@ function handleSkip() {
 }
 
 .tutorial-dot--active {
-  background-color: #155dfc;
+  background-color: #2c3e50;
   width: 24px;
   border-radius: 4px;
 }
@@ -290,13 +290,13 @@ function handleSkip() {
 }
 
 .tutorial-btn--primary {
-  background-color: #155dfc;
+  background-color: #2c3e50;
   border: none;
   color: white;
 }
 
 .tutorial-btn--primary:hover {
-  background-color: #1249d6;
+  background-color: #1a252f;
 }
 
 .tutorial-btn--secondary {

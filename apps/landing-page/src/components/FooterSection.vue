@@ -39,12 +39,7 @@ const footerLinks = {
       <div class="footer__main">
         <div class="footer__brand">
           <div class="footer__logo">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="16" cy="16" r="14" fill="var(--color-primary)" />
-              <path d="M16 8L22 20H10L16 8Z" fill="white" />
-              <circle cx="16" cy="22" r="2" fill="white" />
-            </svg>
-            <span class="footer__brand-name">Arriveo</span>
+            <img src="/logo-eng.png" alt="Arriveo" class="footer__logo-img" />
           </div>
           <p class="footer__tagline">
             Visual delivery guidance that helps couriers find your exact location every time.
@@ -144,13 +139,14 @@ const footerLinks = {
 .footer__logo {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
   margin-bottom: var(--spacing-md);
 }
 
-.footer__brand-name {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
+.footer__logo-img {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
 }
 
 .footer__tagline {
