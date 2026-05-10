@@ -152,10 +152,15 @@ function iconFor(field: MetadataFieldType): string {
     </div>
 
     <button class="scroll-hint" type="button" @click="props.onScrollNext" :aria-label="isRtl ? 'التالي' : 'Continue'">
+      <span class="scroll-hint-icon" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="currentColor"/>
+        </svg>
+      </span>
       <span class="scroll-hint-text">{{ isRtl ? 'اسحب للأسفل للخريطة' : 'Scroll for map' }}</span>
       <span class="scroll-hint-arrow" aria-hidden="true">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </span>
     </button>
@@ -310,43 +315,56 @@ function iconFor(field: MetadataFieldType): string {
   position: relative;
   margin-top: auto;
   margin-bottom: calc(env(safe-area-inset-bottom) + var(--spacing-md));
-  display: flex;
-  flex-direction: column;
+  align-self: center;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background: transparent;
-  border: none;
-  color: var(--color-text-muted);
+  gap: 12px;
+  padding: 18px 32px;
+  background-color: white;
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-full);
+  color: var(--color-text);
   cursor: pointer;
-  padding: var(--spacing-sm);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.10);
+  animation: bounce 1.8s ease-in-out infinite;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.scroll-hint:active {
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+  animation: none;
+}
+
+.scroll-hint-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  flex-shrink: 0;
 }
 
 .scroll-hint-text {
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 .scroll-hint-arrow {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: white;
-  color: var(--color-primary);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
-  animation: bounce 1.8s ease-in-out infinite;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
 }
 
 @keyframes bounce {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(4px); }
+  50% { transform: translateY(3px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .scroll-hint-arrow {
+  .scroll-hint {
     animation: none;
   }
 }
