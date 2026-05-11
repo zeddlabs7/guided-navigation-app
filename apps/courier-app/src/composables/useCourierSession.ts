@@ -125,6 +125,11 @@ export function useCourierSession() {
     return guidanceSet.value?.destinationCoordinates ?? null;
   }
 
+  function getDestinationAddress(): string | null {
+    const locationCheckStep = allSteps.value.find(step => step.stepType === 'LOCATION_CHECK');
+    return locationCheckStep?.locationData?.formattedAddress ?? null;
+  }
+
   return {
     token,
     shareLink,
@@ -149,5 +154,6 @@ export function useCourierSession() {
     setRecipientPhoneNumber,
     getRecipientPhoneNumber,
     getDestinationCoordinates,
+    getDestinationAddress,
   };
 }

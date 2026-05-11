@@ -42,7 +42,7 @@ const rows = computed<StepRow[]>(() =>
 </script>
 
 <template>
-  <section class="steps-section" :id="'landing-section-3'">
+  <section class="steps-section" :id="'landing-section-2'">
     <header class="section-header">
       <span class="section-kicker">{{ isRtl ? 'الدليل' : 'Guide' }}</span>
       <h2 class="section-title">{{ isRtl ? 'خطوات التوصيل' : 'Delivery steps' }}</h2>
@@ -97,7 +97,7 @@ const rows = computed<StepRow[]>(() =>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M18 15l-6-6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span>{{ isRtl ? 'العودة للخريطة' : 'Back to map' }}</span>
+        <span>{{ isRtl ? 'العودة للتفاصيل' : 'Back to details' }}</span>
       </button>
     </div>
   </section>

@@ -3,7 +3,6 @@ import { computed, ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useCourierSession } from '@/composables/useCourierSession';
 import AddressDetailsSection from '@/components/AddressDetailsSection.vue';
-import LocationCheckSection from '@/components/LocationCheckSection.vue';
 import StepListSection from '@/components/StepListSection.vue';
 
 const router = useRouter();
@@ -15,6 +14,7 @@ const {
   steps,
   currentLanguage,
   getDestinationCoordinates,
+  getDestinationAddress,
   getAvailabilityText,
   toggleLanguage,
 } = useCourierSession();
@@ -37,6 +37,10 @@ const availabilityText = computed(() => {
 const languageToggleLabel = computed(() => (isRtl.value ? 'English' : 'عربي'));
 
 const destinationCoords = computed(() => getDestinationCoordinates());
+
+const hasSteps = computed(() => steps.value.length > 0);
+
+const destinationAddress = computed(() => getDestinationAddress());
 
 function scrollToSection(id: string) {
   const el = document.getElementById(id);
@@ -70,20 +74,17 @@ function handleSelectStep(index: number) {
         :guidance-set="guidanceSet"
         :is-rtl="isRtl"
         :language-toggle-label="languageToggleLabel"
-        :on-toggle-language="toggleLanguage"
-        :on-scroll-next="() => scrollToSection('landing-section-2')"
-      />
-      <LocationCheckSection
         :destination="destinationCoords"
-        :is-rtl="isRtl"
-        :on-scroll-next="() => scrollToSection('landing-section-3')"
-        :on-scroll-prev="() => scrollToSection('landing-section-1')"
+        :destination-address="destinationAddress"
+        :has-steps="hasSteps"
+        :on-toggle-language="toggleLanguage"
+        :on-view-steps="() => scrollToSection('landing-section-2')"
       />
       <StepListSection
         :steps="steps"
         :is-rtl="isRtl"
         :on-select-step="handleSelectStep"
-        :on-scroll-prev="() => scrollToSection('landing-section-2')"
+        :on-scroll-prev="() => scrollToSection('landing-section-1')"
       />
     </div>
   </div>

@@ -1,19 +1,24 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, shallowRef, onMounted, nextTick, watch } from 'vue';
 import {
   ADDRESS_TYPE_LABELS,
   getMetadataFieldConfigs,
+  type Coordinates,
   type GuidanceSet,
   type MetadataFieldConfig,
   type MetadataFieldType,
 } from '@guidenav/types';
+import { openMapsNative } from '@/utils/contact';
 
 interface Props {
   guidanceSet: GuidanceSet;
   isRtl: boolean;
   languageToggleLabel: string;
+  destination: Coordinates | null;
+  destinationAddress: string | null;
+  hasSteps: boolean;
   onToggleLanguage: () => void;
-  onScrollNext: () => void;
+  onViewSteps: () => void;
 }
 
 const props = defineProps<Props>();
@@ -79,6 +84,95 @@ const FIELD_ICONS: Record<MetadataFieldType, string> = {
 
 function iconFor(field: MetadataFieldType): string {
   return FIELD_ICONS[field] ?? 'location';
+}
+
+const destinationLabel = computed(() => {
+  if (props.destinationAddress) return props.destinationAddress;
+  const g = props.guidanceSet;
+  const parts: string[] = [];
+  if (g.buildingNumber) parts.push(g.buildingNumber);
+  if (g.compoundName) parts.push(g.compoundName);
+  if (g.floorNumber) parts.push(props.isRtl ? `طابق ${g.floorNumber}` : `Floor ${g.floorNumber}`);
+  if (g.doorNumber) parts.push(props.isRtl ? `باب ${g.doorNumber}` : `Door ${g.doorNumber}`);
+  if (g.locationDescription) parts.push(g.locationDescription);
+  if (parts.length > 0) return parts.join(', ');
+  return g.title || (props.isRtl ? 'الوجهة' : 'Destination');
+});
+
+const miniMapContainer = ref<HTMLDivElement | null>(null);
+const miniMapInstance = shallowRef<any>(null);
+const miniMapReady = ref(false);
+
+async function initMiniMap() {
+  await nextTick();
+  if (!miniMapContainer.value || !props.destination) return;
+
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) return;
+
+  try {
+    const { Loader } = await import('@googlemaps/js-api-loader');
+    const loader = new Loader({
+      apiKey,
+      version: 'weekly',
+      libraries: ['marker'],
+    });
+
+    const google = await loader.load();
+    const destLatLng = {
+      lat: props.destination.latitude,
+      lng: props.destination.longitude,
+    };
+
+    miniMapInstance.value = new google.maps.Map(miniMapContainer.value, {
+      center: destLatLng,
+      zoom: 15,
+      disableDefaultUI: true,
+      gestureHandling: 'none',
+      clickableIcons: false,
+      mapId: 'MINI_MAP_ID',
+      keyboardShortcuts: false,
+    });
+
+    const { AdvancedMarkerElement, PinElement } = (await google.maps.importLibrary('marker')) as any;
+    const pin = new PinElement({
+      background: '#ef4444',
+      borderColor: '#b91c1c',
+      glyphColor: '#ffffff',
+      scale: 0.8,
+    });
+
+    new AdvancedMarkerElement({
+      position: destLatLng,
+      map: miniMapInstance.value,
+      content: pin,
+    });
+
+    miniMapReady.value = true;
+  } catch {
+    // Silently fail — the placeholder icon will show
+  }
+}
+
+watch(() => props.destination, (val) => {
+  if (val && !miniMapInstance.value) {
+    void initMiniMap();
+  }
+});
+
+onMounted(() => {
+  if (props.destination) {
+    void initMiniMap();
+  }
+});
+
+function handleOpenMaps() {
+  if (!props.destination) return;
+  openMapsNative(
+    props.destination.latitude,
+    props.destination.longitude,
+    props.isRtl ? 'الوجهة' : 'Destination'
+  );
 }
 </script>
 
@@ -151,19 +245,55 @@ function iconFor(field: MetadataFieldType): string {
       </p>
     </div>
 
-    <button class="scroll-hint" type="button" @click="props.onScrollNext" :aria-label="isRtl ? 'التالي' : 'Continue'">
-      <span class="scroll-hint-icon" aria-hidden="true">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="currentColor"/>
-        </svg>
-      </span>
-      <span class="scroll-hint-text">{{ isRtl ? 'اسحب للأسفل للخريطة' : 'Scroll for map' }}</span>
-      <span class="scroll-hint-arrow" aria-hidden="true">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </span>
-    </button>
+    <div class="bottom-actions">
+      <button
+        v-if="destination"
+        class="directions-card"
+        type="button"
+        @click="handleOpenMaps"
+      >
+        <div class="directions-body">
+          <span class="directions-label">{{ isRtl ? 'احصل على الاتجاهات' : 'Get Directions' }}</span>
+          <span class="directions-address">{{ destinationLabel }}</span>
+          <span class="directions-action">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            {{ isRtl ? 'افتح في الخرائط' : 'Open in Maps' }}
+          </span>
+        </div>
+        <div class="directions-map">
+          <div ref="miniMapContainer" class="directions-map-canvas"></div>
+          <div v-if="!miniMapReady" class="directions-map-placeholder">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="currentColor"/>
+            </svg>
+          </div>
+        </div>
+      </button>
+
+      <button
+        v-if="hasSteps"
+        class="steps-hint"
+        type="button"
+        @click="props.onViewSteps"
+        :aria-label="isRtl ? 'خطوات الوصول' : 'Arrival Steps'"
+      >
+        <span class="steps-hint-icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" stroke-width="2"/>
+            <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="steps-hint-text">{{ isRtl ? 'خطوات الوصول' : 'Arrival Steps' }}</span>
+        <span class="steps-hint-arrow" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+      </button>
+    </div>
   </section>
 </template>
 
@@ -311,15 +441,108 @@ function iconFor(field: MetadataFieldType): string {
   font-style: italic;
 }
 
-.scroll-hint {
-  position: relative;
+.bottom-actions {
   margin-top: auto;
-  margin-bottom: calc(env(safe-area-inset-bottom) + var(--spacing-md));
-  align-self: center;
+  margin-bottom: calc(env(safe-area-inset-bottom) + var(--spacing-sm));
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  align-items: center;
+  max-width: 480px;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.directions-card {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  width: 100%;
+  padding: var(--spacing-md);
+  background-color: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  text-align: start;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.directions-card:active {
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  border-color: var(--color-primary);
+}
+
+.directions-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.directions-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.directions-address {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.directions-action {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-  padding: 18px 32px;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-primary);
+  margin-top: 2px;
+}
+
+.directions-map {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background-color: var(--color-primary-light);
+}
+
+.directions-map-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.directions-map-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  background-color: var(--color-primary-light);
+}
+
+.steps-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
   background-color: white;
   border: 2px solid var(--color-primary);
   border-radius: var(--radius-full);
@@ -327,15 +550,15 @@ function iconFor(field: MetadataFieldType): string {
   cursor: pointer;
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.10);
   animation: bounce 1.8s ease-in-out infinite;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: box-shadow 0.2s ease;
 }
 
-.scroll-hint:active {
+.steps-hint:active {
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
   animation: none;
 }
 
-.scroll-hint-icon {
+.steps-hint-icon {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -343,14 +566,14 @@ function iconFor(field: MetadataFieldType): string {
   flex-shrink: 0;
 }
 
-.scroll-hint-text {
-  font-size: 18px;
+.steps-hint-text {
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.01em;
   white-space: nowrap;
 }
 
-.scroll-hint-arrow {
+.steps-hint-arrow {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -364,7 +587,7 @@ function iconFor(field: MetadataFieldType): string {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .scroll-hint {
+  .steps-hint {
     animation: none;
   }
 }
