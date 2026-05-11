@@ -253,14 +253,13 @@ function handleOpenMaps() {
         @click="handleOpenMaps"
       >
         <div class="directions-body">
-          <span class="directions-label">{{ isRtl ? 'احصل على الاتجاهات' : 'Get Directions' }}</span>
-          <span class="directions-address">{{ destinationLabel }}</span>
-          <span class="directions-action">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <span class="directions-label">
+            {{ isRtl ? 'احصل على الاتجاهات' : 'Get Directions' }}
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            {{ isRtl ? 'افتح في الخرائط' : 'Open in Maps' }}
           </span>
+          <span class="directions-address">{{ destinationLabel }}</span>
         </div>
         <div class="directions-map">
           <div ref="miniMapContainer" class="directions-map-canvas"></div>
@@ -483,11 +482,14 @@ function handleOpenMaps() {
 }
 
 .directions-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--color-text-muted);
+  color: var(--color-primary);
 }
 
 .directions-address {
@@ -499,16 +501,6 @@ function handleOpenMaps() {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-.directions-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-primary);
-  margin-top: 2px;
 }
 
 .directions-map {
