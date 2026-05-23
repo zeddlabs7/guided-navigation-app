@@ -8,6 +8,7 @@
     "dev:courier": "pnpm --filter @guidenav/courier-app dev",
     "dev:landing": "pnpm --filter landing-page dev",
     "dev:admin": "pnpm --filter @guidenav/admin-portal dev",
+    "dev:mobile": "pnpm --filter @guidenav/mobile dev",
     "dev": "pnpm run --parallel dev:recipient dev:courier",
     "build:recipient": "pnpm --filter @guidenav/recipient-app build",
     "build:courier": "pnpm --filter @guidenav/courier-app build",

@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "407314189352",
+    "project_id": "guided-navigation-app",
+    "storage_bucket": "guided-navigation-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:407314189352:android:f9435d765bf0cfb444791d",
+        "android_client_info": {
+          "package_name": "com.arriveo.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "407314189352-vfqqdjqengv3tre5d7ovr7dtoil404ka.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3yeZITJgJ6LKC622dzLfYGOuocN-0iLI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "407314189352-vfqqdjqengv3tre5d7ovr7dtoil404ka.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "407314189352-3shohcr36rqvmpq29p7aqcfojpn5mjas.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.arriveo.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
