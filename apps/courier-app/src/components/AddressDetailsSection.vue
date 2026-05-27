@@ -28,8 +28,6 @@ const addressTypeLabel = computed(() => {
   return props.isRtl ? labels.ar : labels.en;
 });
 
-const addressTitle = computed(() => props.guidanceSet.title || 'Arriveo');
-
 interface MetadataRow {
   field: MetadataFieldType;
   label: string;
@@ -199,12 +197,6 @@ function handleOpenMaps() {
         <span>{{ addressTypeLabel }}</span>
       </div>
 
-      <h1 class="address-title">{{ addressTitle }}</h1>
-
-      <p v-if="guidanceSet.description" class="address-description">
-        {{ guidanceSet.description }}
-      </p>
-
       <ul v-if="metadataRows.length > 0" class="metadata-list">
         <li v-for="row in metadataRows" :key="row.field" class="metadata-row">
           <span class="metadata-icon" :data-icon="iconFor(row.field)">
@@ -327,22 +319,28 @@ function handleOpenMaps() {
 }
 
 .language-toggle {
-  padding: var(--spacing-xs) var(--spacing-md);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
+  padding: 6px 16px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--color-primary);
   background-color: white;
-  font-size: var(--font-size-sm);
-  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-primary);
   cursor: pointer;
   flex-shrink: 0;
+  line-height: 1.4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 .address-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
-  padding: var(--spacing-lg) 0;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) 0;
   max-width: 480px;
   width: 100%;
   margin: 0 auto;
@@ -363,24 +361,9 @@ function handleOpenMaps() {
   letter-spacing: 0.04em;
 }
 
-.address-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--color-text);
-  margin: 0;
-}
-
-.address-description {
-  font-size: var(--font-size-base);
-  color: var(--color-text-muted);
-  line-height: 1.5;
-  margin: 0;
-}
-
 .metadata-list {
   list-style: none;
-  margin: var(--spacing-sm) 0 0;
+  margin: var(--spacing-xs) 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -390,8 +373,8 @@ function handleOpenMaps() {
 .metadata-row {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md);
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
   background-color: white;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -399,8 +382,8 @@ function handleOpenMaps() {
 }
 
 .metadata-icon {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
@@ -442,10 +425,10 @@ function handleOpenMaps() {
 
 .bottom-actions {
   margin-top: auto;
-  margin-bottom: calc(env(safe-area-inset-bottom) + var(--spacing-sm));
+  margin-bottom: calc(env(safe-area-inset-bottom) + var(--spacing-xs));
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
   align-items: center;
   max-width: 480px;
   width: 100%;

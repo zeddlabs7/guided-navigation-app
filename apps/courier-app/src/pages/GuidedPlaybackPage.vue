@@ -282,10 +282,12 @@ function handleImageError() {
 
 <style scoped>
 .playback-page {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   background-color: var(--color-background);
+  overflow: hidden;
 }
 
 /* Header */
@@ -387,15 +389,18 @@ function handleImageError() {
 /* Main Content */
 .playback-content {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 /* Image Container */
 .image-container {
   position: relative;
   background-color: #1f2937;
-  aspect-ratio: 393 / 265;
+  flex: 1;
+  min-height: 0;
 }
 
 .step-image-wrapper {
@@ -542,8 +547,9 @@ function handleImageError() {
 
 /* Step Info */
 .step-info {
-  padding: var(--spacing-lg) var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-md);
   background-color: white;
+  flex-shrink: 0;
 }
 
 .step-title {
@@ -564,7 +570,7 @@ function handleImageError() {
 .step-divider {
   height: 1px;
   background-color: var(--color-border);
-  margin: var(--spacing-lg) 0;
+  margin: var(--spacing-sm) 0;
 }
 
 .cant-find-button {
@@ -601,9 +607,10 @@ function handleImageError() {
 .playback-footer {
   display: flex;
   gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md) calc(env(safe-area-inset-bottom, 0px) + var(--spacing-lg));
+  padding: var(--spacing-sm) var(--spacing-md) calc(env(safe-area-inset-bottom, 0px) + var(--spacing-sm));
   background-color: white;
   border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
 }
 
 .nav-button {

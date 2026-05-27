@@ -79,8 +79,8 @@ const rows = computed<StepRow[]>(() =>
 
           <div class="step-body">
             <span class="step-type">{{ row.typeLabel }}</span>
-            <span class="step-title">{{ row.displayTitle }}</span>
             <span v-if="row.instruction" class="step-instruction">{{ row.instruction }}</span>
+            <span v-else class="step-instruction step-instruction--empty">{{ isRtl ? 'لا توجد تعليمات' : 'No instructions' }}</span>
           </div>
 
           <span class="step-chevron" aria-hidden="true">
@@ -97,7 +97,7 @@ const rows = computed<StepRow[]>(() =>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M18 15l-6-6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span>{{ isRtl ? 'العودة للتفاصيل' : 'Back to details' }}</span>
+        <span>{{ isRtl ? 'العودة للأعلى' : 'Back to Top' }}</span>
       </button>
     </div>
   </section>
@@ -252,31 +252,28 @@ const rows = computed<StepRow[]>(() =>
 
 .step-type {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--color-primary);
-}
-
-.step-title {
-  font-size: var(--font-size-base);
-  font-weight: 600;
-  color: var(--color-text);
-  line-height: 1.3;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--color-text-muted);
 }
 
 .step-instruction {
-  font-size: 13px;
-  color: var(--color-text-muted);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--color-text);
   line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+}
+
+.step-instruction--empty {
+  font-weight: 400;
+  color: var(--color-text-muted);
+  font-style: italic;
 }
 
 .step-chevron {

@@ -9,11 +9,10 @@ import {
   Modal,
   TextInput,
   Share,
-  Linking,
   Alert,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
@@ -21,6 +20,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import Svg, { Path, Circle } from 'react-native-svg';
 import type { AvailabilityMode, GuidanceSet } from '@guidenav/types';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
+import { getBottomInset } from '@/components/ui/ScreenFooter';
+import { openWhatsAppShare } from '@/lib/share-whatsapp';
 import { getGuidanceSet, updateGuidanceSet } from '@/services/guidance';
 import {
   createShareLink,
@@ -89,6 +90,8 @@ function AvailabilityIcon({ icon, selected }: { icon: 'check' | 'clock' | 'x'; s
 export default function ShareScreen() {
   const router = useRouter();
   const { id: guidanceSetId } = useLocalSearchParams<{ id: string }>();
+  const insets = useSafeAreaInsets();
+  const modalBottomPadding = Math.max(getBottomInset(insets), Spacing.lg);
 
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -221,18 +224,7 @@ export default function ShareScreen() {
 
   const handleWhatsAppShare = useCallback(async () => {
     if (!courierAppUrl) return;
-    const text = encodeURIComponent(`Here are directions to my address: ${courierAppUrl}`);
-    const nativeUrl = `whatsapp://send?text=${text}`;
-    try {
-      const canOpen = await Linking.canOpenURL(nativeUrl);
-      if (canOpen) {
-        await Linking.openURL(nativeUrl);
-      } else {
-        Alert.alert('WhatsApp Not Installed', 'Please install WhatsApp to share via this method.');
-      }
-    } catch {
-      Alert.alert('Error', 'Could not open WhatsApp. Please make sure it is installed.');
-    }
+    await openWhatsAppShare(`Here are directions to my address: ${courierAppUrl}`);
   }, [courierAppUrl]);
 
   const handleNativeShare = useCallback(async () => {
@@ -465,7 +457,7 @@ export default function ShareScreen() {
       >
         <View style={styles.modalOverlay}>
           <Pressable style={styles.modalDismissArea} onPress={() => setShowModal(false)} />
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { paddingBottom: modalBottomPadding }]}>
             <View style={styles.modalHandle} />
 
             <View style={styles.modalHeader}>
@@ -903,7 +895,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: BorderRadius.xxl,
     maxHeight: '85%',
     paddingHorizontal: Spacing.xl,
-    paddingBottom: 34,
   },
   modalHandle: {
     width: 36,

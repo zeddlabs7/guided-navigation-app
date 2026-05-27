@@ -40,6 +40,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
   },
   android: {
+    edgeToEdgeEnabled: true,
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
       backgroundColor: '#ffffff',
@@ -64,6 +65,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     'expo-router',
     './plugins/withCoreLibraryDesugaring',
+    './plugins/withWhatsAppQueries',
     [
       'expo-build-properties',
       {
@@ -97,6 +99,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     eas: {
       projectId: '68767fae-c3e1-467d-b66e-d6180e281380',
     },
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
   },
   experiments: {
     typedRoutes: true,

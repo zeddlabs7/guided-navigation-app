@@ -19,6 +19,7 @@ import type { GuidanceSet, GuidanceStep, GuidanceStatus, Overlay, ArrowDirection
 import { STEP_TYPE_LABELS, ADDRESS_TYPE_LABELS } from '@guidenav/types';
 import { getMetadataFieldConfigs, requiresMetadata as checkRequiresMetadata } from '@guidenav/types';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
+import { ScreenFooter, useFooterScrollPadding } from '@/components/ui/ScreenFooter';
 import { getGuidanceSet, getGuidanceSteps, updateGuidanceSet } from '@/services/guidance';
 
 const arrowCurvedLeft = require('@/assets/arrows/arrow-curved-left.png');
@@ -88,6 +89,7 @@ export default function PreviewScreen() {
   const isPublished = status === 'PUBLISHED';
   const statusCfg = STATUS_CONFIG[status];
   const totalSteps = steps.length;
+  const footerScrollPadding = useFooterScrollPadding(120);
 
   const loadData = useCallback(async () => {
     if (!guidanceSetId) return;
@@ -374,7 +376,10 @@ export default function PreviewScreen() {
       )}
 
       {/* Content */}
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={[styles.contentInner, { paddingBottom: footerScrollPadding }]}
+      >
         {/* Summary Card */}
         <View style={styles.summaryCard}>
           <View style={styles.summaryIcon}>
@@ -451,7 +456,7 @@ export default function PreviewScreen() {
 
       {/* Footer */}
       {totalSteps > 0 && (
-        <View style={styles.footer}>
+        <ScreenFooter style={styles.footer}>
           {!isPublished ? (
             <>
               <View style={styles.footerButtons}>
@@ -509,7 +514,7 @@ export default function PreviewScreen() {
               </Pressable>
             </View>
           )}
-        </View>
+        </ScreenFooter>
       )}
     </SafeAreaView>
   );
@@ -627,7 +632,6 @@ const styles = StyleSheet.create({
   },
   contentInner: {
     padding: Spacing.xl,
-    paddingBottom: 180,
   },
 
   summaryCard: {
@@ -870,11 +874,6 @@ const styles = StyleSheet.create({
   },
 
   footer: {
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.lg,
-    backgroundColor: Colors.surface,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.border,
     gap: Spacing.sm,
   },
   footerButtons: {

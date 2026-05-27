@@ -15,8 +15,7 @@ import MapView, { Marker, PROVIDER_GOOGLE, PROVIDER_DEFAULT, Region } from 'reac
 import * as Location from 'expo-location';
 import Svg, { Circle, Path } from 'react-native-svg';
 import type { Coordinates, LocationData } from '@guidenav/types';
-
-const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
+import { getGoogleMapsApiKey, isGoogleMapsConfigured } from '@/lib/google-maps';
 
 const DEFAULT_CENTER: Coordinates = { latitude: 25.2048, longitude: 55.2708 };
 const DEFAULT_ZOOM_DELTA = 0.01;
@@ -42,7 +41,7 @@ async function reverseGeocode(
   lng: number,
 ): Promise<{ formattedAddress: string; placeId?: string }> {
   try {
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}`;
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${getGoogleMapsApiKey()}`;
     const res = await fetch(url);
     const data = await res.json();
     if (data.results?.[0]) {
@@ -65,7 +64,7 @@ async function searchPlaces(query: string): Promise<Suggestion[]> {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Goog-Api-Key': GOOGLE_MAPS_API_KEY,
+          'X-Goog-Api-Key': getGoogleMapsApiKey(),
         },
         body: JSON.stringify({ input: query }),
       },
@@ -92,7 +91,7 @@ async function getPlaceDetails(
       `https://places.googleapis.com/v1/places/${placeId}`,
       {
         headers: {
-          'X-Goog-Api-Key': GOOGLE_MAPS_API_KEY,
+          'X-Goog-Api-Key': getGoogleMapsApiKey(),
           'X-Goog-FieldMask': 'location,formattedAddress,displayName',
         },
       },
@@ -132,7 +131,7 @@ export function LocationPicker({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
 
-  const isConfigured = !!GOOGLE_MAPS_API_KEY;
+  const isConfigured = isGoogleMapsConfigured();
 
   useEffect(() => {
     if (value?.coordinates) {
@@ -287,7 +286,7 @@ export function LocationPicker({
           </Svg>
           <Text style={styles.errorText}>Google Maps API key is not configured</Text>
           <Text style={styles.errorHint}>
-            Set EXPO_PUBLIC_GOOGLE_MAPS_API_KEY in your .env file.
+            Set EXPO_PUBLIC_GOOGLE_MAPS_API_KEY in apps/mobile/.env (or as an EAS secret) and rebuild the app.
           </Text>
         </View>
       </View>

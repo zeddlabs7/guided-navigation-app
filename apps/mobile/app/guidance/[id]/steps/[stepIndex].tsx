@@ -8,7 +8,8 @@ import {
   Pressable,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getBottomInset } from '@/components/ui/ScreenFooter';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { StepType, AddressType, StepImage, GuidanceStep, Overlay, LocationData } from '@guidenav/types';
 import { STEP_TYPE_LABELS, getStepTypesForAddressType } from '@guidenav/types';
@@ -26,6 +27,8 @@ import { StepTypeDropdown, STEP_TYPE_COLORS, PhotoUpload, LocationPicker } from 
 import { OverlayEditor } from '@/components/overlay';
 
 export default function StepBuilderScreen() {
+  const insets = useSafeAreaInsets();
+  const scrollBottomPadding = 320 + getBottomInset(insets);
   const router = useRouter();
   const { id: guidanceSetId, stepIndex: stepIndexParam } = useLocalSearchParams<{
     id: string;
@@ -366,7 +369,7 @@ export default function StepBuilderScreen() {
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: scrollBottomPadding }]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         showsVerticalScrollIndicator={false}
@@ -610,9 +613,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  scrollContent: {
-    paddingBottom: 320,
-  },
+  scrollContent: {},
   section: {
     padding: Spacing.xl,
   },

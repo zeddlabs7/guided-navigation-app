@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
+import { ScreenFooter, useFooterScrollPadding } from '@/components/ui/ScreenFooter';
 import { requiresMetadata as checkRequiresMetadata } from '@guidenav/types';
 import { ADDRESS_TYPE_LABELS, getMetadataFieldConfigs } from '@guidenav/types';
 import type {
@@ -81,6 +82,7 @@ export default function EditGuidanceScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const displayTitle = title.trim() || 'Untitled Address';
+  const footerScrollPadding = useFooterScrollPadding(60);
 
   const loadData = useCallback(async () => {
     if (!guidanceSetId) return;
@@ -427,7 +429,7 @@ export default function EditGuidanceScreen() {
       <View style={styles.flex}>
         <ScrollView
           style={styles.flex}
-          contentContainerStyle={styles.stepsScrollContent}
+          contentContainerStyle={[styles.stepsScrollContent, { paddingBottom: footerScrollPadding }]}
           showsVerticalScrollIndicator={false}
         >
           {/* Address summary */}
@@ -553,8 +555,7 @@ export default function EditGuidanceScreen() {
           </Pressable>
         </ScrollView>
 
-        {/* Fixed footer */}
-        <View style={styles.footer}>
+        <ScreenFooter style={styles.footer}>
           <Pressable
             style={[styles.footerBtnSecondary, saving && styles.footerBtnDisabled]}
             onPress={handleSave}
@@ -571,7 +572,7 @@ export default function EditGuidanceScreen() {
           >
             <Text style={styles.footerBtnPrimaryText}>Preview & Publish</Text>
           </Pressable>
-        </View>
+        </ScreenFooter>
       </View>
     );
   };
@@ -885,7 +886,6 @@ const styles = StyleSheet.create({
 
   stepsScrollContent: {
     padding: Spacing.xl,
-    paddingBottom: 100,
   },
   addressSummary: {
     backgroundColor: Colors.background,
@@ -1033,11 +1033,6 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     gap: Spacing.sm,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    backgroundColor: Colors.surface,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.border,
   },
   footerBtnSecondary: {
     flex: 1,
