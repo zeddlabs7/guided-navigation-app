@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, shallowRef, onMounted, nextTick, watch } from 'vue';
+import { computed, ref, shallowRef, onMounted, nextTick, watch, onBeforeUnmount } from 'vue';
 import {
   ADDRESS_TYPE_LABELS,
   getMetadataFieldConfigs,
@@ -16,6 +16,7 @@ interface Props {
   languageToggleLabel: string;
   destination: Coordinates | null;
   destinationAddress: string | null;
+  locationCheckImageUrl: string | null;
   hasSteps: boolean;
   onToggleLanguage: () => void;
   onViewSteps: () => void;
@@ -172,6 +173,22 @@ function handleOpenMaps() {
     props.isRtl ? 'الوجهة' : 'Destination'
   );
 }
+
+const isImageExpanded = ref(false);
+
+function openImageViewer() {
+  isImageExpanded.value = true;
+  document.body.style.overflow = 'hidden';
+}
+
+function closeImageViewer() {
+  isImageExpanded.value = false;
+  document.body.style.overflow = '';
+}
+
+onBeforeUnmount(() => {
+  document.body.style.overflow = '';
+});
 </script>
 
 <template>
@@ -239,6 +256,21 @@ function handleOpenMaps() {
 
     <div class="bottom-actions">
       <button
+        v-if="locationCheckImageUrl"
+        class="location-image-card"
+        type="button"
+        @click="openImageViewer"
+      >
+        <img :src="locationCheckImageUrl" alt="" class="location-image-thumb" />
+        <span class="location-image-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          {{ isRtl ? 'صورة الموقع' : 'Location photo' }}
+        </span>
+      </button>
+
+      <button
         v-if="destination"
         class="directions-card"
         type="button"
@@ -285,6 +317,21 @@ function handleOpenMaps() {
         </span>
       </button>
     </div>
+
+    <Teleport to="body">
+      <div
+        v-if="isImageExpanded && locationCheckImageUrl"
+        class="image-viewer-overlay"
+        @click="closeImageViewer"
+      >
+        <button class="image-viewer-close" type="button" @click.stop="closeImageViewer" :aria-label="isRtl ? 'إغلاق' : 'Close'">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <img :src="locationCheckImageUrl" alt="" class="image-viewer-img" @click.stop />
+      </div>
+    </Teleport>
   </section>
 </template>
 
@@ -554,6 +601,83 @@ function handleOpenMaps() {
   justify-content: center;
   color: var(--color-text-muted);
   flex-shrink: 0;
+}
+
+.location-image-card {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  width: 100%;
+  padding: var(--spacing-sm);
+  background-color: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  text-align: start;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.location-image-card:active {
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  border-color: var(--color-primary);
+}
+
+.location-image-thumb {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.location-image-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.image-viewer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background-color: rgba(0, 0, 0, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+}
+
+.image-viewer-close {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 16px);
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background-color: rgba(255, 255, 255, 0.15);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1;
+}
+
+[dir="rtl"] .image-viewer-close {
+  right: auto;
+  left: 16px;
+}
+
+.image-viewer-img {
+  max-width: 100%;
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: var(--radius-md);
 }
 
 @keyframes bounce {

@@ -130,6 +130,11 @@ export function useCourierSession() {
     return locationCheckStep?.locationData?.formattedAddress ?? null;
   }
 
+  function getLocationCheckImageUrl(): string | null {
+    const locationCheckStep = allSteps.value.find(step => step.stepType === 'LOCATION_CHECK');
+    return locationCheckStep?.image?.publicUrl ?? null;
+  }
+
   return {
     token,
     shareLink,
@@ -155,5 +160,6 @@ export function useCourierSession() {
     getRecipientPhoneNumber,
     getDestinationCoordinates,
     getDestinationAddress,
+    getLocationCheckImageUrl,
   };
 }

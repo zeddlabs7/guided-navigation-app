@@ -15,6 +15,7 @@ const {
   currentLanguage,
   getDestinationCoordinates,
   getDestinationAddress,
+  getLocationCheckImageUrl,
   getAvailabilityText,
   toggleLanguage,
 } = useCourierSession();
@@ -41,6 +42,8 @@ const destinationCoords = computed(() => getDestinationCoordinates());
 const hasSteps = computed(() => steps.value.length > 0);
 
 const destinationAddress = computed(() => getDestinationAddress());
+
+const locationCheckImageUrl = computed(() => getLocationCheckImageUrl());
 
 function scrollToSection(id: string) {
   const el = document.getElementById(id);
@@ -76,6 +79,7 @@ function handleSelectStep(index: number) {
         :language-toggle-label="languageToggleLabel"
         :destination="destinationCoords"
         :destination-address="destinationAddress"
+        :location-check-image-url="locationCheckImageUrl"
         :has-steps="hasSteps"
         :on-toggle-language="toggleLanguage"
         :on-view-steps="() => scrollToSection('landing-section-2')"
