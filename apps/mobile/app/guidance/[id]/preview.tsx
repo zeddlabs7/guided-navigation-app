@@ -1,16 +1,16 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   Pressable,
-  Image,
   ActivityIndicator,
   Alert,
   Platform,
   useWindowDimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -20,7 +20,8 @@ import { STEP_TYPE_LABELS, ADDRESS_TYPE_LABELS } from '@guidenav/types';
 import { getMetadataFieldConfigs, requiresMetadata as checkRequiresMetadata } from '@guidenav/types';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { ScreenFooter, useFooterScrollPadding } from '@/components/ui/ScreenFooter';
-import { getGuidanceSet, getGuidanceSteps, updateGuidanceSet } from '@/services/guidance';
+import { hasUnpublishedStepChanges } from '@guidenav/core';
+import { getGuidanceSet, getGuidanceSteps, updateGuidanceSet, publishGuidanceWithSteps } from '@/services/guidance';
 
 const arrowCurvedLeft = require('@/assets/arrows/arrow-curved-left.png');
 const arrowCurvedRight = require('@/assets/arrows/arrow-curved-right.png');
@@ -89,7 +90,11 @@ export default function PreviewScreen() {
   const isPublished = status === 'PUBLISHED';
   const statusCfg = STATUS_CONFIG[status];
   const totalSteps = steps.length;
-  const footerScrollPadding = useFooterScrollPadding(120);
+  const hasUnpublishedChanges = useMemo(
+    () => isPublished && hasUnpublishedStepChanges(steps),
+    [isPublished, steps],
+  );
+  const footerScrollPadding = useFooterScrollPadding(hasUnpublishedChanges ? 160 : 120);
 
   const loadData = useCallback(async () => {
     if (!guidanceSetId) return;
@@ -121,8 +126,13 @@ export default function PreviewScreen() {
     setPublishing(true);
     setError(null);
     try {
-      await updateGuidanceSet(guidanceSetId, { status: 'PUBLISHED' });
-      setGuidanceSet((prev) => prev ? { ...prev, status: 'PUBLISHED' } : prev);
+      await publishGuidanceWithSteps(guidanceSetId);
+      const [gs, gSteps] = await Promise.all([
+        getGuidanceSet(guidanceSetId),
+        getGuidanceSteps(guidanceSetId),
+      ]);
+      if (gs) setGuidanceSet(gs);
+      setSteps(gSteps);
     } catch (err) {
       console.error('Failed to publish:', err);
       setError('Failed to publish. Please try again.');
@@ -239,7 +249,7 @@ export default function PreviewScreen() {
           <Image
             source={arrowImg}
             style={{ width: scaledSize, height: scaledSize }}
-            resizeMode="contain"
+            contentFit="contain"
           />
         </View>
       );
@@ -280,7 +290,9 @@ export default function PreviewScreen() {
             <Image
               source={{ uri: step.image!.publicUrl }}
               style={styles.stepImage}
-              resizeMode="cover"
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={200}
             />
             {step.overlays && step.overlays.length > 0 && (
               <View style={StyleSheet.absoluteFill}>
@@ -372,6 +384,14 @@ export default function PreviewScreen() {
       {error && (
         <View style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{error}</Text>
+        </View>
+      )}
+
+      {hasUnpublishedChanges && (
+        <View style={styles.unpublishedBanner}>
+          <Text style={styles.unpublishedBannerText}>
+            You have unpublished changes. Republish to make them visible to couriers.
+          </Text>
         </View>
       )}
 
@@ -485,34 +505,50 @@ export default function PreviewScreen() {
               <Text style={styles.footerHint}>Publish to generate a shareable link for couriers</Text>
             </>
           ) : (
-            <View style={styles.footerButtons}>
-              <Pressable
-                style={[styles.footerBtn, styles.footerBtnOutline, publishing && styles.footerBtnDisabled]}
-                onPress={handleUnpublish}
-                disabled={publishing}
-              >
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                  <Circle cx={12} cy={12} r={10} stroke={Colors.textSecondary} strokeWidth={2} />
-                  <Path d="M15 9L9 15M9 9L15 15" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                </Svg>
-                <Text style={styles.footerBtnOutlineText}>
-                  {publishing ? 'Unpublishing...' : 'Unpublish'}
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[styles.footerBtn, styles.footerBtnSecondary, publishing && styles.footerBtnDisabled]}
-                onPress={handleShareLink}
-                disabled={publishing}
-              >
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                  <Path d="M18 8C19.6569 8 21 6.65685 21 5C21 3.34315 19.6569 2 18 2C16.3431 2 15 3.34315 15 5C15 6.65685 16.3431 8 18 8Z" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                  <Path d="M6 15C7.65685 15 9 13.6569 9 12C9 10.3431 7.65685 9 6 9C4.34315 9 3 10.3431 3 12C3 13.6569 4.34315 15 6 15Z" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                  <Path d="M18 22C19.6569 22 21 20.6569 21 19C21 17.3431 19.6569 16 18 16C16.3431 16 15 17.3431 15 19C15 20.6569 16.3431 22 18 22Z" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                  <Path d="M8.59 13.51L15.42 17.49M15.41 6.51L8.59 10.49" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                </Svg>
-                <Text style={styles.footerBtnSecondaryText}>Share Link</Text>
-              </Pressable>
-            </View>
+            <>
+              {hasUnpublishedChanges && (
+                <Pressable
+                  style={[styles.republishBtn, publishing && styles.footerBtnDisabled]}
+                  onPress={handlePublish}
+                  disabled={publishing}
+                >
+                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                    <Path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                  </Svg>
+                  <Text style={styles.footerBtnPrimaryText}>
+                    {publishing ? 'Republishing...' : 'Republish'}
+                  </Text>
+                </Pressable>
+              )}
+              <View style={styles.footerButtons}>
+                <Pressable
+                  style={[styles.footerBtn, styles.footerBtnOutline, publishing && styles.footerBtnDisabled]}
+                  onPress={handleUnpublish}
+                  disabled={publishing}
+                >
+                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                    <Circle cx={12} cy={12} r={10} stroke={Colors.textSecondary} strokeWidth={2} />
+                    <Path d="M15 9L9 15M9 9L15 15" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                  </Svg>
+                  <Text style={styles.footerBtnOutlineText}>
+                    {publishing ? 'Unpublishing...' : 'Unpublish'}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.footerBtn, styles.footerBtnSecondary, publishing && styles.footerBtnDisabled]}
+                  onPress={handleShareLink}
+                  disabled={publishing}
+                >
+                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                    <Path d="M18 8C19.6569 8 21 6.65685 21 5C21 3.34315 19.6569 2 18 2C16.3431 2 15 3.34315 15 5C15 6.65685 16.3431 8 18 8Z" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                    <Path d="M6 15C7.65685 15 9 13.6569 9 12C9 10.3431 7.65685 9 6 9C4.34315 9 3 10.3431 3 12C3 13.6569 4.34315 15 6 15Z" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                    <Path d="M18 22C19.6569 22 21 20.6569 21 19C21 17.3431 19.6569 16 18 16C16.3431 16 15 17.3431 15 19C15 20.6569 16.3431 22 18 22Z" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                    <Path d="M8.59 13.51L15.42 17.49M15.41 6.51L8.59 10.49" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                  </Svg>
+                  <Text style={styles.footerBtnSecondaryText}>Share Link</Text>
+                </Pressable>
+              </View>
+            </>
           )}
         </ScreenFooter>
       )}
@@ -624,6 +660,20 @@ const styles = StyleSheet.create({
   errorBannerText: {
     fontSize: FontSize.sm,
     color: Colors.danger,
+  },
+  unpublishedBanner: {
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.sm,
+    padding: Spacing.md,
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    borderRadius: BorderRadius.lg,
+  },
+  unpublishedBannerText: {
+    fontSize: FontSize.sm,
+    color: '#b45309',
+    lineHeight: 20,
   },
 
   content: {
@@ -889,6 +939,16 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     paddingHorizontal: Spacing.md,
     borderRadius: BorderRadius.full,
+  },
+  republishBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 13,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.text,
   },
   footerBtnPrimary: {
     backgroundColor: Colors.text,

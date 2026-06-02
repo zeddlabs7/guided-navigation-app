@@ -21,7 +21,7 @@ interface LabelInputModalProps {
 export function LabelInputModal({
   visible,
   initialValue = '',
-  title = 'Add Label',
+  title = 'Add Note on the Marker',
   onSave,
   onCancel,
 }: LabelInputModalProps) {

@@ -164,9 +164,13 @@ export const loadGuidanceByToken = functions.https.onCall(async (data: { token: 
     return { valid: false, error: 'GUIDANCE_DISABLED' };
   }
 
-  const steps = stepsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  const rawSteps = stepsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-  if (steps.length === 0) {
+  const courierSteps = rawSteps
+    .filter((step) => isStepVisibleToCourier(step))
+    .map((step) => applyPublishedSnapshotForCourier(step));
+
+  if (courierSteps.length === 0) {
     return { valid: false, error: 'NO_STEPS' };
   }
 
@@ -188,10 +192,47 @@ export const loadGuidanceByToken = functions.https.onCall(async (data: { token: 
     valid: true,
     shareLink,
     guidanceSet,
-    steps,
+    steps: courierSteps,
     recipientPhoneNumber,
   };
 });
+
+type StepDoc = { id: string; publishedSnapshot?: unknown; [key: string]: unknown };
+
+/** Legacy steps (no field) use live data; explicit null = hidden until republish */
+function isStepVisibleToCourier(step: StepDoc): boolean {
+  if (!('publishedSnapshot' in step)) {
+    return true;
+  }
+  return step.publishedSnapshot != null;
+}
+
+function applyPublishedSnapshotForCourier(step: StepDoc): StepDoc {
+  const snapshot = step.publishedSnapshot;
+  if (!snapshot || typeof snapshot !== 'object') {
+    const { publishedSnapshot: _omit, ...rest } = step;
+    return rest;
+  }
+
+  const {
+    publishedSnapshot: _omit,
+    stepType: _st,
+    contentType: _ct,
+    title: _t,
+    instructionOriginal: _io,
+    instructionTranslations: _it,
+    image: _img,
+    overlays: _ov,
+    isRequired: _ir,
+    locationData: _ld,
+    ...meta
+  } = step;
+
+  return {
+    ...meta,
+    ...(snapshot as Record<string, unknown>),
+  };
+}
 
 export const revokeShareLink = functions.https.onCall(
   async (data: { shareLinkId: string }, context) => {

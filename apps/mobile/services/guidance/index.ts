@@ -1,5 +1,6 @@
 import firestore from '@react-native-firebase/firestore';
 import storage from '@react-native-firebase/storage';
+import { buildStepPublishedSnapshot } from '@guidenav/core';
 import type {
   GuidanceSet,
   GuidanceStep,
@@ -64,6 +65,9 @@ function mapDocToGuidanceStep(doc: { id: string; data: () => Record<string, any>
     overlays: data.overlays ?? [],
     isRequired: data.isRequired ?? true,
     locationData: data.locationData ?? null,
+    publishedSnapshot: 'publishedSnapshot' in data
+      ? (data.publishedSnapshot ?? null)
+      : undefined,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
     deletedAt: data.deletedAt ?? null,
@@ -152,6 +156,37 @@ export async function updateGuidanceSet(
       ...input,
       updatedAt: firestore.FieldValue.serverTimestamp(),
     });
+}
+
+/**
+ * Publishes guidance: writes publishedSnapshot on every non-deleted step, then sets status PUBLISHED.
+ */
+export async function publishGuidanceWithSteps(guidanceSetId: string): Promise<void> {
+  const steps = await getGuidanceSteps(guidanceSetId);
+
+  if (steps.length === 0) {
+    throw new Error('Cannot publish guidance without steps');
+  }
+
+  const batch = firestore().batch();
+  const now = firestore.FieldValue.serverTimestamp();
+
+  for (const step of steps) {
+    const stepRef = firestore().collection(GUIDANCE_STEPS_COLLECTION).doc(step.id);
+    batch.update(stepRef, {
+      publishedSnapshot: buildStepPublishedSnapshot(step),
+      updatedAt: now,
+    });
+  }
+
+  const setRef = firestore().collection(GUIDANCE_SETS_COLLECTION).doc(guidanceSetId);
+  batch.update(setRef, {
+    status: 'PUBLISHED',
+    publishedAt: now,
+    updatedAt: now,
+  });
+
+  await batch.commit();
 }
 
 export async function reorderGuidanceSteps(
@@ -256,6 +291,7 @@ export async function createGuidanceStep(
       overlays: [],
       isRequired: true,
       locationData: input.locationData ?? null,
+      publishedSnapshot: null,
       deletedAt: null,
       createdAt: now,
       updatedAt: now,
@@ -287,30 +323,52 @@ export async function deleteGuidanceStep(stepId: string): Promise<void> {
     });
 }
 
+const MAX_IMAGE_WIDTH = 1280;
+const COMPRESS_QUALITY = 0.7;
+
+async function compressImage(localUri: string): Promise<{
+  uri: string;
+  width: number;
+  height: number;
+}> {
+  const { ImageManipulator, SaveFormat } = require('expo-image-manipulator') as typeof import('expo-image-manipulator');
+
+  const pipeline = ImageManipulator.manipulate(localUri)
+    .resize({ width: MAX_IMAGE_WIDTH });
+
+  const imageRef = await pipeline.renderAsync();
+  const saved = await imageRef.saveAsync({
+    format: SaveFormat.JPEG,
+    compress: COMPRESS_QUALITY,
+  });
+
+  return {
+    uri: saved.uri,
+    width: saved.width,
+    height: saved.height,
+  };
+}
+
 export async function uploadStepImage(
   guidanceSetId: string,
   stepId: string,
   localUri: string,
 ): Promise<StepImage> {
-  const extension = localUri.split('.').pop()?.toLowerCase() || 'jpg';
-  const mimeMap: Record<string, SupportedImageMimeType> = {
-    jpg: 'image/jpeg',
-    jpeg: 'image/jpeg',
-    png: 'image/png',
-    webp: 'image/webp',
-  };
-  const mimeType: SupportedImageMimeType = mimeMap[extension] || 'image/jpeg';
-  const storagePath = `guidanceSets/${guidanceSetId}/steps/${stepId}/main.${extension}`;
+  const compressed = await compressImage(localUri);
+  const filePath = compressed.uri.replace(/^file:\/\//, '');
+
+  const storagePath = `guidanceSets/${guidanceSetId}/steps/${stepId}/main.jpg`;
+  const mimeType: SupportedImageMimeType = 'image/jpeg';
 
   const ref = storage().ref(storagePath);
-  await ref.putFile(localUri);
+  await ref.putFile(filePath, { contentType: 'image/jpeg' });
   const publicUrl = await ref.getDownloadURL();
 
   return {
     storagePath,
     publicUrl,
-    width: 0,
-    height: 0,
+    width: compressed.width,
+    height: compressed.height,
     fileSize: 0,
     mimeType,
   };

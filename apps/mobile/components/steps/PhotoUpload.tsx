@@ -4,12 +4,12 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  Image,
   ActivityIndicator,
   ActionSheetIOS,
   Platform,
   Alert,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { validateImageFile } from '@guidenav/core';
 
 function getImagePicker() {
@@ -144,6 +144,9 @@ export function PhotoUpload({
           <Image
             source={{ uri: imageUri }}
             style={[styles.previewImage, { aspectRatio: imageAspect }]}
+            contentFit="contain"
+            cachePolicy="memory-disk"
+            transition={200}
           />
           {uploading && (
             <View style={styles.uploadIndicator}>
@@ -243,7 +246,6 @@ const styles = StyleSheet.create({
   },
   previewImage: {
     width: '100%',
-    resizeMode: 'contain',
   },
   uploadIndicator: {
     position: 'absolute',

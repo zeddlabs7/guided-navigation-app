@@ -120,6 +120,7 @@ export function LocationPicker({
 }: LocationPickerProps) {
   const mapRef = useRef<MapView>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ignoreNextMapPressRef = useRef(false);
   const [mapReady, setMapReady] = useState(false);
   const [loadingGps, setLoadingGps] = useState(false);
   const [markerCoord, setMarkerCoord] = useState<Coordinates | null>(
@@ -175,6 +176,7 @@ export function LocationPicker({
 
   const handleSuggestionPress = useCallback(
     async (suggestion: Suggestion) => {
+      ignoreNextMapPressRef.current = true;
       setShowSuggestions(false);
       setSuggestions([]);
       Keyboard.dismiss();
@@ -199,6 +201,10 @@ export function LocationPicker({
 
   const handleMapPress = useCallback(
     async (e: { nativeEvent: { coordinate: { latitude: number; longitude: number } } }) => {
+      if (ignoreNextMapPressRef.current) {
+        ignoreNextMapPressRef.current = false;
+        return;
+      }
       if (disabled) return;
       Keyboard.dismiss();
       setShowSuggestions(false);

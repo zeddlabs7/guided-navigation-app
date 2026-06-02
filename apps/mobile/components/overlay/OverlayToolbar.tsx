@@ -10,7 +10,15 @@ const DIRECTIONS: { value: ArrowDirection; label: string }[] = [
   { value: 'forward-backward', label: 'Forward' },
 ];
 
-function DirectionSvgIcon({ direction, size = 14, color = '#92400e' }: { direction: ArrowDirection; size?: number; color?: string }) {
+function DirectionSvgIcon({
+  direction,
+  size = 14,
+  color = '#92400e',
+}: {
+  direction: ArrowDirection;
+  size?: number;
+  color?: string;
+}) {
   switch (direction) {
     case 'left':
       return (
@@ -103,8 +111,7 @@ export function OverlayToolbar({
                   key={dir.value}
                   style={[
                     styles.directionOption,
-                    arrowDirection === dir.value &&
-                      styles.directionOptionSelected,
+                    arrowDirection === dir.value && styles.directionOptionSelected,
                   ]}
                   onPress={() => selectDirection(dir.value)}
                 >
@@ -135,20 +142,14 @@ export function OverlayToolbar({
               strokeLinejoin="round"
             />
           </Svg>
-          <Text style={styles.labelBtnText}>
-            {hasLabel ? 'Edit' : 'Add Label'}
-          </Text>
+          <Text style={styles.labelBtnText}>{hasLabel ? 'Edit' : 'Add Note'}</Text>
         </Pressable>
       )}
 
       <View style={styles.divider} />
 
-      {/* Delete button */}
       <Pressable
-        style={({ pressed }) => [
-          styles.btn,
-          pressed && styles.btnDangerPressed,
-        ]}
+        style={({ pressed }) => [styles.btn, pressed && styles.btnDangerPressed]}
         onPress={onDelete}
       >
         <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
@@ -171,12 +172,8 @@ export function OverlayToolbar({
 
       <View style={styles.divider} />
 
-      {/* Done button */}
       <Pressable
-        style={({ pressed }) => [
-          styles.btn,
-          pressed && styles.btnDonePressed,
-        ]}
+        style={({ pressed }) => [styles.btn, pressed && styles.btnDonePressed]}
         onPress={onDone}
       >
         <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
@@ -242,10 +239,6 @@ const styles = StyleSheet.create({
     borderColor: '#fcd34d',
     borderRadius: 8,
   },
-  directionIconWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   directionPicker: {
     position: 'absolute',
     bottom: '100%',
@@ -264,6 +257,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 16,
     elevation: 8,
+    zIndex: 20,
   },
   directionOption: {
     flexDirection: 'row',
@@ -276,11 +270,6 @@ const styles = StyleSheet.create({
   },
   directionOptionSelected: {
     backgroundColor: '#fef3c7',
-  },
-  directionOptionIconWrap: {
-    width: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   directionOptionLabel: {
     fontSize: 13,

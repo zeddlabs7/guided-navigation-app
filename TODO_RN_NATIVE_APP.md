@@ -52,7 +52,7 @@
 - [ ] Install `@react-native-firebase/storage`
 - [ ] Request camera and gallery permissions
 - [ ] Image picker (camera + gallery)
-- [ ] Image compression before upload
+- [x] Image compression before upload
 - [ ] Upload with progress indicator
 - [ ] Upload error handling + retry
 - [ ] Step type dropdown (from ADDRESS_TYPE_STEP_CONFIG)
@@ -95,8 +95,8 @@
 - [ ] Android internal testing
 
 ## Known Issues
-- [ ] Dashboard image flickering: When switching filter tabs (e.g. All → Draft → All), thumbnail images briefly go blank and take 3-4 seconds to re-render. Root cause: React Native's Image component loses its GPU texture on unmount; even with `cache: 'force-cache'` and ScrollView (no FlatList), the images re-decode from disk cache. Fix: use `expo-image` (which uses SDWebImage/Glide with persistent memory caching) or `react-native-fast-image`.
-- [ ] Step Builder: Photo upload is slow (5-10+ seconds). Root cause: full-resolution images (12MP, 3-5MB) are uploaded directly to Firebase Storage without resize. Fix: add `expo-image-manipulator` to resize images to max ~1920px width before upload (reduces to ~200-400KB). Requires adding the package and a new native build.
+- [x] Dashboard image flickering (iOS only): When switching filter tabs (e.g. All → Draft → All), thumbnail images briefly go blank and take 3-4 seconds to re-render. Root cause: React Native's Image component loses its GPU texture on unmount on iOS; even with `cache: 'force-cache'` and ScrollView (no FlatList), the images re-decode from disk cache. Android (Fresco) does not exhibit this issue. Fix: use `expo-image` (which uses SDWebImage on iOS / Glide on Android with persistent memory caching).
+- [x] Step Builder: Photo upload is slow (5-10+ seconds). Fixed: images are now compressed to max 1280px width and 70% JPEG quality via `expo-image-manipulator` before upload. Also migrated all remote image rendering from React Native `Image` to `expo-image` for persistent memory+disk caching and faster rendering.
 
 ## Future Enhancements (Out of Scope)
 - [ ] Arabic language + RTL layout

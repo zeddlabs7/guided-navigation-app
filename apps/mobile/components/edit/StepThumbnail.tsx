@@ -1,4 +1,5 @@
-import { View, Image, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import type { Overlay, ArrowDirection } from '@guidenav/types';
 import { Colors, BorderRadius } from '@/constants/theme';
 import Svg, { Path } from 'react-native-svg';
@@ -111,7 +112,7 @@ export function StepThumbnail({
         <Image
           source={arrowImg}
           style={{ width: scaledSize, height: scaledSize }}
-          resizeMode="contain"
+          contentFit="contain"
         />
       </View>
     );
@@ -143,7 +144,13 @@ export function StepThumbnail({
   return (
     <View style={[styles.container, { width: dimension, height: dimension }]}>
       {imageUrl ? (
-        <Image source={{ uri: imageUrl }} style={styles.image} />
+        <Image
+          source={{ uri: imageUrl }}
+          style={styles.image}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={200}
+        />
       ) : (
         <View style={styles.placeholder} />
       )}
@@ -171,7 +178,6 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
   },
   placeholder: {
     width: '100%',

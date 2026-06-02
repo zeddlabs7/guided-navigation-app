@@ -12,7 +12,6 @@ interface ArrowOverlayProps {
   rotation?: number;
   arrowDirection?: ArrowDirection;
   selected?: boolean;
-  renderHandles?: () => React.ReactNode;
 }
 
 export function ArrowOverlay({
@@ -20,7 +19,6 @@ export function ArrowOverlay({
   rotation = 0,
   arrowDirection = 'up-down',
   selected = false,
-  renderHandles,
 }: ArrowOverlayProps) {
   const arrowConfig = useMemo((): { type: string; image: any } => {
     switch (arrowDirection) {
@@ -87,8 +85,6 @@ export function ArrowOverlay({
           resizeMode="contain"
         />
       )}
-
-      {selected && renderHandles?.()}
     </View>
   );
 }

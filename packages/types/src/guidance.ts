@@ -96,6 +96,19 @@ export interface Overlay {
   arrowDirection?: ArrowDirection; // Only for arrow type, default 'up-down'
 }
 
+/** Frozen step content served to couriers after publish */
+export interface StepPublishedSnapshot {
+  stepType: StepType;
+  contentType: ContentType;
+  title: string | null;
+  instructionOriginal: string;
+  instructionTranslations: Record<Language, string>;
+  image: StepImage | null;
+  overlays: Overlay[];
+  isRequired: boolean;
+  locationData: LocationData | null;
+}
+
 export interface GuidanceStep {
   id: string;
   guidanceSetId: string;
@@ -109,6 +122,8 @@ export interface GuidanceStep {
   overlays: Overlay[];
   isRequired: boolean;
   locationData: LocationData | null;
+  /** undefined = legacy doc (pre-snapshot); null = not yet published; object = courier-visible version */
+  publishedSnapshot?: StepPublishedSnapshot | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   deletedAt: Timestamp | null;

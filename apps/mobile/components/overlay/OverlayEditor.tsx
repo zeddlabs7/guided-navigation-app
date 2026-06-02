@@ -1,60 +1,11 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Image, type ImageLoadEventData } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
-import type { Overlay, ArrowDirection } from '@guidenav/types';
-import { OverlayCanvas, type EditorMode } from './OverlayCanvas';
-import { OverlayToolbar } from './OverlayToolbar';
-import { LabelInputModal } from './LabelInputModal';
-import { OverlayTutorial, type OverlayTutorialType } from './OverlayTutorial';
-
-const ARROW_DIRECTIONS: { value: ArrowDirection; label: string }[] = [
-  { value: 'left', label: 'Left' },
-  { value: 'right', label: 'Right' },
-  { value: 'up-down', label: 'Up/Down' },
-  { value: 'forward-backward', label: 'Forward' },
-];
-
-function ArrowDirectionIcon({ direction, size = 18 }: { direction: ArrowDirection; size?: number }) {
-  const color = '#555555';
-  switch (direction) {
-    case 'left':
-      return (
-        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-          <Path d="M20 18C20 18 16 14 12 14C8 14 4 18 4 18" stroke={color} strokeWidth={2} strokeLinecap="round" />
-          <Path d="M4 18L4 12" stroke={color} strokeWidth={2} strokeLinecap="round" />
-          <Path d="M4 18L10 18" stroke={color} strokeWidth={2} strokeLinecap="round" />
-        </Svg>
-      );
-    case 'right':
-      return (
-        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-          <Path d="M4 18C4 18 8 14 12 14C16 14 20 18 20 18" stroke={color} strokeWidth={2} strokeLinecap="round" />
-          <Path d="M20 18L20 12" stroke={color} strokeWidth={2} strokeLinecap="round" />
-          <Path d="M20 18L14 18" stroke={color} strokeWidth={2} strokeLinecap="round" />
-        </Svg>
-      );
-    case 'up-down':
-      return (
-        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-          <Path d="M12 20V4M12 4L6 10M12 4L18 10" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-        </Svg>
-      );
-    case 'forward-backward':
-      return (
-        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-          <Path d="M12 20V6M12 6L6 12M12 6L18 12" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-          <Path d="M6 20H18" stroke={color} strokeWidth={2} strokeLinecap="round" />
-        </Svg>
-      );
-    default:
-      return null;
-  }
-}
-
-function generateId(): string {
-  return `overlay-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-}
+import type { Overlay } from '@guidenav/types';
+import { ArrowOverlay } from './ArrowOverlay';
+import { MarkerDot, MarkerLabel, computeLabelPosition } from './MarkerOverlay';
+import { OverlayEditorModal } from './OverlayEditorModal';
 
 interface OverlayEditorProps {
   imageUrl: string;
@@ -71,500 +22,206 @@ export function OverlayEditor({
   userId = 'dev-user-placeholder',
   onUpdateOverlays,
 }: OverlayEditorProps) {
-  const [mode, setMode] = useState<EditorMode>('view');
-  const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null);
-  const [showLabelModal, setShowLabelModal] = useState(false);
-  const [editingLabelOverlayId, setEditingLabelOverlayId] = useState<string | null>(null);
-  const [showArrowTypePicker, setShowArrowTypePicker] = useState(false);
-  const [pendingArrowDirection, setPendingArrowDirection] = useState<ArrowDirection>('up-down');
+  const [modalVisible, setModalVisible] = useState(false);
 
-  const [hasSeenArrowTutorial, setHasSeenArrowTutorial] = useState(true);
-  const [hasSeenMarkerTutorial, setHasSeenMarkerTutorial] = useState(true);
-  const [showTutorial, setShowTutorial] = useState(false);
-  const [tutorialType, setTutorialType] = useState<OverlayTutorialType>('arrow');
-
-  useEffect(() => {
-    (async () => {
-      const arrowKey = `overlay-tutorial-seen-arrow:${userId}`;
-      const markerKey = `overlay-tutorial-seen-marker:${userId}`;
-      const [arrowSeen, markerSeen] = await Promise.all([
-        AsyncStorage.getItem(arrowKey),
-        AsyncStorage.getItem(markerKey),
-      ]);
-      setHasSeenArrowTutorial(arrowSeen === 'true');
-      setHasSeenMarkerTutorial(markerSeen === 'true');
-    })();
-  }, [userId]);
-
-  const hasArrow = useMemo(() => overlays.some((o) => o.type === 'arrow'), [overlays]);
-  const hasMarker = useMemo(() => overlays.some((o) => o.type === 'marker'), [overlays]);
-
-  const selectedOverlay = useMemo(() => {
-    if (!selectedOverlayId) return null;
-    return overlays.find((o) => o.id === selectedOverlayId) ?? null;
-  }, [overlays, selectedOverlayId]);
-
-  const labelModalTitle = useMemo(() => {
-    if (editingLabelOverlayId) {
-      const overlay = overlays.find((o) => o.id === editingLabelOverlayId);
-      return overlay?.label ? 'Edit Label' : 'Add Label';
-    }
-    return 'Add Label';
-  }, [editingLabelOverlayId, overlays]);
-
-  const labelModalInitialValue = useMemo(() => {
-    if (editingLabelOverlayId) {
-      const overlay = overlays.find((o) => o.id === editingLabelOverlayId);
-      return overlay?.label ?? '';
-    }
-    return '';
-  }, [editingLabelOverlayId, overlays]);
-
-  const markArrowTutorialSeen = useCallback(async () => {
-    const key = `overlay-tutorial-seen-arrow:${userId}`;
-    await AsyncStorage.setItem(key, 'true');
-    setHasSeenArrowTutorial(true);
-  }, [userId]);
-
-  const markMarkerTutorialSeen = useCallback(async () => {
-    const key = `overlay-tutorial-seen-marker:${userId}`;
-    await AsyncStorage.setItem(key, 'true');
-    setHasSeenMarkerTutorial(true);
-  }, [userId]);
-
-  const handleAddArrowClick = useCallback(() => {
+  const handleOpenEditor = useCallback(() => {
     if (readonly) return;
-    if (mode === 'add-arrow') {
-      setMode('view');
-      setShowArrowTypePicker(false);
-      return;
-    }
-    setShowArrowTypePicker(true);
-    setSelectedOverlayId(null);
-  }, [readonly, mode]);
-
-  const handleArrowTypeSelect = useCallback((direction: ArrowDirection) => {
-    setPendingArrowDirection(direction);
-    setShowArrowTypePicker(false);
-    setMode('add-arrow');
-  }, []);
-
-  const handleArrowTypePickerCancel = useCallback(() => {
-    setShowArrowTypePicker(false);
-  }, []);
-
-  const handleAddMarkerClick = useCallback(() => {
-    if (readonly) return;
-    setMode((prev) => (prev === 'add-marker' ? 'view' : 'add-marker'));
-    setSelectedOverlayId(null);
+    setModalVisible(true);
   }, [readonly]);
 
-  const handleSelectOverlay = useCallback(
-    (id: string | null) => {
-      setSelectedOverlayId(id);
-      if (id) {
-        setMode('select');
-      } else if (mode === 'select') {
-        setMode('view');
-      }
-    },
-    [mode],
-  );
-
-  const handleAddOverlay = useCallback(
-    (x: number, y: number) => {
-      if (mode === 'add-arrow') {
-        const newOverlay: Overlay = {
-          id: generateId(),
-          type: 'arrow',
-          x,
-          y,
-          scale: 2,
-          rotation: 0,
-          label: null,
-          arrowDirection: pendingArrowDirection,
-        };
-        const filteredOverlays = overlays.filter((o) => o.type !== 'arrow');
-        onUpdateOverlays([...filteredOverlays, newOverlay]);
-        setSelectedOverlayId(newOverlay.id);
-        setMode('select');
-
-        if (!hasSeenArrowTutorial) {
-          setTutorialType('arrow');
-          setShowTutorial(true);
-        }
-      }
-    },
-    [mode, pendingArrowDirection, overlays, onUpdateOverlays, hasSeenArrowTutorial],
-  );
-
-  const handleCanvasTap = useCallback(
-    (x: number, y: number) => {
-      if (mode === 'add-marker') {
-        const newOverlay: Overlay = {
-          id: generateId(),
-          type: 'marker',
-          x,
-          y,
-          scale: 1,
-          rotation: 0,
-          label: null,
-        };
-        const filteredOverlays = overlays.filter((o) => o.type !== 'marker');
-        onUpdateOverlays([...filteredOverlays, newOverlay]);
-        setSelectedOverlayId(newOverlay.id);
-        setMode('select');
-
-        if (!hasSeenMarkerTutorial) {
-          setTutorialType('marker');
-          setShowTutorial(true);
-        }
-      }
-    },
-    [mode, overlays, onUpdateOverlays, hasSeenMarkerTutorial],
-  );
-
-  const handleUpdateOverlay = useCallback(
-    (id: string, updates: Partial<Overlay>) => {
-      const updatedOverlays = overlays.map((o) =>
-        o.id === id ? { ...o, ...updates } : o,
-      );
+  const handleSave = useCallback(
+    (updatedOverlays: Overlay[]) => {
       onUpdateOverlays(updatedOverlays);
+      setModalVisible(false);
     },
-    [overlays, onUpdateOverlays],
+    [onUpdateOverlays],
   );
 
-  const handleChangeDirection = useCallback(
-    (direction: ArrowDirection) => {
-      if (!selectedOverlayId) return;
-      const overlay = overlays.find((o) => o.id === selectedOverlayId);
-      if (overlay && overlay.type === 'arrow') {
-        handleUpdateOverlay(selectedOverlayId, { arrowDirection: direction });
-      }
-    },
-    [selectedOverlayId, overlays, handleUpdateOverlay],
-  );
-
-  const handleEditLabel = useCallback(() => {
-    if (!selectedOverlayId) return;
-    setEditingLabelOverlayId(selectedOverlayId);
-    setShowLabelModal(true);
-  }, [selectedOverlayId]);
-
-  const handleDelete = useCallback(() => {
-    if (!selectedOverlayId) return;
-    const updatedOverlays = overlays.filter((o) => o.id !== selectedOverlayId);
-    onUpdateOverlays(updatedOverlays);
-    setSelectedOverlayId(null);
-    setMode('view');
-  }, [selectedOverlayId, overlays, onUpdateOverlays]);
-
-  const handleDone = useCallback(() => {
-    setSelectedOverlayId(null);
-    setMode('view');
+  const handleCancel = useCallback(() => {
+    setModalVisible(false);
   }, []);
-
-  const handleLabelSave = useCallback(
-    (label: string) => {
-      if (editingLabelOverlayId) {
-        const updatedOverlays = overlays.map((o) =>
-          o.id === editingLabelOverlayId ? { ...o, label } : o,
-        );
-        onUpdateOverlays(updatedOverlays);
-        setEditingLabelOverlayId(null);
-      }
-      setShowLabelModal(false);
-    },
-    [editingLabelOverlayId, overlays, onUpdateOverlays],
-  );
-
-  const handleLabelCancel = useCallback(() => {
-    setEditingLabelOverlayId(null);
-    setShowLabelModal(false);
-  }, []);
-
-  const handleTutorialComplete = useCallback(() => {
-    if (tutorialType === 'arrow') {
-      markArrowTutorialSeen();
-    } else {
-      markMarkerTutorialSeen();
-    }
-    setShowTutorial(false);
-  }, [tutorialType, markArrowTutorialSeen, markMarkerTutorialSeen]);
-
-  const handleTutorialSkip = useCallback(() => {
-    if (tutorialType === 'arrow') {
-      markArrowTutorialSeen();
-    } else {
-      markMarkerTutorialSeen();
-    }
-    setShowTutorial(false);
-  }, [tutorialType, markArrowTutorialSeen, markMarkerTutorialSeen]);
 
   return (
-    <View style={styles.editor}>
-      <OverlayCanvas
+    <View style={styles.container}>
+      {/* Inline preview - non-interactive thumbnail with overlays */}
+      <Pressable onPress={handleOpenEditor} disabled={readonly} style={styles.previewWrapper}>
+        <ImageWithOverlays imageUrl={imageUrl} overlays={overlays} />
+
+        {!readonly && (
+          <View style={styles.editBadge}>
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13"
+                stroke="#fff"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <Path
+                d="M18.5 2.50001C18.8978 2.10219 19.4374 1.87869 20 1.87869C20.5626 1.87869 21.1022 2.10219 21.5 2.50001C21.8978 2.89784 22.1213 3.4374 22.1213 4.00001C22.1213 4.56262 21.8978 5.10219 21.5 5.50001L12 15L8 16L9 12L18.5 2.50001Z"
+                stroke="#fff"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+            <Text style={styles.editBadgeText}>
+              {overlays.length > 0 ? 'Edit Overlays' : 'Add Overlays'}
+            </Text>
+          </View>
+        )}
+      </Pressable>
+
+      {/* Full-screen editor modal */}
+      <OverlayEditorModal
+        visible={modalVisible}
         imageUrl={imageUrl}
         overlays={overlays}
-        selectedId={selectedOverlayId}
-        mode={mode}
-        onSelectOverlay={handleSelectOverlay}
-        onAddOverlay={handleAddOverlay}
-        onUpdateOverlay={handleUpdateOverlay}
-        onCanvasTap={handleCanvasTap}
-      />
-
-      {!readonly && (
-        <View style={styles.controls}>
-          <View style={styles.addButtons}>
-            <Text style={styles.label}>Overlay:</Text>
-
-            <View style={styles.arrowBtnWrapper}>
-              <Pressable
-                style={[
-                  styles.addBtn,
-                  (mode === 'add-arrow' || showArrowTypePicker) &&
-                    styles.addBtnActive,
-                ]}
-                onPress={handleAddArrowClick}
-              >
-                <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
-                  <Path
-                    d="M7 17L17 7M17 7H7M17 7V17"
-                    stroke={
-                      mode === 'add-arrow' || showArrowTypePicker
-                        ? 'white'
-                        : '#4a5565'
-                    }
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </Svg>
-                <Text
-                  style={[
-                    styles.addBtnText,
-                    (mode === 'add-arrow' || showArrowTypePicker) &&
-                      styles.addBtnTextActive,
-                  ]}
-                >
-                  {hasArrow ? 'Replace Arrow' : 'Add Arrow'}
-                </Text>
-              </Pressable>
-
-              {showArrowTypePicker && (
-                <View style={styles.arrowPicker}>
-                  <View style={styles.arrowPickerHeader}>
-                    <Text style={styles.arrowPickerTitle}>
-                      Choose arrow type
-                    </Text>
-                    <Pressable
-                      style={styles.arrowPickerClose}
-                      onPress={handleArrowTypePickerCancel}
-                    >
-                      <Svg
-                        width={16}
-                        height={16}
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <Path
-                          d="M18 6L6 18M6 6L18 18"
-                          stroke="#99a1af"
-                          strokeWidth={2}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </Svg>
-                    </Pressable>
-                  </View>
-                  <View style={styles.arrowPickerGrid}>
-                    {ARROW_DIRECTIONS.map((dir) => (
-                      <Pressable
-                        key={dir.value}
-                        style={styles.arrowPickerOption}
-                        onPress={() => handleArrowTypeSelect(dir.value)}
-                      >
-                        <ArrowDirectionIcon direction={dir.value} size={18} />
-                        <Text style={styles.arrowPickerLabel} numberOfLines={1}>{dir.label}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                </View>
-              )}
-            </View>
-
-            <Pressable
-              style={[
-                styles.addBtn,
-                mode === 'add-marker' && styles.addBtnActive,
-              ]}
-              onPress={handleAddMarkerClick}
-            >
-              <View
-                style={[
-                  styles.markerDot,
-                  mode === 'add-marker' && styles.markerDotActive,
-                ]}
-              />
-              <Text
-                style={[
-                  styles.addBtnText,
-                  mode === 'add-marker' && styles.addBtnTextActive,
-                ]}
-              >
-                {hasMarker ? 'Replace Marker' : 'Add Marker'}
-              </Text>
-            </Pressable>
-          </View>
-
-          {selectedOverlay && (
-            <View style={styles.toolbarContainer}>
-              <OverlayToolbar
-                overlayType={selectedOverlay.type}
-                arrowDirection={selectedOverlay.arrowDirection}
-                hasLabel={!!selectedOverlay.label}
-                visible={true}
-                onChangeDirection={handleChangeDirection}
-                onEditLabel={handleEditLabel}
-                onDelete={handleDelete}
-                onDone={handleDone}
-              />
-            </View>
-          )}
-        </View>
-      )}
-
-      <LabelInputModal
-        visible={showLabelModal}
-        initialValue={labelModalInitialValue}
-        title={labelModalTitle}
-        onSave={handleLabelSave}
-        onCancel={handleLabelCancel}
-      />
-
-      <OverlayTutorial
-        visible={showTutorial}
-        type={tutorialType}
-        onComplete={handleTutorialComplete}
-        onSkip={handleTutorialSkip}
+        userId={userId}
+        onSave={handleSave}
+        onCancel={handleCancel}
       />
     </View>
   );
 }
 
+/**
+ * Static (non-interactive) rendering of image + overlays for the preview thumbnail.
+ */
+function ImageWithOverlays({ imageUrl, overlays }: { imageUrl: string; overlays: Overlay[] }) {
+  const [layout, setLayout] = useState({ width: 0, height: 0 });
+  const [imageAspect, setImageAspect] = useState(4 / 3);
+
+  const handleImageLoad = useCallback(
+    (event: ImageLoadEventData) => {
+      const { width, height } = event.source;
+      if (width && height) {
+        setImageAspect(width / height);
+      }
+    },
+    [],
+  );
+
+  return (
+    <View
+      style={styles.previewCanvas}
+      onLayout={(e) => {
+        const { width, height } = e.nativeEvent.layout;
+        setLayout({ width, height });
+      }}
+    >
+      <Image
+        source={{ uri: imageUrl }}
+        style={[styles.previewImage, { aspectRatio: imageAspect }]}
+        contentFit="contain"
+        cachePolicy="memory-disk"
+        transition={200}
+        onLoad={handleImageLoad}
+      />
+
+      {layout.width > 0 &&
+        overlays.map((overlay) => (
+          <PreviewOverlayItem key={overlay.id} overlay={overlay} layout={layout} />
+        ))}
+    </View>
+  );
+}
+
+function PreviewOverlayItem({
+  overlay,
+  layout,
+}: {
+  overlay: Overlay;
+  layout: { width: number; height: number };
+}) {
+  const pixelX = overlay.x * layout.width;
+  const pixelY = overlay.y * layout.height;
+
+  if (overlay.type === 'arrow') {
+    return (
+      <View
+        style={[
+          styles.previewOverlay,
+          {
+            left: pixelX,
+            top: pixelY,
+            transform: [{ translateX: '-50%' }, { translateY: '-50%' }],
+          },
+        ]}
+        pointerEvents="none"
+      >
+        <ArrowOverlay
+          scale={overlay.scale * 0.7}
+          rotation={overlay.rotation ?? 0}
+          arrowDirection={overlay.arrowDirection || 'up-down'}
+          selected={false}
+        />
+      </View>
+    );
+  }
+
+  const labelPosition = computeLabelPosition(overlay.x, overlay.y);
+  return (
+    <>
+      <View
+        style={[styles.previewOverlay, { left: pixelX - 16, top: pixelY - 16 }]}
+        pointerEvents="none"
+      >
+        <MarkerDot selected={false} />
+      </View>
+      {overlay.label && (
+        <View
+          style={[
+            styles.previewOverlay,
+            { left: pixelX, top: pixelY + 10 },
+            { transform: [{ translateX: '-50%' }] },
+          ]}
+          pointerEvents="none"
+        >
+          <MarkerLabel label={overlay.label} position={labelPosition} />
+        </View>
+      )}
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
-  editor: {
-    gap: 12,
+  container: {
+    gap: 0,
   },
-  controls: {
-    gap: 12,
-  },
-  addButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flexWrap: 'wrap',
-  },
-  label: {
-    fontSize: 12,
-    color: '#99a1af',
-  },
-  arrowBtnWrapper: {
+  previewWrapper: {
     position: 'relative',
+    borderRadius: 14,
+    overflow: 'hidden',
   },
-  addBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 13,
-    paddingVertical: 8,
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 10,
+  previewCanvas: {
+    position: 'relative',
+    width: '100%',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 14,
+    overflow: 'hidden',
   },
-  addBtnActive: {
-    backgroundColor: '#2c3e50',
-    borderColor: '#2c3e50',
+  previewImage: {
+    width: '100%',
   },
-  addBtnText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#4a5565',
-  },
-  addBtnTextActive: {
-    color: 'white',
-  },
-  markerDot: {
-    width: 10,
-    height: 10,
-    backgroundColor: '#ff6467',
-    borderRadius: 5,
-  },
-  markerDotActive: {
-    backgroundColor: 'white',
-  },
-  toolbarContainer: {
-    alignItems: 'center',
-  },
-  arrowPicker: {
+  previewOverlay: {
     position: 'absolute',
-    top: '100%',
-    left: 0,
-    marginTop: 8,
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 12,
-    width: 240,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 10,
-    zIndex: 100,
   },
-  arrowPickerHeader: {
+  editBadge: {
+    position: 'absolute',
+    bottom: 12,
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 20,
   },
-  arrowPickerTitle: {
+  editBadgeText: {
+    color: '#ffffff',
     fontSize: 13,
     fontWeight: '600',
-    color: '#101828',
-  },
-  arrowPickerClose: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 4,
-  },
-  arrowPickerGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  arrowPickerOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: '#f9fafb',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8,
-    width: '48%',
-  },
-  arrowPickerLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#101828',
   },
 });

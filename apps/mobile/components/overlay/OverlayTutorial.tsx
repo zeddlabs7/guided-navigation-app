@@ -14,27 +14,34 @@ interface TutorialStep {
 const ALL_STEPS: TutorialStep[] = [
   {
     title: 'Drag to Move',
-    description: 'Drag the overlay to reposition it on the image.',
+    description: 'Tap and hold the arrow, then drag your finger to move it anywhere on the image.',
     icon: 'drag',
     forTypes: ['arrow', 'marker'],
   },
   {
-    title: 'Resize',
-    description: 'Use the bottom handle to make the arrow larger or smaller.',
+    title: 'Resize with Handle',
+    description: 'See the resize icon on the right side of the arrow? Drag it UP to make the arrow bigger, or DOWN to make it smaller.',
     icon: 'resize',
     forTypes: ['arrow'],
   },
   {
-    title: 'Rotate',
+    title: 'Rotate with Handle',
     description:
-      'Use the top handle to rotate the arrow to point in any direction.',
+      'See the rotate icon below the arrow? Drag it LEFT or RIGHT in a circular motion to point the arrow in any direction.',
     icon: 'rotate',
     forTypes: ['arrow'],
   },
   {
-    title: 'Add Label',
+    title: 'Drag to Move',
     description:
-      'Tap the edit button in the toolbar to add a label to your marker.',
+      'Tap and hold the marker, then drag your finger to move it anywhere on the image.',
+    icon: 'drag',
+    forTypes: ['marker'],
+  },
+  {
+    title: 'Add Note on the Marker',
+    description:
+      'Use the "Add Note" button at the bottom to label your marker with helpful text for the courier.',
     icon: 'label',
     forTypes: ['marker'],
   },

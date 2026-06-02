@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
 import type { GuidanceSet, GuidanceStep, GuidanceStatus } from '@guidenav/types';
 import { STEP_TYPE_LABELS } from '@guidenav/types';
@@ -68,9 +69,12 @@ export const GuidanceSetCard = memo(function GuidanceSetCard({
             {visibleSteps.map((step) => (
               <View key={step.id} style={styles.thumbnailWrapper}>
                 <Image
-                  source={{ uri: step.image!.publicUrl!, cache: 'force-cache' }}
+                  source={{ uri: step.image!.publicUrl! }}
                   style={styles.thumbnail}
-                  resizeMode="cover"
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                  recyclingKey={step.id}
+                  transition={200}
                 />
                 <View style={styles.stepBadge}>
                   <View style={[styles.stepDot, { backgroundColor: status.dot }]} />

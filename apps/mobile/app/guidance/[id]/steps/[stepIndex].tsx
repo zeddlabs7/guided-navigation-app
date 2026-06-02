@@ -4,12 +4,12 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  ScrollView,
   Pressable,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getBottomInset } from '@/components/ui/ScreenFooter';
+import { ScrollView } from 'react-native-gesture-handler';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScreenFooter, useFooterScrollPadding } from '@/components/ui/ScreenFooter';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { StepType, AddressType, StepImage, GuidanceStep, Overlay, LocationData } from '@guidenav/types';
 import { STEP_TYPE_LABELS, getStepTypesForAddressType } from '@guidenav/types';
@@ -27,8 +27,7 @@ import { StepTypeDropdown, STEP_TYPE_COLORS, PhotoUpload, LocationPicker } from 
 import { OverlayEditor } from '@/components/overlay';
 
 export default function StepBuilderScreen() {
-  const insets = useSafeAreaInsets();
-  const scrollBottomPadding = 320 + getBottomInset(insets);
+  const footerScrollPadding = useFooterScrollPadding(56);
   const router = useRouter();
   const { id: guidanceSetId, stepIndex: stepIndexParam } = useLocalSearchParams<{
     id: string;
@@ -196,13 +195,13 @@ export default function StepBuilderScreen() {
   }, [selectedStepType, locationData]);
 
   const validateInstructions = useCallback((): boolean => {
-    if (!instructions.trim()) {
+    if (selectedStepType !== 'LOCATION_CHECK' && !instructions.trim()) {
       setInstructionsError('Instructions are required');
       return false;
     }
     setInstructionsError(null);
     return true;
-  }, [instructions]);
+  }, [instructions, selectedStepType]);
 
   const handleInstructionsBlur = useCallback(() => {
     setInstructionsTouched(true);
@@ -369,7 +368,7 @@ export default function StepBuilderScreen() {
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: scrollBottomPadding }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: footerScrollPadding }]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         showsVerticalScrollIndicator={false}
@@ -463,12 +462,15 @@ export default function StepBuilderScreen() {
           onLayout={(e) => { instructionsSectionY.current = e.nativeEvent.layout.y; }}
         >
           <View style={styles.fieldWrapper}>
-            <Text style={styles.fieldLabel}>
-              Instructions <Text style={styles.required}>*</Text>
+            <Text style={selectedStepType === 'LOCATION_CHECK' ? styles.fieldLabelOptional : styles.fieldLabel}>
+              {selectedStepType === 'LOCATION_CHECK' ? 'Notes (optional)' : (
+                <>Instructions <Text style={styles.required}>*</Text></>
+              )}
             </Text>
             <Text style={styles.helperText}>
-              Add instructions that will help the courier navigate to this
-              location.
+              {selectedStepType === 'LOCATION_CHECK'
+                ? 'Add any extra notes about this location for the courier.'
+                : 'Add instructions that will help the courier navigate to this location.'}
             </Text>
             <TextInput
               style={[
@@ -484,7 +486,9 @@ export default function StepBuilderScreen() {
                 }, 250);
               }}
               onSubmitEditing={() => arabicInputRef.current?.focus()}
-              placeholder="Enter instructions for the courier..."
+              placeholder={selectedStepType === 'LOCATION_CHECK'
+                ? 'e.g. Ring the doorbell, leave at the gate...'
+                : 'Enter instructions for the courier...'}
               placeholderTextColor={Colors.textMuted}
               multiline
               numberOfLines={3}
@@ -529,6 +533,21 @@ export default function StepBuilderScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <ScreenFooter>
+        <Pressable
+          style={[
+            styles.footerSaveButton,
+            (saving || uploading) && styles.footerSaveButtonDisabled,
+          ]}
+          onPress={handleSaveStep}
+          disabled={saving || uploading || loading}
+        >
+          <Text style={styles.footerSaveButtonText}>
+            {saving ? 'Saving...' : 'Save Step'}
+          </Text>
+        </Pressable>
+      </ScreenFooter>
     </SafeAreaView>
   );
 }
@@ -718,5 +737,20 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: FontSize.xs,
     color: Colors.danger,
+  },
+  footerSaveButton: {
+    backgroundColor: Colors.text,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerSaveButtonDisabled: {
+    opacity: 0.5,
+  },
+  footerSaveButtonText: {
+    fontSize: FontSize.base,
+    fontWeight: '600',
+    color: Colors.surface,
   },
 });
