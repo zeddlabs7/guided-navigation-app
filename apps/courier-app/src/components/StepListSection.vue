@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { STEP_TYPE_LABELS, type GuidanceStep } from '@guidenav/types';
+import { useTranslation } from '@/composables/useTranslation';
+import { useCourierSession } from '@/composables/useCourierSession';
+
+const { t } = useTranslation();
+const { currentLanguage, getStepInstruction } = useCourierSession();
 
 interface Props {
   steps: GuidanceStep[];
@@ -24,10 +29,8 @@ interface StepRow {
 const rows = computed<StepRow[]>(() =>
   props.steps.map((step, i) => {
     const labels = STEP_TYPE_LABELS[step.stepType];
-    const typeLabel = props.isRtl ? labels.ar : labels.en;
-    const instruction = props.isRtl && step.instructionTranslations?.ar
-      ? step.instructionTranslations.ar
-      : step.instructionOriginal;
+    const typeLabel = labels[currentLanguage.value];
+    const instruction = getStepInstruction(step, i);
     return {
       step,
       index: i,
@@ -44,10 +47,10 @@ const rows = computed<StepRow[]>(() =>
 <template>
   <section class="steps-section" :id="'landing-section-2'">
     <header class="section-header">
-      <span class="section-kicker">{{ isRtl ? 'الدليل' : 'Guide' }}</span>
-      <h2 class="section-title">{{ isRtl ? 'خطوات التوصيل' : 'Delivery steps' }}</h2>
+      <span class="section-kicker">{{ t('guide') }}</span>
+      <h2 class="section-title">{{ t('deliverySteps') }}</h2>
       <p class="section-subtitle">
-        {{ isRtl ? 'اضغط على خطوة لعرض التعليمات التفصيلية' : 'Tap a step to view detailed instructions' }}
+        {{ t('tapStepHint') }}
       </p>
     </header>
 
@@ -56,7 +59,7 @@ const rows = computed<StepRow[]>(() =>
         <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/>
         <path d="M8 12h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
       </svg>
-      <span>{{ isRtl ? 'لا توجد خطوات إضافية' : 'No additional steps' }}</span>
+      <span>{{ t('noAdditionalSteps') }}</span>
     </div>
 
     <ol v-else class="step-list">
@@ -80,7 +83,7 @@ const rows = computed<StepRow[]>(() =>
           <div class="step-body">
             <span class="step-type">{{ row.typeLabel }}</span>
             <span v-if="row.instruction" class="step-instruction">{{ row.instruction }}</span>
-            <span v-else class="step-instruction step-instruction--empty">{{ isRtl ? 'لا توجد تعليمات' : 'No instructions' }}</span>
+            <span v-else class="step-instruction step-instruction--empty">{{ t('noInstructions') }}</span>
           </div>
 
           <span class="step-chevron" aria-hidden="true">
@@ -97,7 +100,7 @@ const rows = computed<StepRow[]>(() =>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M18 15l-6-6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span>{{ isRtl ? 'العودة للأعلى' : 'Back to Top' }}</span>
+        <span>{{ t('backToTop') }}</span>
       </button>
     </div>
   </section>

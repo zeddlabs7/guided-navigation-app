@@ -9,16 +9,19 @@ import {
   type MetadataFieldType,
 } from '@guidenav/types';
 import { openMapsNative } from '@/utils/contact';
+import { useTranslation } from '@/composables/useTranslation';
+import { useCourierSession } from '@/composables/useCourierSession';
+
+const { t } = useTranslation();
+const { currentLanguage } = useCourierSession();
 
 interface Props {
   guidanceSet: GuidanceSet;
   isRtl: boolean;
-  languageToggleLabel: string;
   destination: Coordinates | null;
   destinationAddress: string | null;
   locationCheckImageUrl: string | null;
   hasSteps: boolean;
-  onToggleLanguage: () => void;
   onViewSteps: () => void;
 }
 
@@ -26,7 +29,7 @@ const props = defineProps<Props>();
 
 const addressTypeLabel = computed(() => {
   const labels = ADDRESS_TYPE_LABELS[props.guidanceSet.addressType];
-  return props.isRtl ? labels.ar : labels.en;
+  return labels[currentLanguage.value];
 });
 
 interface MetadataRow {
@@ -39,8 +42,8 @@ function getFieldValue(field: MetadataFieldType): string {
   const raw = (props.guidanceSet as unknown as Record<string, string | undefined>)[field];
   if (!raw) return '';
   if (field === 'unitType') {
-    if (raw === 'villa') return props.isRtl ? 'فيلا' : 'Villa';
-    if (raw === 'apartment') return props.isRtl ? 'شقة' : 'Apartment';
+    if (raw === 'villa') return t('villa');
+    if (raw === 'apartment') return t('apartment');
   }
   return raw;
 }
@@ -48,12 +51,8 @@ function getFieldValue(field: MetadataFieldType): string {
 function shouldShowField(config: MetadataFieldConfig): boolean {
   if (!getFieldValue(config.field)) return false;
   if (config.dependsOn) {
-    const depValue = getFieldValue(config.dependsOn.field);
-    const expected = config.dependsOn.value;
-    const normalized = depValue === (props.isRtl ? 'فيلا' : 'Villa') ? 'villa'
-      : depValue === (props.isRtl ? 'شقة' : 'Apartment') ? 'apartment'
-      : depValue;
-    if (normalized !== expected) return false;
+    const rawValue = (props.guidanceSet as unknown as Record<string, string | undefined>)[config.dependsOn.field];
+    if (rawValue !== config.dependsOn.value) return false;
   }
   return true;
 }
@@ -64,7 +63,7 @@ const metadataRows = computed<MetadataRow[]>(() => {
     .filter(shouldShowField)
     .map(config => ({
       field: config.field,
-      label: props.isRtl ? config.label.ar : config.label.en,
+      label: config.label[currentLanguage.value],
       value: getFieldValue(config.field),
     }));
 });
@@ -91,11 +90,11 @@ const destinationLabel = computed(() => {
   const parts: string[] = [];
   if (g.buildingNumber) parts.push(g.buildingNumber);
   if (g.compoundName) parts.push(g.compoundName);
-  if (g.floorNumber) parts.push(props.isRtl ? `طابق ${g.floorNumber}` : `Floor ${g.floorNumber}`);
-  if (g.doorNumber) parts.push(props.isRtl ? `باب ${g.doorNumber}` : `Door ${g.doorNumber}`);
+  if (g.floorNumber) parts.push(`${t('floor')} ${g.floorNumber}`);
+  if (g.doorNumber) parts.push(`${t('door')} ${g.doorNumber}`);
   if (g.locationDescription) parts.push(g.locationDescription);
   if (parts.length > 0) return parts.join(', ');
-  return g.title || (props.isRtl ? 'الوجهة' : 'Destination');
+  return g.title || t('destination');
 });
 
 const miniMapContainer = ref<HTMLDivElement | null>(null);
@@ -170,7 +169,7 @@ function handleOpenMaps() {
   openMapsNative(
     props.destination.latitude,
     props.destination.longitude,
-    props.isRtl ? 'الوجهة' : 'Destination'
+    t('destination')
   );
 }
 
@@ -193,18 +192,6 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="address-section" :id="'landing-section-1'">
-    <header class="address-header">
-      <div class="brand">
-        <img 
-          :src="isRtl ? '/logo-ar.png' : '/logo-eng.png'" 
-          alt="Arriveo" 
-          class="brand-logo" 
-        />
-      </div>
-      <button class="language-toggle" type="button" @click="props.onToggleLanguage">
-        {{ languageToggleLabel }}
-      </button>
-    </header>
 
     <div class="address-content">
       <div class="address-type-badge">
@@ -250,7 +237,7 @@ onBeforeUnmount(() => {
       </ul>
 
       <p v-else class="no-metadata">
-        {{ isRtl ? 'لا توجد تفاصيل إضافية للعنوان' : 'No additional address details provided' }}
+        {{ t('noAddressDetails') }}
       </p>
     </div>
 
@@ -266,7 +253,7 @@ onBeforeUnmount(() => {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          {{ isRtl ? 'صورة الموقع' : 'Location photo' }}
+          {{ t('locationPhoto') }}
         </span>
       </button>
 
@@ -278,7 +265,7 @@ onBeforeUnmount(() => {
       >
         <div class="directions-body">
           <span class="directions-label">
-            {{ isRtl ? 'احصل على الاتجاهات' : 'Get Directions' }}
+            {{ t('getDirections') }}
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -300,7 +287,7 @@ onBeforeUnmount(() => {
         class="steps-hint"
         type="button"
         @click="props.onViewSteps"
-        :aria-label="isRtl ? 'خطوات الوصول' : 'Arrival Steps'"
+        :aria-label="t('arrivalSteps')"
       >
         <span class="steps-hint-icon" aria-hidden="true">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -309,7 +296,7 @@ onBeforeUnmount(() => {
             <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </span>
-        <span class="steps-hint-text">{{ isRtl ? 'خطوات الوصول' : 'Arrival Steps' }}</span>
+        <span class="steps-hint-text">{{ t('arrivalSteps') }}</span>
         <span class="steps-hint-arrow" aria-hidden="true">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -324,7 +311,7 @@ onBeforeUnmount(() => {
         class="image-viewer-overlay"
         @click="closeImageViewer"
       >
-        <button class="image-viewer-close" type="button" @click.stop="closeImageViewer" :aria-label="isRtl ? 'إغلاق' : 'Close'">
+        <button class="image-viewer-close" type="button" @click.stop="closeImageViewer" :aria-label="t('close')">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
@@ -347,40 +334,6 @@ onBeforeUnmount(() => {
   position: relative;
 }
 
-.address-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-sm);
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-}
-
-.brand-logo {
-  height: 32px;
-  width: auto;
-  object-fit: contain;
-}
-
-.language-toggle {
-  padding: 6px 16px;
-  border-radius: var(--radius-full);
-  border: 2px solid var(--color-primary);
-  background-color: white;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--color-primary);
-  cursor: pointer;
-  flex-shrink: 0;
-  line-height: 1.4;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-}
 
 .address-content {
   flex: 1;

@@ -3,22 +3,23 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { logAnalyticsEvent } from '@guidenav/services';
 import { useCourierSession } from '@/composables/useCourierSession';
+import { useTranslation } from '@/composables/useTranslation';
 import { openWhatsApp } from '@/utils/contact';
 
 const route = useRoute();
 const router = useRouter();
 const token = route.params.token as string;
 
+const { t } = useTranslation();
+
 const {
   guidanceSet,
   dropOffStep,
   totalSteps,
-  currentLanguage,
-  toggleLanguage,
+  isRtl,
   getRecipientPhoneNumber,
+  getGuidanceTitle,
 } = useCourierSession();
-
-const isRtl = computed(() => currentLanguage.value === 'ar');
 const deliveryConfirmed = ref(false);
 const isConfirming = ref(false);
 
@@ -30,9 +31,7 @@ onMounted(() => {
 
 const dropOffImage = computed(() => dropOffStep.value?.image?.publicUrl);
 
-const guidanceTitle = computed(() => guidanceSet.value?.title || 'Arriveo');
-
-const languageToggleLabel = computed(() => (isRtl.value ? 'English' : 'عربي'));
+const guidanceTitle = computed(() => getGuidanceTitle());
 
 function handleConfirmDelivery() {
   if (isConfirming.value || deliveryConfirmed.value) return;
@@ -96,21 +95,19 @@ function handleHome() {
   <div class="complete-page" :dir="isRtl ? 'rtl' : 'ltr'">
     <!-- Header -->
     <header class="complete-header">
-      <button class="header-back" @click="handleBack" :aria-label="isRtl ? 'رجوع' : 'Back'">
+      <button class="header-back" @click="handleBack" :aria-label="t('back')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
       <span class="header-title">{{ guidanceTitle }}</span>
       <div class="header-actions">
-        <button class="header-home" @click="handleHome" :aria-label="isRtl ? 'الرئيسية' : 'Home'">
+        <button class="header-home" @click="handleHome" :aria-label="t('home')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1h-5v-7h-6v7H4a1 1 0 01-1-1V9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-        <button class="header-language" @click="toggleLanguage">
-          {{ languageToggleLabel }}
-        </button>
+        
       </div>
     </header>
 
@@ -137,8 +134,8 @@ function handleHome() {
           </svg>
         </div>
         <div class="badge-text">
-          <span class="badge-title">{{ isRtl ? 'نقطة التسليم' : 'Drop-off Point' }}</span>
-          <span class="badge-subtitle">{{ isRtl ? 'الخطوة الأخيرة' : 'Final step reached' }}</span>
+          <span class="badge-title">{{ t('dropOffPoint') }}</span>
+          <span class="badge-subtitle">{{ t('finalStepReached') }}</span>
         </div>
       </div>
     </div>
@@ -155,20 +152,11 @@ function handleHome() {
 
       <!-- Success Text -->
       <h1 class="success-title">
-        {{ deliveryConfirmed 
-          ? (isRtl ? 'تم تأكيد التوصيل!' : 'Delivery Confirmed!') 
-          : (isRtl ? 'لقد وصلت إلى نقطة التسليم.' : 'You have reached the drop-off point.') 
-        }}
+        {{ deliveryConfirmed ? t('deliveryConfirmed') : t('reachedDropOff') }}
       </h1>
       
-      <!-- Arabic subtitle (bilingual display when in English) -->
-      <p v-if="!isRtl && !deliveryConfirmed" class="success-subtitle-ar">وصلت إلى نقطة التسليم.</p>
-      
       <p class="success-message">
-        {{ deliveryConfirmed 
-          ? (isRtl ? 'شكرًا لك على استخدام Arriveo.' : 'Thank you for using Arriveo.') 
-          : (isRtl ? 'يرجى تأكيد التوصيل أدناه.' : 'Please confirm your delivery below.') 
-        }}
+        {{ deliveryConfirmed ? t('thankYou') : t('confirmBelow') }}
       </p>
     </div>
 
@@ -184,21 +172,21 @@ function handleHome() {
           <path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           <path d="M22 4L12 14.01l-3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span>{{ isConfirming ? (isRtl ? 'جاري التأكيد...' : 'Confirming...') : (isRtl ? 'تأكيد التوصيل' : 'Confirm Delivery') }}</span>
+        <span>{{ isConfirming ? t('confirming') : t('confirmDelivery') }}</span>
       </button>
 
       <p v-if="!deliveryConfirmed" class="whatsapp-hint">
         <svg class="whatsapp-hint-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span>{{ isRtl ? 'سيفتح واتساب لإرسال صورة التوصيل للمستلم' : 'This will open WhatsApp to send a delivery photo to the recipient' }}</span>
+        <span>{{ t('whatsappHint') }}</span>
       </p>
 
       <button class="action-button action-button--contact" @click="handleContactRecipient">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span>{{ isRtl ? 'تواصل مع المستلم' : 'Contact Recipient' }}</span>
+        <span>{{ t('contactRecipient') }}</span>
       </button>
     </div>
   </div>
@@ -276,17 +264,6 @@ function handleHome() {
 
 .header-home:hover {
   background-color: var(--color-background);
-}
-
-.header-language {
-  padding: var(--spacing-xs) var(--spacing-md);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background-color: white;
-  font-size: var(--font-size-sm);
-  color: var(--color-text);
-  cursor: pointer;
-  flex-shrink: 0;
 }
 
 [dir="rtl"] .header-back svg {
@@ -390,13 +367,6 @@ function handleHome() {
   color: var(--color-text);
   margin: 0 0 var(--spacing-xs) 0;
   line-height: 1.3;
-}
-
-.success-subtitle-ar {
-  font-size: var(--font-size-base);
-  color: var(--color-text-muted);
-  margin: 0 0 var(--spacing-md) 0;
-  direction: rtl;
 }
 
 .success-message {

@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, watch } from 'vue';
 import { submitFeedback } from '@guidenav/services';
 import type { FeedbackReasonCode } from '@guidenav/types';
 import { useCourierSession } from '@/composables/useCourierSession';
+import { useTranslation } from '@/composables/useTranslation';
+import type { TranslationKey } from '@/i18n/translations';
 
 interface Props {
   open: boolean;
@@ -15,19 +17,18 @@ const emit = defineEmits<{
   close: [];
 }>();
 
-const { shareLink, currentLanguage } = useCourierSession();
-
-const isRtl = computed(() => currentLanguage.value === 'ar');
+const { shareLink, isRtl } = useCourierSession();
+const { t } = useTranslation();
 
 const selectedReason = ref<FeedbackReasonCode | null>(null);
 const isSubmitting = ref(false);
 
-const feedbackOptions: Array<{ code: FeedbackReasonCode; labelEn: string; labelAr: string }> = [
-  { code: 'WRONG_PHOTO', labelEn: 'Photo unclear', labelAr: 'الصورة غير واضحة' },
-  { code: 'UNCLEAR_DIRECTION', labelEn: 'No visible landmark', labelAr: 'لا يوجد معلم مرئي' },
-  { code: 'MISSING_STEP', labelEn: 'Gate closed', labelAr: 'البوابة مغلقة' },
-  { code: 'LOCATION_CONFUSING', labelEn: 'Incorrect PIN', labelAr: 'رقم PIN غير صحيح' },
-  { code: 'OTHER', labelEn: 'Other', labelAr: 'أخرى' },
+const feedbackOptions: Array<{ code: FeedbackReasonCode; labelKey: TranslationKey }> = [
+  { code: 'WRONG_PHOTO', labelKey: 'photoUnclear' },
+  { code: 'UNCLEAR_DIRECTION', labelKey: 'noVisibleLandmark' },
+  { code: 'MISSING_STEP', labelKey: 'gateClosed' },
+  { code: 'LOCATION_CONFUSING', labelKey: 'incorrectPin' },
+  { code: 'OTHER', labelKey: 'other' },
 ];
 
 watch(() => props.open, (isOpen) => {
@@ -92,8 +93,8 @@ function handleBackdropClick(event: MouseEvent) {
                 <path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               </svg>
             </div>
-            <h2 class="header-title">{{ isRtl ? 'لا أجد هذه الخطوة' : "I can't find this step" }}</h2>
-            <button class="header-close" @click="handleClose" :aria-label="isRtl ? 'إغلاق' : 'Close'">
+            <h2 class="header-title">{{ t('cantFindStep') }}</h2>
+            <button class="header-close" @click="handleClose" :aria-label="t('close')">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
@@ -102,7 +103,7 @@ function handleBackdropClick(event: MouseEvent) {
 
           <!-- Content -->
           <div class="sheet-content">
-            <p class="content-question">{{ isRtl ? 'ما هي المشكلة؟' : 'What seems to be the issue?' }}</p>
+            <p class="content-question">{{ t('whatIsTheIssue') }}</p>
 
             <div class="options-list">
               <button
@@ -115,7 +116,7 @@ function handleBackdropClick(event: MouseEvent) {
                 <span class="option-radio">
                   <span v-if="selectedReason === option.code" class="option-radio-dot"></span>
                 </span>
-                <span class="option-label">{{ isRtl ? option.labelAr : option.labelEn }}</span>
+                <span class="option-label">{{ t(option.labelKey) }}</span>
               </button>
             </div>
 
@@ -124,7 +125,7 @@ function handleBackdropClick(event: MouseEvent) {
               :disabled="!selectedReason || isSubmitting"
               @click="handleSubmit"
             >
-              {{ isSubmitting ? (isRtl ? 'جاري الإرسال...' : 'Submitting...') : (isRtl ? 'إرسال التقرير' : 'Submit Report') }}
+              {{ isSubmitting ? t('submitting') : t('submitReport') }}
             </button>
           </div>
         </div>

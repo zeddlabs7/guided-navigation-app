@@ -177,54 +177,59 @@ export type CreateGuidanceStepInput = Pick<
 > & {
   stepIndex?: number;
   locationData?: LocationData | null;
+  instructionTranslations?: Partial<Record<Language, string>>;
 };
 
 export type UpdateGuidanceStepInput = Partial<
   Pick<GuidanceStep, 'stepType' | 'contentType' | 'title' | 'instructionOriginal' | 'overlays' | 'image' | 'locationData'>
->;
-
-export const STEP_TYPE_LABELS: Record<StepType, { en: string; ar: string }> = {
-  LOCATION_CHECK: { en: 'Location Check', ar: 'التحقق من الموقع' },
-  LANDMARK_REFERENCE: { en: 'Landmark Reference', ar: 'مرجع المعلم' },
-  PARKING_LOCATION: { en: 'Parking Location', ar: 'موقع الوقوف' },
-  BUILDING_ENTRY: { en: 'Building Entry', ar: 'دخول المبنى' },
-  RECEPTION_OR_SECURITY: { en: 'Reception / Security', ar: 'الاستقبال / الأمن' },
-  LOBBY_NAVIGATION: { en: 'Lobby Navigation', ar: 'التنقل في الردهة' },
-  ELEVATOR_ENTRY: { en: 'Elevator Entry', ar: 'دخول المصعد' },
-  STAIRS_ENTRY: { en: 'Stairs Entry', ar: 'دخول الدرج' },
-  FLOOR_NUMBER: { en: 'Floor Number', ar: 'رقم الطابق' },
-  CORRIDOR_OR_PATH: { en: 'Corridor / Path', ar: 'الممر / المسار' },
-  DOOR_IDENTIFICATION: { en: 'Door Identification', ar: 'تحديد الباب' },
-  DROP_OFF_POINT: { en: 'Drop-off Point', ar: 'نقطة التسليم' },
-  GATE_ENTRY: { en: 'Gate Entry', ar: 'دخول البوابة' },
-  UNIT_OR_DOOR_IDENTIFICATION: { en: 'Unit / Door Identification', ar: 'تحديد الوحدة / الباب' },
-  FLOOR_NAVIGATION: { en: 'Floor Navigation', ar: 'التنقل في الطابق' },
-  OTHER: { en: 'Other', ar: 'أخرى' },
+> & {
+  instructionTranslations?: Partial<Record<Language, string>>;
 };
 
-export const STEP_TYPE_DEFAULT_INSTRUCTIONS: Record<StepType, { en: string; ar: string }> = {
-  LOCATION_CHECK: { en: '', ar: '' },
-  LANDMARK_REFERENCE: { en: '', ar: '' },
-  PARKING_LOCATION: { en: '', ar: '' },
-  BUILDING_ENTRY: { en: '', ar: '' },
-  RECEPTION_OR_SECURITY: { en: '', ar: '' },
-  LOBBY_NAVIGATION: { en: '', ar: '' },
-  ELEVATOR_ENTRY: { en: '', ar: '' },
-  STAIRS_ENTRY: { en: '', ar: '' },
-  FLOOR_NUMBER: { en: '', ar: '' },
-  CORRIDOR_OR_PATH: { en: '', ar: '' },
-  DOOR_IDENTIFICATION: { en: '', ar: '' },
-  DROP_OFF_POINT: { en: '', ar: '' },
-  GATE_ENTRY: { en: '', ar: '' },
-  UNIT_OR_DOOR_IDENTIFICATION: { en: '', ar: '' },
-  FLOOR_NAVIGATION: { en: '', ar: '' },
-  OTHER: { en: '', ar: '' },
+export type TranslatedLabel = Record<Language, string>;
+
+export const STEP_TYPE_LABELS: Record<StepType, TranslatedLabel> = {
+  LOCATION_CHECK: { en: 'Location Check', ar: 'التحقق من الموقع', hi: 'स्थान जांच', ur: 'مقام کی جانچ', bn: 'অবস্থান যাচাই' },
+  LANDMARK_REFERENCE: { en: 'Landmark Reference', ar: 'مرجع المعلم', hi: 'लैंडमार्क संदर्भ', ur: 'نشان زد مقام', bn: 'ল্যান্ডমার্ক রেফারেন্স' },
+  PARKING_LOCATION: { en: 'Parking Location', ar: 'موقع الوقوف', hi: 'पार्किंग स्थान', ur: 'پارکنگ کا مقام', bn: 'পার্কিং অবস্থান' },
+  BUILDING_ENTRY: { en: 'Building Entry', ar: 'دخول المبنى', hi: 'भवन प्रवेश', ur: 'عمارت میں داخلہ', bn: 'ভবনে প্রবেশ' },
+  RECEPTION_OR_SECURITY: { en: 'Reception / Security', ar: 'الاستقبال / الأمن', hi: 'रिसेप्शन / सुरक्षा', ur: 'استقبالیہ / سیکیورٹی', bn: 'রিসেপশন / নিরাপত্তা' },
+  LOBBY_NAVIGATION: { en: 'Lobby Navigation', ar: 'التنقل في الردهة', hi: 'लॉबी नेविगेशन', ur: 'لابی نیویگیشن', bn: 'লবি নেভিগেশন' },
+  ELEVATOR_ENTRY: { en: 'Elevator Entry', ar: 'دخول المصعد', hi: 'लिफ्ट प्रवेश', ur: 'لفٹ میں داخلہ', bn: 'লিফটে প্রবেশ' },
+  STAIRS_ENTRY: { en: 'Stairs Entry', ar: 'دخول الدرج', hi: 'सीढ़ी प्रवेश', ur: 'سیڑھیوں میں داخلہ', bn: 'সিঁড়িতে প্রবেশ' },
+  FLOOR_NUMBER: { en: 'Floor Number', ar: 'رقم الطابق', hi: 'मंजिल संख्या', ur: 'منزل نمبر', bn: 'তলা নম্বর' },
+  CORRIDOR_OR_PATH: { en: 'Corridor / Path', ar: 'الممر / المسار', hi: 'गलियारा / रास्ता', ur: 'گلیارا / راستہ', bn: 'করিডোর / পথ' },
+  DOOR_IDENTIFICATION: { en: 'Door Identification', ar: 'تحديد الباب', hi: 'दरवाज़ा पहचान', ur: 'دروازے کی شناخت', bn: 'দরজা শনাক্তকরণ' },
+  DROP_OFF_POINT: { en: 'Drop-off Point', ar: 'نقطة التسليم', hi: 'डिलीवरी पॉइंट', ur: 'ڈیلیوری پوائنٹ', bn: 'ডেলিভারি পয়েন্ট' },
+  GATE_ENTRY: { en: 'Gate Entry', ar: 'دخول البوابة', hi: 'गेट प्रवेश', ur: 'گیٹ میں داخلہ', bn: 'গেটে প্রবেশ' },
+  UNIT_OR_DOOR_IDENTIFICATION: { en: 'Unit / Door Identification', ar: 'تحديد الوحدة / الباب', hi: 'यूनिट / दरवाज़ा पहचान', ur: 'یونٹ / دروازے کی شناخت', bn: 'ইউনিট / দরজা শনাক্তকরণ' },
+  FLOOR_NAVIGATION: { en: 'Floor Navigation', ar: 'التنقل في الطابق', hi: 'मंज़िल नेविगेशन', ur: 'منزل نیویگیشن', bn: 'তলা নেভিগেশন' },
+  OTHER: { en: 'Other', ar: 'أخرى', hi: 'अन्य', ur: 'دیگر', bn: 'অন্যান্য' },
 };
 
-export const ADDRESS_TYPE_LABELS: Record<AddressType, { en: string; ar: string }> = {
-  APARTMENT_BUILDING: { en: 'Apartment Building', ar: 'مبنى سكني' },
-  VILLA: { en: 'Villa', ar: 'فيلا' },
-  RESIDENTIAL_COMPOUND: { en: 'Residential Compound', ar: 'مجمع سكني' },
-  OFFICE_BUILDING: { en: 'Office Building', ar: 'مبنى مكاتب' },
-  OTHER: { en: 'Other', ar: 'أخرى' },
+export const STEP_TYPE_DEFAULT_INSTRUCTIONS: Record<StepType, TranslatedLabel> = {
+  LOCATION_CHECK: { en: '', ar: '', hi: '', ur: '', bn: '' },
+  LANDMARK_REFERENCE: { en: '', ar: '', hi: '', ur: '', bn: '' },
+  PARKING_LOCATION: { en: '', ar: '', hi: '', ur: '', bn: '' },
+  BUILDING_ENTRY: { en: '', ar: '', hi: '', ur: '', bn: '' },
+  RECEPTION_OR_SECURITY: { en: '', ar: '', hi: '', ur: '', bn: '' },
+  LOBBY_NAVIGATION: { en: '', ar: '', hi: '', ur: '', bn: '' },
+  ELEVATOR_ENTRY: { en: '', ar: '', hi: '', ur: '', bn: '' },
+  STAIRS_ENTRY: { en: '', ar: '', hi: '', ur: '', bn: '' },
+  FLOOR_NUMBER: { en: '', ar: '', hi: '', ur: '', bn: '' },
+  CORRIDOR_OR_PATH: { en: '', ar: '', hi: '', ur: '', bn: '' },
+  DOOR_IDENTIFICATION: { en: '', ar: '', hi: '', ur: '', bn: '' },
+  DROP_OFF_POINT: { en: '', ar: '', hi: '', ur: '', bn: '' },
+  GATE_ENTRY: { en: '', ar: '', hi: '', ur: '', bn: '' },
+  UNIT_OR_DOOR_IDENTIFICATION: { en: '', ar: '', hi: '', ur: '', bn: '' },
+  FLOOR_NAVIGATION: { en: '', ar: '', hi: '', ur: '', bn: '' },
+  OTHER: { en: '', ar: '', hi: '', ur: '', bn: '' },
+};
+
+export const ADDRESS_TYPE_LABELS: Record<AddressType, TranslatedLabel> = {
+  APARTMENT_BUILDING: { en: 'Apartment Building', ar: 'مبنى سكني', hi: 'अपार्टमेंट बिल्डिंग', ur: 'اپارٹمنٹ بلڈنگ', bn: 'অ্যাপার্টমেন্ট বিল্ডিং' },
+  VILLA: { en: 'Villa', ar: 'فيلا', hi: 'विला', ur: 'ولا', bn: 'ভিলা' },
+  RESIDENTIAL_COMPOUND: { en: 'Residential Compound', ar: 'مجمع سكني', hi: 'आवासीय परिसर', ur: 'رہائشی کمپاؤنڈ', bn: 'আবাসিক কমপাউন্ড' },
+  OFFICE_BUILDING: { en: 'Office Building', ar: 'مبنى مكاتب', hi: 'कार्यालय भवन', ur: 'آفس بلڈنگ', bn: 'অফিস বিল্ডিং' },
+  OTHER: { en: 'Other', ar: 'أخرى', hi: 'अन्य', ur: 'دیگر', bn: 'অন্যান্য' },
 };

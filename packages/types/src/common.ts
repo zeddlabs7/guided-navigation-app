@@ -1,8 +1,8 @@
 export type Timestamp = string;
 
-export type Language = 'en' | 'ar';
+export type Language = 'en' | 'ar' | 'hi' | 'ur' | 'bn';
 
-export const SUPPORTED_LANGUAGES: Language[] = ['en', 'ar'];
+export const SUPPORTED_LANGUAGES: Language[] = ['en', 'ar', 'hi', 'ur', 'bn'];
 
 export const DEFAULT_TIMEZONE = 'Asia/Riyadh';
 

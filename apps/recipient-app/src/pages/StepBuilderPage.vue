@@ -211,6 +211,7 @@ async function loadExistingStep() {
     existingStep.value = step;
     selectedStepType.value = step.stepType;
     instructions.value = step.instructionOriginal || '';
+    instructionsArabic.value = step.instructionTranslations?.ar || '';
     imageUrl.value = step.image?.publicUrl || null;
     imageStoragePath.value = step.image?.storagePath || null;
     overlays.value = step.overlays || [];
@@ -303,11 +304,13 @@ async function handleSaveStep() {
   error.value = null;
   
   try {
+    const arText = instructionsArabic.value.trim();
     await updateGuidanceStep(stepId.value, {
       stepType: selectedStepType.value,
       contentType: imageUrl.value ? 'PHOTO' : 'TEXT',
       title: null,
       instructionOriginal: instructions.value.trim(),
+      instructionTranslations: arText ? { ar: arText } : {},
       overlays: overlays.value,
       image: pendingImage.value ?? existingStep.value?.image ?? null,
       locationData: isLocationCheckStep.value ? locationData.value : null,

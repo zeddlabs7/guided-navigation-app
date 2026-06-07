@@ -143,6 +143,7 @@ export default function StepBuilderScreen() {
       setExistingStep(step);
       setSelectedStepType(step.stepType);
       setInstructions(step.instructionOriginal || '');
+      setInstructionsArabic(step.instructionTranslations?.ar || '');
       setOverlays(step.overlays || []);
       setLocationData(step.locationData || null);
       if (step.image?.publicUrl) {
@@ -236,11 +237,13 @@ export default function StepBuilderScreen() {
     setSaving(true);
     setError(null);
     try {
+      const arText = instructionsArabic.trim();
       await updateGuidanceStep(stepIdRef.current, {
         stepType: selectedStepType,
         contentType: imageUri ? 'PHOTO' : 'TEXT',
         title: null,
         instructionOriginal: instructions.trim(),
+        instructionTranslations: arText ? { ar: arText } : {},
         overlays: overlays,
         image: pendingImage ?? existingStep?.image ?? null,
         locationData: selectedStepType === 'LOCATION_CHECK' ? locationData : null,

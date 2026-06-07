@@ -280,13 +280,14 @@ export async function createGuidanceStep(
 ): Promise<string> {
   const now = firestore.FieldValue.serverTimestamp();
 
+  const { instructionTranslations: inputTranslations, ...restInput } = input;
   const docRef = await firestore()
     .collection(GUIDANCE_STEPS_COLLECTION)
     .add({
-      ...input,
+      ...restInput,
       guidanceSetId,
       stepIndex,
-      instructionTranslations: {},
+      instructionTranslations: inputTranslations || {},
       image: null,
       overlays: [],
       isRequired: true,

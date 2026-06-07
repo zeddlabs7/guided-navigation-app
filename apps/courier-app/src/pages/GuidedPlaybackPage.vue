@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ArrowOverlay, MarkerOverlay } from '@guidenav/ui';
-import { STEP_TYPE_LABELS } from '@guidenav/types';
+import { STEP_TYPE_LABELS, type Language } from '@guidenav/types';
 import { useCourierSession } from '@/composables/useCourierSession';
+import { useTranslation } from '@/composables/useTranslation';
 import FeedbackModal from '@/components/FeedbackModal.vue';
 
 const router = useRouter();
 const route = useRoute();
+const { t } = useTranslation();
 
 const token = computed(() => route.params.token as string);
 const currentIndex = computed(() => parseInt(route.params.index as string, 10));
@@ -16,9 +18,14 @@ const {
   guidanceSet,
   totalSteps,
   currentLanguage,
+  isRtl,
   getStepByIndex,
+  getStepInstruction,
+  getStepTitle,
+  getGuidanceTitle,
   getAvailabilityText,
-  toggleLanguage,
+  setLanguage,
+  translateUserContent,
 } = useCourierSession();
 
 const showFeedbackModal = ref(false);
@@ -34,30 +41,26 @@ onMounted(() => {
 const currentStep = computed(() => getStepByIndex(currentIndex.value));
 const isFirstStep = computed(() => currentIndex.value === 0);
 const isLastStep = computed(() => currentIndex.value === totalSteps.value - 1);
-const isRtl = computed(() => currentLanguage.value === 'ar');
 
 const availabilityText = computed(() => {
   const texts = getAvailabilityText();
-  return isRtl.value ? texts.ar : texts.en;
+  return texts[currentLanguage.value];
 });
 
 const stepTypeLabel = computed(() => {
   if (!currentStep.value) return '';
   const labels = STEP_TYPE_LABELS[currentStep.value.stepType];
-  return isRtl.value ? labels.ar : labels.en;
+  return labels[currentLanguage.value];
 });
 
 const stepTitle = computed(() => {
   if (!currentStep.value) return '';
-  return currentStep.value.title || stepTypeLabel.value;
+  return getStepTitle(currentStep.value, currentIndex.value);
 });
 
 const stepInstruction = computed(() => {
   if (!currentStep.value) return '';
-  if (isRtl.value && currentStep.value.instructionTranslations?.ar) {
-    return currentStep.value.instructionTranslations.ar;
-  }
-  return currentStep.value.instructionOriginal;
+  return getStepInstruction(currentStep.value, currentIndex.value);
 });
 
 const overlayCount = computed(() => {
@@ -65,11 +68,43 @@ const overlayCount = computed(() => {
 });
 
 const guidanceTitle = computed(() => {
-  return guidanceSet.value?.title || 'Arriveo';
+  return getGuidanceTitle();
 });
 
-const languageToggleLabel = computed(() => {
-  return isRtl.value ? 'English' : 'عربي';
+const languageOptions: { code: Language; label: string }[] = [
+  { code: 'en', label: 'English' },
+  { code: 'ar', label: 'العربية' },
+  { code: 'hi', label: 'हिन्दी' },
+  { code: 'ur', label: 'اردو' },
+  { code: 'bn', label: 'বাংলা' },
+];
+const showLanguageMenu = ref(false);
+const currentLanguageLabel = computed(() =>
+  languageOptions.find(l => l.code === currentLanguage.value)?.label || 'English'
+);
+
+async function handleLanguageSelect(lang: Language) {
+  showLanguageMenu.value = false;
+  if (lang === currentLanguage.value) return;
+  setLanguage(lang);
+  if (lang !== 'en') {
+    await translateUserContent();
+  }
+}
+
+function closeLanguageMenu(e: MouseEvent) {
+  const target = e.target as HTMLElement;
+  if (!target.closest('.header-language-picker')) {
+    showLanguageMenu.value = false;
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', closeLanguageMenu);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', closeLanguageMenu);
 });
 
 watch(() => route.params.index, () => {
@@ -120,21 +155,35 @@ function handleImageError() {
   <div class="playback-page" :dir="isRtl ? 'rtl' : 'ltr'">
     <!-- Header -->
     <header class="playback-header">
-      <button class="header-back" @click="handleBackToLanding" :aria-label="isRtl ? 'رجوع' : 'Back'">
+      <button class="header-back" @click="handleBackToLanding" :aria-label="t('back')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
       <span class="header-title">{{ guidanceTitle }}</span>
       <div class="header-actions">
-        <button class="header-home" @click="handleHome" :aria-label="isRtl ? 'الرئيسية' : 'Home'">
+        <button class="header-home" @click="handleHome" :aria-label="t('home')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1h-5v-7h-6v7H4a1 1 0 01-1-1V9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-        <button class="header-language" @click="toggleLanguage">
-          {{ languageToggleLabel }}
-        </button>
+        <div class="header-language-picker">
+          <button class="header-language" @click="showLanguageMenu = !showLanguageMenu">
+            {{ currentLanguageLabel }}
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div v-if="showLanguageMenu" class="language-dropdown">
+            <button
+              v-for="opt in languageOptions"
+              :key="opt.code"
+              class="language-dropdown-item"
+              :class="{ active: currentLanguage === opt.code }"
+              @click="handleLanguageSelect(opt.code)"
+            >{{ opt.label }}</button>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -192,7 +241,7 @@ function handleImageError() {
             <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
             <path d="M21 15L16 10L5 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          <span>{{ isRtl ? 'لا توجد صورة' : 'No image' }}</span>
+          <span>{{ t('noImage') }}</span>
         </div>
 
         <!-- Step Type Badge -->
@@ -205,14 +254,14 @@ function handleImageError() {
         <div v-if="overlayCount > 0" class="annotation-count">
           <span class="annotation-dot"></span>
           <span class="annotation-text">
-            {{ overlayCount }} {{ isRtl ? 'تعليق توضيحية على الصورة' : 'annotation on photo' }}
+            {{ overlayCount }} {{ t('annotationOnPhoto') }}
           </span>
         </div>
 
         <!-- Step Progress Bar -->
         <div class="step-progress">
           <div class="step-counter-pill">
-            <span>{{ isRtl ? `الخطوة ${currentIndex + 1} من ${totalSteps}` : `Step ${currentIndex + 1} of ${totalSteps}` }}</span>
+            <span>{{ `${t('step')} ${currentIndex + 1} ${t('of')} ${totalSteps}` }}</span>
           </div>
           <div class="step-dots">
             <span
@@ -239,7 +288,7 @@ function handleImageError() {
               <path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
           </span>
-          <span class="cant-find-text">{{ isRtl ? 'لا أجد هذه الخطوة' : "I can't find this step" }}</span>
+          <span class="cant-find-text">{{ t('cantFindStep') }}</span>
         </button>
       </div>
     </main>
@@ -250,7 +299,7 @@ function handleImageError() {
         class="nav-button nav-button--back"
         :disabled="isFirstStep"
         @click="handlePrevious"
-        :aria-label="isRtl ? 'السابق' : 'Previous'"
+        :aria-label="t('previous')"
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -258,7 +307,7 @@ function handleImageError() {
       </button>
       
       <button class="nav-button nav-button--next" @click="handleNext">
-        <span>{{ isLastStep ? (isRtl ? 'وصلت' : "You've Arrived") : (isRtl ? 'التالي' : 'Next') }}</span>
+        <span>{{ isLastStep ? t('youveArrived') : t('next') }}</span>
         <template v-if="isLastStep">
           <span class="arrived-emoji">🏁</span>
         </template>
@@ -353,6 +402,10 @@ function handleImageError() {
   background-color: var(--color-background);
 }
 
+.header-language-picker {
+  position: relative;
+}
+
 .header-language {
   padding: var(--spacing-xs) var(--spacing-md);
   border-radius: var(--radius-md);
@@ -362,6 +415,50 @@ function handleImageError() {
   color: var(--color-text);
   cursor: pointer;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.language-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 130px;
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  z-index: 100;
+  overflow: hidden;
+}
+
+[dir="rtl"] .language-dropdown {
+  right: auto;
+  left: 0;
+}
+
+.language-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  border: none;
+  background: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: start;
+}
+
+.language-dropdown-item:hover {
+  background-color: var(--color-primary-light);
+}
+
+.language-dropdown-item.active {
+  color: var(--color-primary);
+  font-weight: 700;
+  background-color: var(--color-primary-light);
 }
 
 /* Availability Banner */

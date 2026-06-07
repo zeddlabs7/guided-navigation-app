@@ -8,6 +8,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/GuidanceLoaderPage.vue'),
   },
   {
+    path: '/g/:token/welcome',
+    name: 'Welcome',
+    component: () => import('@/pages/WelcomePage.vue'),
+  },
+  {
     path: '/g/:token/landing',
     name: 'Landing',
     component: () => import('@/pages/LandingPage.vue'),

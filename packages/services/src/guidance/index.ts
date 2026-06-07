@@ -120,11 +120,12 @@ export async function createGuidanceStep(
 ): Promise<string> {
   const db = getFirebaseFirestore();
 
+  const { instructionTranslations: inputTranslations, ...restInput } = input;
   const docRef = await addDoc(collection(db, GUIDANCE_STEPS_COLLECTION), {
-    ...input,
+    ...restInput,
     guidanceSetId,
     stepIndex,
-    instructionTranslations: {},
+    instructionTranslations: inputTranslations || {},
     image: null,
     overlays: [],
     isRequired: true,

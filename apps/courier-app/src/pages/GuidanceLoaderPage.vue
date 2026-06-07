@@ -30,7 +30,7 @@ onMounted(async () => {
 
     setSession(result.shareLink, result.guidanceSet, result.steps);
 
-    router.replace(`/g/${token}/landing`);
+    router.replace(`/g/${token}/welcome`);
   } catch (err) {
     console.error('Failed to load guidance:', err);
     setError('Failed to load guidance');
