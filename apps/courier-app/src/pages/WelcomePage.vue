@@ -127,27 +127,31 @@ onUnmounted(() => {
           :disabled="isProceedDisabled"
           @click="proceed"
         >
-          <Transition name="fade" mode="out-in">
-            <span v-if="isTranslating" key="translating" class="cta-text">...</span>
-            <span v-else :key="displayText" class="cta-text">{{ displayText }}</span>
-          </Transition>
-          <svg
-            class="cta-arrow"
-            :class="{ 'cta-arrow-rtl': displayRtl }"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M5 12h14M12 5l7 7-7 7"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
+          <template v-if="isTranslating">
+            <span class="spinner" />
+          </template>
+          <template v-else>
+            <Transition name="fade" mode="out-in">
+              <span :key="displayText" class="cta-text">{{ displayText }}</span>
+            </Transition>
+            <svg
+              class="cta-arrow"
+              :class="{ 'cta-arrow-rtl': displayRtl }"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M5 12h14M12 5l7 7-7 7"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </template>
         </button>
       </div>
     </div>
@@ -267,6 +271,19 @@ onUnmounted(() => {
 
 .cta-text {
   display: inline-block;
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .cta-arrow {
