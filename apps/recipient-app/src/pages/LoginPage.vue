@@ -18,6 +18,7 @@ const {
   startPolling,
   stopPolling,
   retryWhatsAppVerify,
+  devBypassSignIn,
   clearError,
 } = useAuth();
 
@@ -129,6 +130,14 @@ async function handleStartWhatsAppVerify() {
 function handleOpenWhatsApp() {
   if (verifyWhatsappUrl.value) {
     window.open(verifyWhatsappUrl.value, '_blank');
+  }
+}
+
+async function handleDevBypass() {
+  clearError();
+  const success = await devBypassSignIn();
+  if (success) {
+    router.push('/dashboard');
   }
 }
 
@@ -297,6 +306,19 @@ async function handleRetryVerify() {
           </div>
         </div>
       </GCard>
+
+      <div class="dev-bypass">
+        <GButton
+          variant="ghost"
+          size="sm"
+          full-width
+          :loading="isLoading"
+          :disabled="isLoading"
+          @click="handleDevBypass"
+        >
+          Dev: Sign in as test user
+        </GButton>
+      </div>
       
       <!-- Invisible reCAPTCHA container -->
       <div id="recaptcha-container"></div>
@@ -440,6 +462,13 @@ async function handleRetryVerify() {
   color: var(--color-error, #ef4444);
   font-size: var(--font-size-sm, 0.875rem);
   margin: 0;
+}
+
+.dev-bypass {
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px dashed var(--color-border, #e5e7eb);
+  opacity: 0.6;
 }
 
 #recaptcha-container {

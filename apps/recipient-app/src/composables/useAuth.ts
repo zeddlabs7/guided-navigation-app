@@ -7,6 +7,7 @@ import {
   onAuthStateChange,
   signOut as signOutService,
   getOrCreateUser,
+  devSignIn as devSignInService,
   createVerificationSession as createSessionService,
   getVerificationStatus as getStatusService,
   completeWhatsAppVerification as completeVerifyService,
@@ -278,6 +279,22 @@ export function useAuth() {
     }
   }
 
+  async function devBypassSignIn(): Promise<boolean> {
+    error.value = null;
+    loading.value = true;
+
+    try {
+      await devSignInService('YCAilJHBfpeqoSrInaYJeqQVmwp1');
+      loading.value = false;
+      return true;
+    } catch (e: unknown) {
+      loading.value = false;
+      const fnError = e as { message?: string };
+      error.value = fnError.message || 'Dev sign-in failed.';
+      return false;
+    }
+  }
+
   function clearError() {
     error.value = null;
   }
@@ -303,6 +320,7 @@ export function useAuth() {
     stopPolling,
     retryWhatsAppVerify,
     logout,
+    devBypassSignIn,
     clearError,
   };
 }
