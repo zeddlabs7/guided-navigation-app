@@ -29,6 +29,7 @@ let recaptchaVerifier: RecaptchaVerifier | null = null;
 let authInitPromise: Promise<void> | null = null;
 let authInitResolve: (() => void) | null = null;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
+let devSignInResolve: (() => void) | null = null;
 
 const verifySessionId = ref<string | null>(null);
 const verifyWhatsappUrl = ref<string | null>(null);
@@ -69,6 +70,10 @@ export function useAuth() {
       if (authInitResolve) {
         authInitResolve();
         authInitResolve = null;
+      }
+      if (devSignInResolve) {
+        devSignInResolve();
+        devSignInResolve = null;
       }
     });
   }
@@ -284,11 +289,16 @@ export function useAuth() {
     loading.value = true;
 
     try {
+      const authSettled = new Promise<void>((resolve) => {
+        devSignInResolve = resolve;
+      });
       await devSignInService('YCAilJHBfpeqoSrInaYJeqQVmwp1');
+      await authSettled;
       loading.value = false;
       return true;
     } catch (e: unknown) {
       loading.value = false;
+      devSignInResolve = null;
       const fnError = e as { message?: string };
       error.value = fnError.message || 'Dev sign-in failed.';
       return false;
