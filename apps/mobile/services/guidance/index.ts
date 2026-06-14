@@ -362,7 +362,10 @@ export async function uploadStepImage(
   const mimeType: SupportedImageMimeType = 'image/jpeg';
 
   const ref = storage().ref(storagePath);
-  await ref.putFile(filePath, { contentType: 'image/jpeg' });
+  await ref.putFile(filePath, {
+    contentType: 'image/jpeg',
+    cacheControl: 'public, max-age=1209600',
+  });
   const publicUrl = await ref.getDownloadURL();
 
   return {

@@ -1,8 +1,9 @@
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
-  addDoc,
+  setDoc,
   updateDoc,
   query,
   where,
@@ -39,7 +40,8 @@ export async function createShareLink(input: CreateShareLinkInput): Promise<{ sh
   const now = new Date();
   const expiresAt = new Date(now.getTime() + expiryMinutes * 60 * 1000);
 
-  const docRef = await addDoc(collection(db, SHARE_LINKS_COLLECTION), {
+  const docRef = doc(db, SHARE_LINKS_COLLECTION, tokenHash);
+  await setDoc(docRef, {
     guidanceSetId: input.guidanceSetId,
     tokenHash,
     status: 'ACTIVE',
@@ -52,25 +54,20 @@ export async function createShareLink(input: CreateShareLinkInput): Promise<{ sh
     updatedAt: serverTimestamp(),
   });
 
-  return { shareLinkId: docRef.id, token };
+  return { shareLinkId: tokenHash, token };
 }
 
 export async function validateShareLinkToken(token: string): Promise<ShareLinkValidationResult> {
   const db = getFirebaseFirestore();
   const tokenHash = await hashToken(token);
 
-  const q = query(
-    collection(db, SHARE_LINKS_COLLECTION),
-    where('tokenHash', '==', tokenHash)
-  );
+  const docSnap = await getDoc(doc(db, SHARE_LINKS_COLLECTION, tokenHash));
 
-  const querySnapshot = await getDocs(q);
-
-  if (querySnapshot.empty) {
+  if (!docSnap.exists()) {
     return { valid: false, error: 'NOT_FOUND' };
   }
 
-  const shareLink = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as ShareLink;
+  const shareLink = { id: docSnap.id, ...docSnap.data() } as ShareLink;
 
   if (shareLink.status === 'REVOKED') {
     return { valid: false, error: 'REVOKED', shareLink };
@@ -120,7 +117,22 @@ export async function incrementAccessCount(shareLinkId: string): Promise<void> {
   });
 }
 
-export interface LoadGuidanceByTokenResult {
+export interface ValidateTokenResult {
+  valid: boolean;
+  error?: string;
+}
+
+export async function validateToken(token: string): Promise<ValidateTokenResult> {
+  const functions = getFirebaseFunctions();
+  const fn = httpsCallable<{ token: string }, ValidateTokenResult>(
+    functions,
+    'validateToken',
+  );
+  const result = await fn({ token });
+  return result.data;
+}
+
+export interface LoadGuidanceDataResult {
   valid: boolean;
   error?: string;
   shareLink?: ShareLink;
@@ -129,6 +141,20 @@ export interface LoadGuidanceByTokenResult {
   recipientPhoneNumber?: string | null;
 }
 
+export async function loadGuidanceData(token: string): Promise<LoadGuidanceDataResult> {
+  const functions = getFirebaseFunctions();
+  const fn = httpsCallable<{ token: string }, LoadGuidanceDataResult>(
+    functions,
+    'loadGuidanceData',
+  );
+  const result = await fn({ token });
+  return result.data;
+}
+
+/** @deprecated Use validateToken + loadGuidanceData instead */
+export type LoadGuidanceByTokenResult = LoadGuidanceDataResult;
+
+/** @deprecated Use validateToken + loadGuidanceData instead */
 export async function loadGuidanceByToken(token: string): Promise<LoadGuidanceByTokenResult> {
   const functions = getFirebaseFunctions();
   const fn = httpsCallable<{ token: string }, LoadGuidanceByTokenResult>(

@@ -2,37 +2,36 @@
 import { onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { GSpinner } from '@guidenav/ui';
-import { loadGuidanceByToken } from '@guidenav/services';
+import { validateToken } from '@guidenav/services';
 import { useCourierSession } from '@/composables/useCourierSession';
 
 const router = useRouter();
 const route = useRoute();
 const token = route.params.token as string;
 
-const { setSession, setLoading, setError, setToken, setRecipientPhoneNumber } = useCourierSession();
+const { setLoading, setError, setToken, setTokenValid, loadDataInBackground } = useCourierSession();
 
 onMounted(async () => {
   setLoading(true);
   setToken(token);
 
   try {
-    const result = await loadGuidanceByToken(token);
+    const result = await validateToken(token);
 
-    if (!result.valid || !result.shareLink || !result.guidanceSet || !result.steps) {
+    if (!result.valid) {
       const errorType = result.error || 'NOT_FOUND';
       router.replace(`/g/${token}/error?type=${errorType}`);
       return;
     }
 
-    if (result.recipientPhoneNumber) {
-      setRecipientPhoneNumber(result.recipientPhoneNumber);
-    }
+    setTokenValid(true);
 
-    setSession(result.shareLink, result.guidanceSet, result.steps);
+    // Fire full data load in background — don't await it
+    loadDataInBackground(token);
 
     router.replace(`/g/${token}/welcome`);
   } catch (err) {
-    console.error('Failed to load guidance:', err);
+    console.error('Failed to validate token:', err);
     setError('Failed to load guidance');
     router.replace(`/g/${token}/error?type=LOAD_FAILED`);
   } finally {

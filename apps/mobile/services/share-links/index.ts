@@ -35,22 +35,24 @@ export async function createShareLink(
   const now = new Date();
   const expiresAt = new Date(now.getTime() + expiryMinutes * 60 * 1000);
 
-  const docRef = await firestore()
+  const docRef = firestore()
     .collection(SHARE_LINKS_COLLECTION)
-    .add({
-      guidanceSetId: input.guidanceSetId,
-      tokenHash,
-      status: 'ACTIVE',
-      expiresAt: expiresAt.toISOString(),
-      expiryDurationMinutes: expiryMinutes,
-      revokedAt: null,
-      accessCount: 0,
-      lastAccessedAt: null,
-      createdAt: firestore.FieldValue.serverTimestamp(),
-      updatedAt: firestore.FieldValue.serverTimestamp(),
-    });
+    .doc(tokenHash);
 
-  return { shareLinkId: docRef.id, token, url: buildShareUrl(token) };
+  await docRef.set({
+    guidanceSetId: input.guidanceSetId,
+    tokenHash,
+    status: 'ACTIVE',
+    expiresAt: expiresAt.toISOString(),
+    expiryDurationMinutes: expiryMinutes,
+    revokedAt: null,
+    accessCount: 0,
+    lastAccessedAt: null,
+    createdAt: firestore.FieldValue.serverTimestamp(),
+    updatedAt: firestore.FieldValue.serverTimestamp(),
+  });
+
+  return { shareLinkId: tokenHash, token, url: buildShareUrl(token) };
 }
 
 export async function getShareLinkForGuidance(

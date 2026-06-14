@@ -12,7 +12,10 @@ export async function uploadStepImage(
   const storagePath = `guidanceSets/${guidanceSetId}/steps/${stepId}/main.${extension}`;
   const storageRef = ref(storage, storagePath);
 
-  await uploadBytes(storageRef, file);
+  await uploadBytes(storageRef, file, {
+    cacheControl: 'public, max-age=1209600',
+    contentType: file.type,
+  });
   const publicUrl = await getDownloadURL(storageRef);
 
   const dimensions = await getImageDimensions(file);

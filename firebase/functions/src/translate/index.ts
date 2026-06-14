@@ -1,4 +1,5 @@
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { logger } from 'firebase-functions/v2';
 
 const { Translate } = require('@google-cloud/translate').v2;
 const translate = new Translate();
@@ -8,21 +9,22 @@ interface TranslateTextsData {
   targetLanguage: string;
 }
 
-export const translateTexts = functions.https.onCall(
-  async (data: TranslateTextsData) => {
-    const { texts, targetLanguage } = data;
+export const translateTexts = onCall(
+  { region: 'me-central1', concurrency: 80, memory: '256MiB' },
+  async (request) => {
+    const { texts, targetLanguage } = request.data as TranslateTextsData;
 
     if (!texts || !Array.isArray(texts) || texts.length === 0) {
-      throw new functions.https.HttpsError('invalid-argument', 'texts array is required');
+      throw new HttpsError('invalid-argument', 'texts array is required');
     }
 
     if (!targetLanguage) {
-      throw new functions.https.HttpsError('invalid-argument', 'targetLanguage is required');
+      throw new HttpsError('invalid-argument', 'targetLanguage is required');
     }
 
     const validLangs = ['ar', 'hi', 'ur', 'bn'];
     if (!validLangs.includes(targetLanguage)) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'invalid-argument',
         `targetLanguage must be one of: ${validLangs.join(', ')}`,
       );
@@ -56,8 +58,8 @@ export const translateTexts = functions.https.onCall(
 
       return { translations: result };
     } catch (err: any) {
-      functions.logger.error('Translation failed:', err?.message || err, err?.stack);
-      throw new functions.https.HttpsError(
+      logger.error('Translation failed:', err?.message || err, err?.stack);
+      throw new HttpsError(
         'internal',
         `Translation service failed: ${err?.message || 'unknown error'}`,
       );

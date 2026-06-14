@@ -81,7 +81,7 @@ export function getFirebaseStorage(): FirebaseStorage {
 
 export function getFirebaseFunctions(): Functions {
   if (!functions) {
-    functions = _getFunctions(getFirebaseApp());
+    functions = _getFunctions(getFirebaseApp(), 'me-central1');
     if (useEmulators) {
       connectFunctionsEmulator(functions, 'localhost', 5001);
     }

@@ -11,6 +11,9 @@ const currentLanguage = ref<Language>('en');
 const recipientPhoneNumber = ref<string | null>(null);
 const translatedContent = ref<Record<string, string>>({});
 const isTranslating = ref(false);
+const isTokenValid = ref(false);
+const isDataLoading = ref(false);
+const dataLoadError = ref<string | null>(null);
 
 export function useCourierSession() {
   const token = ref<string | null>(null);
@@ -18,6 +21,7 @@ export function useCourierSession() {
   const totalSteps = computed(() => steps.value.length);
 
   const hasData = computed(() => guidanceSet.value !== null && steps.value.length > 0);
+  const isDataReady = computed(() => guidanceSet.value !== null && steps.value.length > 0 && !isDataLoading.value);
 
   const lastStep = computed(() => {
     if (steps.value.length === 0) return null;
@@ -196,6 +200,36 @@ export function useCourierSession() {
     return translatedContent.value['guidance_title'] || title;
   }
 
+  function setTokenValid(valid: boolean) {
+    isTokenValid.value = valid;
+  }
+
+  async function loadDataInBackground(tokenValue: string) {
+    isDataLoading.value = true;
+    dataLoadError.value = null;
+
+    try {
+      const { loadGuidanceData } = await import('@guidenav/services');
+      const result = await loadGuidanceData(tokenValue);
+
+      if (!result.valid || !result.shareLink || !result.guidanceSet || !result.steps) {
+        dataLoadError.value = result.error || 'LOAD_FAILED';
+        return;
+      }
+
+      if (result.recipientPhoneNumber) {
+        recipientPhoneNumber.value = result.recipientPhoneNumber;
+      }
+
+      setSession(result.shareLink, result.guidanceSet, result.steps);
+    } catch (err) {
+      console.error('Background data load failed:', err);
+      dataLoadError.value = 'LOAD_FAILED';
+    } finally {
+      isDataLoading.value = false;
+    }
+  }
+
   function clearSession() {
     shareLink.value = null;
     guidanceSet.value = null;
@@ -204,6 +238,9 @@ export function useCourierSession() {
     token.value = null;
     error.value = null;
     isLoading.value = false;
+    isTokenValid.value = false;
+    isDataLoading.value = false;
+    dataLoadError.value = null;
     recipientPhoneNumber.value = null;
     translatedContent.value = {};
     isTranslating.value = false;
@@ -245,6 +282,10 @@ export function useCourierSession() {
     steps,
     isLoading,
     isTranslating,
+    isTokenValid,
+    isDataLoading,
+    isDataReady,
+    dataLoadError,
     error,
     currentLanguage,
     isRtl,
@@ -254,9 +295,11 @@ export function useCourierSession() {
     lastStep,
     dropOffStep,
     setToken,
+    setTokenValid,
     setSession,
     setLoading,
     setError,
+    loadDataInBackground,
     getStepByIndex,
     toggleLanguage,
     setLanguage,

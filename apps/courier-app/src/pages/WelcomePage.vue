@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useCourierSession } from '@/composables/useCourierSession';
 import type { Language } from '@guidenav/types';
@@ -8,11 +8,26 @@ const router = useRouter();
 const route = useRoute();
 const token = route.params.token as string;
 
-const { guidanceSet, setLanguage, translateUserContent, isTranslating } = useCourierSession();
+const {
+  isTokenValid,
+  isDataReady,
+  dataLoadError,
+  setLanguage,
+  translateUserContent,
+  isTranslating,
+} = useCourierSession();
+
+const waitingForData = ref(false);
 
 onMounted(() => {
-  if (!guidanceSet.value) {
+  if (!isTokenValid.value) {
     router.replace(`/g/${token}`);
+  }
+});
+
+watch(dataLoadError, (err) => {
+  if (err) {
+    router.replace(`/g/${token}/error?type=${err}`);
   }
 });
 
@@ -54,7 +69,7 @@ const displayRtl = computed(() => {
 });
 
 const isLanguageSelected = computed(() => selectedLanguage.value !== null);
-const isProceedDisabled = computed(() => !isLanguageSelected.value || isTranslating.value);
+const isProceedDisabled = computed(() => !isLanguageSelected.value || isTranslating.value || waitingForData.value);
 
 function startCycling() {
   cycleTimer = setInterval(() => {
@@ -77,6 +92,19 @@ function selectLanguage(lang: Language) {
 
 async function proceed() {
   if (!selectedLanguage.value) return;
+
+  if (!isDataReady.value) {
+    waitingForData.value = true;
+    const unwatch = watch(isDataReady, (ready) => {
+      if (ready) {
+        unwatch();
+        waitingForData.value = false;
+        proceed();
+      }
+    });
+    return;
+  }
+
   const lang = selectedLanguage.value;
   if (lang !== 'en') {
     await translateUserContent();
@@ -94,7 +122,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div v-if="guidanceSet" class="welcome-page">
+  <div v-if="isTokenValid" class="welcome-page">
     <div class="welcome-content">
       <div class="logo-section">
         <img
@@ -127,7 +155,7 @@ onUnmounted(() => {
           :disabled="isProceedDisabled"
           @click="proceed"
         >
-          <template v-if="isTranslating">
+          <template v-if="isTranslating || waitingForData">
             <span class="spinner" />
           </template>
           <template v-else>
