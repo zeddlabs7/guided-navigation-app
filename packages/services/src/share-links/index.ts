@@ -117,19 +117,20 @@ export async function incrementAccessCount(shareLinkId: string): Promise<void> {
   });
 }
 
+const FUNCTIONS_BASE_URL = 'https://me-central1-guided-navigation-app.cloudfunctions.net';
+
 export interface ValidateTokenResult {
   valid: boolean;
   error?: string;
 }
 
 export async function validateToken(token: string): Promise<ValidateTokenResult> {
-  const functions = getFirebaseFunctions();
-  const fn = httpsCallable<{ token: string }, ValidateTokenResult>(
-    functions,
-    'validateToken',
-  );
-  const result = await fn({ token });
-  return result.data;
+  const resp = await fetch(`${FUNCTIONS_BASE_URL}/validateToken`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  });
+  return resp.json();
 }
 
 export interface LoadGuidanceDataResult {
@@ -142,13 +143,12 @@ export interface LoadGuidanceDataResult {
 }
 
 export async function loadGuidanceData(token: string): Promise<LoadGuidanceDataResult> {
-  const functions = getFirebaseFunctions();
-  const fn = httpsCallable<{ token: string }, LoadGuidanceDataResult>(
-    functions,
-    'loadGuidanceData',
-  );
-  const result = await fn({ token });
-  return result.data;
+  const resp = await fetch(`${FUNCTIONS_BASE_URL}/loadGuidanceData`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  });
+  return resp.json();
 }
 
 /** @deprecated Use validateToken + loadGuidanceData instead */

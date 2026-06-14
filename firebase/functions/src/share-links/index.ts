@@ -1,10 +1,15 @@
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onRequest } from 'firebase-functions/v2/https';
 import { logger } from 'firebase-functions/v2';
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import * as crypto from 'crypto';
 
 const FUNCTIONS_REGION = 'me-central1';
+const CORS_ORIGINS = [
+  'https://guided-navigation-app-courier.netlify.app',
+  'http://localhost:5173',
+  'http://localhost:5174',
+];
 
 const db = admin.firestore();
 
@@ -21,16 +26,17 @@ function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
-// --- v2 courier-facing functions (same region as Firestore) ---
+// --- v2 courier-facing functions (onRequest for lower overhead) ---
 
-export const validateToken = onCall(
-  { region: FUNCTIONS_REGION, concurrency: 80, memory: '256MiB' },
-  async (request) => {
+export const validateToken = onRequest(
+  { region: FUNCTIONS_REGION, concurrency: 80, memory: '256MiB', cors: CORS_ORIGINS },
+  async (req, res) => {
     const t0 = Date.now();
-    const { token } = request.data as { token: string };
+    const { token } = req.body as { token: string };
 
     if (!token) {
-      throw new HttpsError('invalid-argument', 'Token is required');
+      res.status(400).json({ error: 'TOKEN_REQUIRED' });
+      return;
     }
 
     const tokenHash = hashToken(token);
@@ -46,31 +52,35 @@ export const validateToken = onCall(
     });
 
     if (!shareLinkSnap.exists) {
-      return { valid: false, error: 'NOT_FOUND' };
+      res.json({ valid: false, error: 'NOT_FOUND' });
+      return;
     }
 
     const shareLink = shareLinkSnap.data()!;
 
     if (shareLink.status === 'REVOKED') {
-      return { valid: false, error: 'REVOKED' };
+      res.json({ valid: false, error: 'REVOKED' });
+      return;
     }
 
     if (new Date(shareLink.expiresAt) < new Date()) {
-      return { valid: false, error: 'EXPIRED' };
+      res.json({ valid: false, error: 'EXPIRED' });
+      return;
     }
 
-    return { valid: true };
+    res.json({ valid: true });
   },
 );
 
-export const loadGuidanceData = onCall(
-  { region: FUNCTIONS_REGION, concurrency: 80, memory: '256MiB' },
-  async (request) => {
+export const loadGuidanceData = onRequest(
+  { region: FUNCTIONS_REGION, concurrency: 80, memory: '256MiB', cors: CORS_ORIGINS },
+  async (req, res) => {
     const t0 = Date.now();
-    const { token } = request.data as { token: string };
+    const { token } = req.body as { token: string };
 
     if (!token) {
-      throw new HttpsError('invalid-argument', 'Token is required');
+      res.status(400).json({ error: 'TOKEN_REQUIRED' });
+      return;
     }
 
     const tokenHash = hashToken(token);
@@ -79,17 +89,20 @@ export const loadGuidanceData = onCall(
     const tShareLink = Date.now();
 
     if (!shareLinkSnap.exists) {
-      return { valid: false, error: 'NOT_FOUND' };
+      res.json({ valid: false, error: 'NOT_FOUND' });
+      return;
     }
 
     const shareLinkData = shareLinkSnap.data()!;
 
     if (shareLinkData.status === 'REVOKED') {
-      return { valid: false, error: 'REVOKED' };
+      res.json({ valid: false, error: 'REVOKED' });
+      return;
     }
 
     if (new Date(shareLinkData.expiresAt) < new Date()) {
-      return { valid: false, error: 'EXPIRED' };
+      res.json({ valid: false, error: 'EXPIRED' });
+      return;
     }
 
     const shareLink = { id: shareLinkSnap.id, ...shareLinkData };
@@ -111,14 +124,16 @@ export const loadGuidanceData = onCall(
     const tData = Date.now();
 
     if (!guidanceSetSnap.exists) {
-      return { valid: false, error: 'NOT_FOUND' };
+      res.json({ valid: false, error: 'NOT_FOUND' });
+      return;
     }
 
     const guidanceSetData = guidanceSetSnap.data() as admin.firestore.DocumentData;
     const guidanceSet = { id: guidanceSetSnap.id, ...guidanceSetData };
 
     if (guidanceSetData.status === 'DISABLED') {
-      return { valid: false, error: 'GUIDANCE_DISABLED' };
+      res.json({ valid: false, error: 'GUIDANCE_DISABLED' });
+      return;
     }
 
     const rawSteps = stepsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
@@ -128,7 +143,8 @@ export const loadGuidanceData = onCall(
       .map((step) => applyPublishedSnapshotForCourier(step));
 
     if (courierSteps.length === 0) {
-      return { valid: false, error: 'NO_STEPS' };
+      res.json({ valid: false, error: 'NO_STEPS' });
+      return;
     }
 
     let recipientPhoneNumber: string | null = null;
@@ -152,13 +168,13 @@ export const loadGuidanceData = onCall(
       totalMs: tEnd - t0,
     });
 
-    return {
+    res.json({
       valid: true,
       shareLink,
       guidanceSet,
       steps: courierSteps,
       recipientPhoneNumber,
-    };
+    });
   },
 );
 

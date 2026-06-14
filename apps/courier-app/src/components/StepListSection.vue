@@ -71,7 +71,7 @@ const rows = computed<StepRow[]>(() =>
           :aria-label="`${row.typeLabel}: ${row.displayTitle}`"
         >
           <div class="step-thumbnail" :class="{ 'step-thumbnail--placeholder': !row.thumbnail }">
-            <img v-if="row.thumbnail" :src="row.thumbnail" :alt="row.displayTitle" />
+            <img v-if="row.thumbnail" :src="row.thumbnail" :alt="row.displayTitle" loading="lazy" />
             <svg v-else width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.8"/>
               <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>

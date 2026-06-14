@@ -42,6 +42,12 @@ const currentStep = computed(() => getStepByIndex(currentIndex.value));
 const isFirstStep = computed(() => currentIndex.value === 0);
 const isLastStep = computed(() => currentIndex.value === totalSteps.value - 1);
 
+const nextStepImageUrl = computed(() => {
+  if (isLastStep.value) return null;
+  const next = getStepByIndex(currentIndex.value + 1);
+  return next?.image?.publicUrl ?? null;
+});
+
 const availabilityText = computed(() => {
   const texts = getAvailabilityText();
   return texts[currentLanguage.value];
@@ -110,7 +116,12 @@ onBeforeUnmount(() => {
 watch(() => route.params.index, () => {
   imageLoaded.value = false;
   imageError.value = false;
-});
+
+  if (nextStepImageUrl.value) {
+    const img = new Image();
+    img.src = nextStepImageUrl.value;
+  }
+}, { immediate: true });
 
 function handlePrevious() {
   if (!isFirstStep.value) {
