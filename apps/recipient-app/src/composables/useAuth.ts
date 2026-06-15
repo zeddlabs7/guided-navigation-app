@@ -299,8 +299,17 @@ export function useAuth() {
     } catch (e: unknown) {
       loading.value = false;
       devSignInResolve = null;
-      const fnError = e as { message?: string };
-      error.value = fnError.message || 'Dev sign-in failed.';
+      const fnError = e as { code?: string; message?: string };
+
+      if (fnError.code === 'functions/permission-denied') {
+        error.value = 'Dev sign-in is not permitted for this account.';
+      } else if (fnError.code === 'functions/not-found') {
+        error.value = 'Test user not found. Check that the dev account exists in Firebase Auth.';
+      } else if (fnError.code === 'functions/internal') {
+        error.value = 'Dev sign-in failed on the server. Check Cloud Functions logs.';
+      } else {
+        error.value = fnError.message || 'Dev sign-in failed.';
+      }
       return false;
     }
   }

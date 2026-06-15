@@ -29,6 +29,7 @@ const otpCode = ref('');
 const otpInputRef = ref<InstanceType<typeof OTPInput> | null>(null);
 const whatsappCountdown = ref(30);
 const showWhatsAppFallback = ref(false);
+const devError = ref<string | null>(null);
 let countdownTimer: ReturnType<typeof setInterval> | null = null;
 
 const isPhoneValid = computed(() => {
@@ -135,9 +136,13 @@ function handleOpenWhatsApp() {
 
 async function handleDevBypass() {
   clearError();
+  devError.value = null;
   const success = await devBypassSignIn();
   if (success) {
     router.push('/dashboard');
+  } else {
+    devError.value = error.value;
+    clearError();
   }
 }
 
@@ -308,6 +313,7 @@ async function handleRetryVerify() {
       </GCard>
 
       <div class="dev-bypass">
+        <p v-if="devError" class="dev-bypass-error">{{ devError }}</p>
         <GButton
           variant="ghost"
           size="sm"
@@ -469,6 +475,13 @@ async function handleRetryVerify() {
   padding-top: var(--spacing-md);
   border-top: 1px dashed var(--color-border, #e5e7eb);
   opacity: 0.6;
+}
+
+.dev-bypass-error {
+  margin: 0 0 var(--spacing-sm);
+  text-align: center;
+  color: var(--color-error, #ef4444);
+  font-size: var(--font-size-sm, 0.875rem);
 }
 
 #recaptcha-container {

@@ -81,7 +81,9 @@ export function getFirebaseStorage(): FirebaseStorage {
 
 export function getFirebaseFunctions(): Functions {
   if (!functions) {
-    functions = _getFunctions(getFirebaseApp(), 'me-central1');
+    // v1 callable functions (auth, share links, WhatsApp) deploy to us-central1.
+    // v2 HTTP functions used by the courier app are in me-central1 and called via fetch.
+    functions = _getFunctions(getFirebaseApp(), 'us-central1');
     if (useEmulators) {
       connectFunctionsEmulator(functions, 'localhost', 5001);
     }
