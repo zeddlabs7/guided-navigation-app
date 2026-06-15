@@ -1,33 +1,44 @@
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onRequest } from 'firebase-functions/v2/https';
 import { logger } from 'firebase-functions/v2';
 
 const { Translate } = require('@google-cloud/translate').v2;
 const translate = new Translate();
+
+const FUNCTIONS_REGION = 'me-central1';
+const CORS_ORIGINS = [
+  'https://guided-navigation-app-courier.netlify.app',
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3001',
+];
 
 interface TranslateTextsData {
   texts: { key: string; text: string }[];
   targetLanguage: string;
 }
 
-export const translateTexts = onCall(
-  { region: 'me-central1', concurrency: 80, memory: '256MiB' },
-  async (request) => {
-    const { texts, targetLanguage } = request.data as TranslateTextsData;
+export const translateTexts = onRequest(
+  { region: FUNCTIONS_REGION, concurrency: 80, memory: '256MiB', cors: CORS_ORIGINS },
+  async (req, res) => {
+    const { texts, targetLanguage } = req.body as TranslateTextsData;
 
     if (!texts || !Array.isArray(texts) || texts.length === 0) {
-      throw new HttpsError('invalid-argument', 'texts array is required');
+      res.status(400).json({ error: 'TEXTS_REQUIRED' });
+      return;
     }
 
     if (!targetLanguage) {
-      throw new HttpsError('invalid-argument', 'targetLanguage is required');
+      res.status(400).json({ error: 'TARGET_LANGUAGE_REQUIRED' });
+      return;
     }
 
     const validLangs = ['ar', 'hi', 'ur', 'bn'];
     if (!validLangs.includes(targetLanguage)) {
-      throw new HttpsError(
-        'invalid-argument',
-        `targetLanguage must be one of: ${validLangs.join(', ')}`,
-      );
+      res.status(400).json({
+        error: 'INVALID_TARGET_LANGUAGE',
+        message: `targetLanguage must be one of: ${validLangs.join(', ')}`,
+      });
+      return;
     }
 
     const nonEmpty = texts.filter((t) => t.text && t.text.trim());
@@ -36,7 +47,8 @@ export const translateTexts = onCall(
       for (const t of texts) {
         result[t.key] = t.text;
       }
-      return { translations: result };
+      res.json({ translations: result });
+      return;
     }
 
     try {
@@ -56,13 +68,13 @@ export const translateTexts = onCall(
         result[nonEmpty[i].key] = translated[i] || nonEmpty[i].text;
       }
 
-      return { translations: result };
+      res.json({ translations: result });
     } catch (err: any) {
       logger.error('Translation failed:', err?.message || err, err?.stack);
-      throw new HttpsError(
-        'internal',
-        `Translation service failed: ${err?.message || 'unknown error'}`,
-      );
+      res.status(500).json({
+        error: 'TRANSLATION_FAILED',
+        message: err?.message || 'unknown error',
+      });
     }
   },
 );

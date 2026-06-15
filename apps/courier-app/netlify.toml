@@ -10,3 +10,9 @@
   to = "https://me-central1-guided-navigation-app.cloudfunctions.net/loadGuidanceData"
   status = 200
   force = true
+
+[[redirects]]
+  from = "/api/translateTexts"
+  to = "https://me-central1-guided-navigation-app.cloudfunctions.net/translateTexts"
+  status = 200
+  force = true
