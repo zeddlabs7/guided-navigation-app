@@ -108,13 +108,14 @@ const rows = computed<StepRow[]>(() =>
 
 <style scoped>
 .steps-section {
-  min-height: 100%;
+  height: 100%;
   scroll-snap-align: start;
   scroll-snap-stop: always;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   background-color: var(--color-background);
-  padding: var(--spacing-md) var(--spacing-md) var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-md) calc(env(safe-area-inset-bottom) + var(--spacing-xs));
   gap: var(--spacing-md);
 }
 

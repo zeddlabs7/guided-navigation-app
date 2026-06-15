@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, shallowRef, onMounted, nextTick, watch, onBeforeUnmount } from 'vue';
 import {
-  ADDRESS_TYPE_LABELS,
   getMetadataFieldConfigs,
   type Coordinates,
   type GuidanceSet,
@@ -26,11 +25,6 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-
-const addressTypeLabel = computed(() => {
-  const labels = ADDRESS_TYPE_LABELS[props.guidanceSet.addressType];
-  return labels[currentLanguage.value];
-});
 
 interface MetadataRow {
   field: MetadataFieldType;
@@ -68,21 +62,8 @@ const metadataRows = computed<MetadataRow[]>(() => {
     }));
 });
 
-const FIELD_ICONS: Record<MetadataFieldType, string> = {
-  buildingNumber: 'building',
-  floorNumber: 'floor',
-  doorNumber: 'door',
-  compoundName: 'compound',
-  gateNumber: 'gate',
-  unitType: 'unit',
-  villaNumber: 'villa',
-  apartmentNumber: 'door',
-  locationDescription: 'location',
-};
-
-function iconFor(field: MetadataFieldType): string {
-  return FIELD_ICONS[field] ?? 'location';
-}
+const isWideMetadataField = (field: MetadataFieldType) =>
+  field === 'compoundName' || field === 'locationDescription';
 
 const destinationLabel = computed(() => {
   if (props.destinationAddress) return props.destinationAddress;
@@ -192,47 +173,16 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="address-section" :id="'landing-section-1'">
-
     <div class="address-content">
-      <div class="address-type-badge">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="currentColor"/>
-        </svg>
-        <span>{{ addressTypeLabel }}</span>
-      </div>
-
       <ul v-if="metadataRows.length > 0" class="metadata-list">
-        <li v-for="row in metadataRows" :key="row.field" class="metadata-row">
-          <span class="metadata-icon" :data-icon="iconFor(row.field)">
-            <svg v-if="iconFor(row.field) === 'building'" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h2M13 9h2M9 13h2M13 13h2M9 17h2M13 17h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <svg v-else-if="iconFor(row.field) === 'floor'" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M4 20h16M4 15h16M4 10h16M4 5h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-            </svg>
-            <svg v-else-if="iconFor(row.field) === 'door'" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6 3h12v18H6zM10 12h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <svg v-else-if="iconFor(row.field) === 'compound'" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 21V10l5-4 5 4v11M13 21V13l4-3 4 3v8M3 21h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <svg v-else-if="iconFor(row.field) === 'gate'" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M4 21V5a2 2 0 012-2h12a2 2 0 012 2v16M4 11h16M9 21v-6M15 21v-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <svg v-else-if="iconFor(row.field) === 'unit'" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 9l9-6 9 6v12H3zM9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <svg v-else-if="iconFor(row.field) === 'villa'" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 10l9-7 9 7v11H3zM9 21v-7h6v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="currentColor"/>
-            </svg>
-          </span>
-          <div class="metadata-body">
-            <span class="metadata-label">{{ row.label }}</span>
-            <span class="metadata-value">{{ row.value }}</span>
-          </div>
+        <li
+          v-for="row in metadataRows"
+          :key="row.field"
+          class="metadata-row"
+          :class="{ 'metadata-row--wide': isWideMetadataField(row.field) }"
+        >
+          <span class="metadata-label">{{ row.label }}</span>
+          <span class="metadata-value">{{ row.value }}</span>
         </li>
       </ul>
 
@@ -242,45 +192,51 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="bottom-actions">
-      <button
-        v-if="locationCheckImageUrl"
-        class="location-image-card"
-        type="button"
-        @click="openImageViewer"
+      <div
+        v-if="locationCheckImageUrl || destination"
+        class="bottom-actions-cards"
+        :class="{ 'bottom-actions-cards--single': !(locationCheckImageUrl && destination) }"
       >
-        <img :src="locationCheckImageUrl" alt="" class="location-image-thumb" />
-        <span class="location-image-label">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          {{ t('locationPhoto') }}
-        </span>
-      </button>
-
-      <button
-        v-if="destination"
-        class="directions-card"
-        type="button"
-        @click="handleOpenMaps"
-      >
-        <div class="directions-body">
-          <span class="directions-label">
-            {{ t('getDirections') }}
+        <button
+          v-if="locationCheckImageUrl"
+          class="location-image-card"
+          type="button"
+          @click="openImageViewer"
+        >
+          <img :src="locationCheckImageUrl" alt="" class="location-image-thumb" />
+          <span class="location-image-label">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
+            {{ t('locationPhoto') }}
           </span>
-          <span class="directions-address">{{ destinationLabel }}</span>
-        </div>
-        <div class="directions-map">
-          <div ref="miniMapContainer" class="directions-map-canvas"></div>
-          <div v-if="!miniMapReady" class="directions-map-placeholder">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="currentColor"/>
-            </svg>
+        </button>
+
+        <button
+          v-if="destination"
+          class="directions-card"
+          type="button"
+          @click="handleOpenMaps"
+        >
+          <div class="directions-body">
+            <span class="directions-label">
+              {{ t('getDirections') }}
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="directions-address">{{ destinationLabel }}</span>
           </div>
-        </div>
-      </button>
+          <div class="directions-map">
+            <div ref="miniMapContainer" class="directions-map-canvas"></div>
+            <div v-if="!miniMapReady" class="directions-map-placeholder">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="currentColor"/>
+              </svg>
+            </div>
+          </div>
+        </button>
+      </div>
 
       <button
         v-if="hasSteps"
@@ -324,135 +280,128 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .address-section {
-  min-height: 100%;
+  --gap: clamp(3px, 0.7dvh, 6px);
+  --meta-label: clamp(8px, 1.8dvh, 10px);
+  --meta-value: clamp(11px, 2.4dvh, 13px);
+  --card-pad: clamp(4px, 1dvh, 8px);
+  --thumb-h: clamp(32px, 6.5dvh, 48px);
+  --map-size: clamp(32px, 6.5dvh, 40px);
+
+  height: 100%;
   scroll-snap-align: start;
   scroll-snap-stop: always;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
   background: linear-gradient(180deg, #f8fafc 0%, #ffffff 60%, #eff6ff 100%);
-  padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg);
+  padding: var(--gap) var(--spacing-md) calc(env(safe-area-inset-bottom) + var(--gap));
+  gap: var(--gap);
   position: relative;
 }
 
-
 .address-content {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-md) 0;
+  overflow: hidden;
   max-width: 480px;
   width: 100%;
   margin: 0 auto;
 }
 
-.address-type-badge {
-  display: inline-flex;
-  align-self: flex-start;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  background-color: var(--color-primary-light);
-  color: var(--color-primary);
-  border-radius: var(--radius-full);
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
 .metadata-list {
   list-style: none;
-  margin: var(--spacing-xs) 0 0;
+  margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap);
+  align-content: start;
 }
 
 .metadata-row {
   display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--card-pad);
   background-color: white;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-}
-
-.metadata-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--color-primary-light);
-  color: var(--color-primary);
-  flex-shrink: 0;
-}
-
-.metadata-body {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  border-radius: var(--radius-sm);
   min-width: 0;
-  flex: 1;
+}
+
+.metadata-row--wide {
+  grid-column: 1 / -1;
 }
 
 .metadata-label {
-  font-size: 12px;
+  font-size: var(--meta-label);
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   font-weight: 500;
+  line-height: 1.15;
 }
 
 .metadata-value {
-  font-size: var(--font-size-base);
+  font-size: var(--meta-value);
   color: var(--color-text);
   font-weight: 600;
+  line-height: 1.2;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   word-break: break-word;
 }
 
 .no-metadata {
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
-  margin: var(--spacing-sm) 0 0;
+  margin: 0;
   font-style: italic;
 }
 
 .bottom-actions {
-  margin-top: auto;
-  margin-bottom: calc(env(safe-area-inset-bottom) + var(--spacing-xs));
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--gap);
   align-items: center;
   max-width: 480px;
   width: 100%;
-  margin-left: auto;
-  margin-right: auto;
+  margin: 0 auto;
+}
+
+.bottom-actions-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap);
+  width: 100%;
+}
+
+.bottom-actions-cards--single {
+  grid-template-columns: 1fr;
 }
 
 .directions-card {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: 6px;
   width: 100%;
-  padding: var(--spacing-md);
+  min-width: 0;
+  padding: var(--card-pad);
   background-color: white;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   text-align: start;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
 }
 
 .directions-card:active {
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
   border-color: var(--color-primary);
 }
 
@@ -461,37 +410,37 @@ onBeforeUnmount(() => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .directions-label {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
+  gap: 3px;
+  font-size: var(--meta-label);
   font-weight: 500;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--color-primary);
 }
 
 .directions-address {
-  font-size: var(--font-size-base);
+  font-size: var(--meta-value);
   font-weight: 700;
   color: var(--color-text);
-  line-height: 1.3;
+  line-height: 1.2;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
 .directions-map {
   position: relative;
-  width: 56px;
-  height: 56px;
+  width: var(--map-size);
+  height: var(--map-size);
   flex-shrink: 0;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   overflow: hidden;
   background-color: var(--color-primary-light);
 }
@@ -516,20 +465,18 @@ onBeforeUnmount(() => {
 .steps-hint {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 24px;
+  gap: clamp(4px, 1dvh, 8px);
+  padding: clamp(6px, 1.4dvh, 10px) clamp(14px, 3dvh, 20px);
   background-color: white;
   border: 2px solid var(--color-primary);
   border-radius: var(--radius-full);
   color: var(--color-text);
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.10);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
   animation: bounce 1.8s ease-in-out infinite;
-  transition: box-shadow 0.2s ease;
 }
 
 .steps-hint:active {
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
   animation: none;
 }
 
@@ -541,10 +488,14 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
 }
 
+.steps-hint-icon svg {
+  width: clamp(16px, 3.5dvh, 20px);
+  height: clamp(16px, 3.5dvh, 20px);
+}
+
 .steps-hint-text {
-  font-size: 15px;
+  font-size: clamp(12px, 2.6dvh, 14px);
   font-weight: 600;
-  letter-spacing: 0.01em;
   white-space: nowrap;
 }
 
@@ -556,39 +507,45 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
 }
 
+.steps-hint-arrow svg {
+  width: clamp(14px, 3dvh, 18px);
+  height: clamp(14px, 3dvh, 18px);
+}
+
 .location-image-card {
   display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
   width: 100%;
-  padding: var(--spacing-sm);
+  min-width: 0;
+  padding: var(--card-pad);
   background-color: white;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   text-align: start;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
 }
 
 .location-image-card:active {
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
   border-color: var(--color-primary);
 }
 
 .location-image-thumb {
-  width: 72px;
-  height: 72px;
+  width: 100%;
+  height: var(--thumb-h);
   object-fit: cover;
-  border-radius: var(--radius-md);
+  border-radius: calc(var(--radius-sm) - 1px);
   flex-shrink: 0;
 }
 
 .location-image-label {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
+  justify-content: center;
+  gap: 3px;
+  font-size: var(--meta-label);
   font-weight: 600;
   color: var(--color-primary);
 }
@@ -635,12 +592,22 @@ onBeforeUnmount(() => {
 
 @keyframes bounce {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(3px); }
+  50% { transform: translateY(2px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .steps-hint {
     animation: none;
+  }
+}
+
+@media (min-width: 400px) {
+  .metadata-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .metadata-row--wide {
+    grid-column: span 2;
   }
 }
 </style>

@@ -66,6 +66,12 @@ const availabilityText = computed(() => {
   return texts[currentLanguage.value];
 });
 
+const availabilityVariant = computed(() => {
+  if (!guidanceSet.value) return 'available';
+  if (guidanceSet.value.availabilityMode === 'NOT_AVAILABLE_TODAY') return 'unavailable';
+  return 'available';
+});
+
 const destinationCoords = computed(() => getDestinationCoordinates());
 
 const hasSteps = computed(() => steps.value.length > 0);
@@ -93,16 +99,8 @@ function handleSelectStep(index: number) {
 
 <template>
   <div v-if="guidanceSet" class="landing-page" :dir="isRtl ? 'rtl' : 'ltr'">
-    <div class="sticky-top">
-      <div class="availability-banner" role="status">
-        <svg class="availability-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M22 4L12 14.01l-3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <span class="availability-text">{{ availabilityText }}</span>
-      </div>
-
-      <header class="app-header">
+    <header class="app-header sticky-top">
+      <div class="header-row">
         <div class="brand">
           <img
             :src="isRtl ? '/logo-ar.png' : '/logo-eng.png'"
@@ -110,28 +108,41 @@ function handleSelectStep(index: number) {
             class="brand-logo"
           />
         </div>
-        <div class="language-picker">
-          <button class="language-picker-btn" type="button" @click="showLanguageMenu = !showLanguageMenu">
-            {{ currentLanguageLabel }}
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <div class="header-actions">
+          <div
+            class="availability-chip"
+            :class="`availability-chip--${availabilityVariant}`"
+            role="status"
+          >
+            <svg class="availability-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M22 4L12 14.01l-3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-          </button>
-          <div v-if="showLanguageMenu" class="language-menu">
-            <button
-              v-for="opt in languageOptions"
-              :key="opt.code"
-              class="language-menu-item"
-              :class="{ active: currentLanguage === opt.code }"
-              :dir="opt.code === 'ar' || opt.code === 'ur' ? 'rtl' : 'ltr'"
-              @click="handleLanguageSelect(opt.code)"
-            >
-              {{ opt.label }}
+            <span class="availability-text">{{ availabilityText }}</span>
+          </div>
+          <div class="language-picker">
+            <button class="language-picker-btn" type="button" @click="showLanguageMenu = !showLanguageMenu">
+              {{ currentLanguageLabel }}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
             </button>
+            <div v-if="showLanguageMenu" class="language-menu">
+              <button
+                v-for="opt in languageOptions"
+                :key="opt.code"
+                class="language-menu-item"
+                :class="{ active: currentLanguage === opt.code }"
+                :dir="opt.code === 'ar' || opt.code === 'ur' ? 'rtl' : 'ltr'"
+                @click="handleLanguageSelect(opt.code)"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
           </div>
         </div>
-      </header>
-    </div>
+      </div>
+    </header>
 
     <div class="landing-scroll" ref="scrollContainer">
       <AddressDetailsSection
@@ -170,46 +181,73 @@ function handleSelectStep(index: number) {
   z-index: 30;
 }
 
-.availability-banner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: calc(env(safe-area-inset-top) + 8px) 12px 8px;
-  background-color: #16a34a;
-  color: white;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-
-.availability-icon {
-  color: white;
-  flex-shrink: 0;
-}
-
-.availability-text {
-  color: white;
-}
-
 .app-header {
+  padding: calc(env(safe-area-inset-top) + 6px) var(--spacing-md) 6px;
+  background-color: white;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.header-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-sm) var(--spacing-lg);
-  background-color: white;
-  border-bottom: 1px solid var(--color-border);
+  gap: var(--spacing-sm);
+  min-height: 36px;
 }
 
 .brand {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .brand-logo {
-  height: 32px;
+  height: 28px;
   width: auto;
   object-fit: contain;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.availability-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: min(100%, 200px);
+  padding: 4px 8px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+.availability-chip--available {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.availability-chip--unavailable {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.availability-icon {
+  flex-shrink: 0;
+}
+
+.availability-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .language-picker {
@@ -218,19 +256,30 @@ function handleSelectStep(index: number) {
 }
 
 .language-picker-btn {
-  padding: 6px 12px;
+  padding: 4px 10px;
   border-radius: var(--radius-full);
   border: 2px solid var(--color-primary);
   background-color: white;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-primary);
   cursor: pointer;
-  line-height: 1.4;
+  line-height: 1.3;
   display: inline-flex;
   align-items: center;
   gap: 4px;
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  white-space: nowrap;
+}
+
+@media (max-width: 380px) {
+  .availability-chip {
+    max-width: 120px;
+  }
+
+  .brand-logo {
+    height: 24px;
+  }
 }
 
 .language-menu {
