@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { GSpinner } from '@guidenav/ui';
-import { validateToken } from '@guidenav/services';
+import GSpinner from '@guidenav/ui/components/GSpinner.vue';
+import { validateToken } from '@guidenav/services/courier-api';
 import { useCourierSession } from '@/composables/useCourierSession';
 
 const router = useRouter();

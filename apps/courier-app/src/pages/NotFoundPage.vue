@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { GCard } from '@guidenav/ui';
+import GCard from '@guidenav/ui/components/GCard.vue';
 </script>
 
 <template>

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { ArrowOverlay, MarkerOverlay } from '@guidenav/ui';
+import ArrowOverlay from '@guidenav/ui/components/ArrowOverlay.vue';
+import MarkerOverlay from '@guidenav/ui/components/MarkerOverlay.vue';
 import { STEP_TYPE_LABELS, type Language } from '@guidenav/types';
 import { useCourierSession } from '@/composables/useCourierSession';
 import { useTranslation } from '@/composables/useTranslation';

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { logAnalyticsEvent } from '@guidenav/services';
+import { logAnalyticsEvent } from '@/utils/lazyFirebase';
 import { useCourierSession } from '@/composables/useCourierSession';
 import { useTranslation } from '@/composables/useTranslation';
 import { openWhatsApp } from '@/utils/contact';

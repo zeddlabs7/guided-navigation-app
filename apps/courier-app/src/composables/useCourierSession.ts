@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue';
 import type { GuidanceSet, GuidanceStep, ShareLink, Language } from '@guidenav/types';
+import { loadGuidanceData, translateTexts } from '@guidenav/services/courier-api';
 
 const shareLink = ref<ShareLink | null>(null);
 const guidanceSet = ref<GuidanceSet | null>(null);
@@ -163,7 +164,6 @@ export function useCourierSession() {
 
     isTranslating.value = true;
     try {
-      const { translateTexts } = await import('@guidenav/services');
       const result = await translateTexts(textsToTranslate, lang);
       translatedContent.value = { ...translatedContent.value, ...result };
     } catch (err) {
@@ -209,7 +209,6 @@ export function useCourierSession() {
     dataLoadError.value = null;
 
     try {
-      const { loadGuidanceData } = await import('@guidenav/services');
       const result = await loadGuidanceData(tokenValue);
 
       if (!result.valid || !result.shareLink || !result.guidanceSet || !result.steps) {

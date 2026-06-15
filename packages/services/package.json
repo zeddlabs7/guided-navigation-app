@@ -9,6 +9,10 @@
     ".": {
       "types": "./src/index.ts",
       "import": "./src/index.ts"
+    },
+    "./courier-api": {
+      "types": "./src/courier-api.ts",
+      "import": "./src/courier-api.ts"
     }
   },
   "scripts": {

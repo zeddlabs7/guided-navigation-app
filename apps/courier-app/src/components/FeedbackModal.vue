@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { submitFeedback } from '@guidenav/services';
+import { submitFeedback } from '@/utils/lazyFirebase';
 import type { FeedbackReasonCode } from '@guidenav/types';
 import { useCourierSession } from '@/composables/useCourierSession';
 import { useTranslation } from '@/composables/useTranslation';
