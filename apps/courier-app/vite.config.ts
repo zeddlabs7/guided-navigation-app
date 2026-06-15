@@ -11,5 +11,12 @@ export default defineConfig({
   },
   server: {
     port: 3001,
+    proxy: {
+      '/api': {
+        target: 'https://me-central1-guided-navigation-app.cloudfunctions.net',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
   },
 });

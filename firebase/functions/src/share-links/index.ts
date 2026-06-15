@@ -29,7 +29,7 @@ function hashToken(token: string): string {
 // --- v2 courier-facing functions (onRequest for lower overhead) ---
 
 export const validateToken = onRequest(
-  { region: FUNCTIONS_REGION, concurrency: 80, memory: '256MiB', cors: CORS_ORIGINS },
+  { region: FUNCTIONS_REGION, minInstances: 1, concurrency: 80, memory: '256MiB', cors: CORS_ORIGINS },
   async (req, res) => {
     const t0 = Date.now();
     const { token } = req.body as { token: string };

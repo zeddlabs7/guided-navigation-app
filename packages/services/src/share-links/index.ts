@@ -117,7 +117,7 @@ export async function incrementAccessCount(shareLinkId: string): Promise<void> {
   });
 }
 
-const FUNCTIONS_BASE_URL = 'https://me-central1-guided-navigation-app.cloudfunctions.net';
+const FUNCTIONS_BASE_URL = '/api';
 
 export interface ValidateTokenResult {
   valid: boolean;

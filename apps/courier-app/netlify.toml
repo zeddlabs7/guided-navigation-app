@@ -1,0 +1,12 @@
+# Proxy courier API calls through same origin to avoid CORS preflight.
+[[redirects]]
+  from = "/api/validateToken"
+  to = "https://me-central1-guided-navigation-app.cloudfunctions.net/validateToken"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/loadGuidanceData"
+  to = "https://me-central1-guided-navigation-app.cloudfunctions.net/loadGuidanceData"
+  status = 200
+  force = true
