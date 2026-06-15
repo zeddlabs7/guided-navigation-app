@@ -62,8 +62,21 @@ const metadataRows = computed<MetadataRow[]>(() => {
     }));
 });
 
-const isWideMetadataField = (field: MetadataFieldType) =>
-  field === 'compoundName' || field === 'locationDescription';
+const FIELD_ICONS: Record<MetadataFieldType, string> = {
+  buildingNumber: 'building',
+  floorNumber: 'floor',
+  doorNumber: 'door',
+  compoundName: 'compound',
+  gateNumber: 'gate',
+  unitType: 'unit',
+  villaNumber: 'villa',
+  apartmentNumber: 'door',
+  locationDescription: 'location',
+};
+
+function iconFor(field: MetadataFieldType): string {
+  return FIELD_ICONS[field] ?? 'location';
+}
 
 const destinationLabel = computed(() => {
   if (props.destinationAddress) return props.destinationAddress;
@@ -175,14 +188,37 @@ onBeforeUnmount(() => {
   <section class="address-section" :id="'landing-section-1'">
     <div class="address-content">
       <ul v-if="metadataRows.length > 0" class="metadata-list">
-        <li
-          v-for="row in metadataRows"
-          :key="row.field"
-          class="metadata-row"
-          :class="{ 'metadata-row--wide': isWideMetadataField(row.field) }"
-        >
-          <span class="metadata-label">{{ row.label }}</span>
-          <span class="metadata-value">{{ row.value }}</span>
+        <li v-for="row in metadataRows" :key="row.field" class="metadata-row">
+          <span class="metadata-icon" :data-icon="iconFor(row.field)">
+            <svg v-if="iconFor(row.field) === 'building'" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h2M13 9h2M9 13h2M13 13h2M9 17h2M13 17h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <svg v-else-if="iconFor(row.field) === 'floor'" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 20h16M4 15h16M4 10h16M4 5h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <svg v-else-if="iconFor(row.field) === 'door'" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 3h12v18H6zM10 12h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <svg v-else-if="iconFor(row.field) === 'compound'" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 21V10l5-4 5 4v11M13 21V13l4-3 4 3v8M3 21h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <svg v-else-if="iconFor(row.field) === 'gate'" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 21V5a2 2 0 012-2h12a2 2 0 012 2v16M4 11h16M9 21v-6M15 21v-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <svg v-else-if="iconFor(row.field) === 'unit'" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 9l9-6 9 6v12H3zM9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <svg v-else-if="iconFor(row.field) === 'villa'" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 10l9-7 9 7v11H3zM9 21v-7h6v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="currentColor"/>
+            </svg>
+          </span>
+          <div class="metadata-body">
+            <span class="metadata-label">{{ row.label }}</span>
+            <span class="metadata-value">{{ row.value }}</span>
+          </div>
         </li>
       </ul>
 
@@ -203,13 +239,15 @@ onBeforeUnmount(() => {
           type="button"
           @click="openImageViewer"
         >
-          <img :src="locationCheckImageUrl" alt="" class="location-image-thumb" />
           <span class="location-image-label">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            {{ t('locationPhoto') }}
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            {{ t('locationPhoto') }}
           </span>
+          <div class="location-image-frame">
+            <img :src="locationCheckImageUrl" alt="" class="location-image-thumb" />
+          </div>
         </button>
 
         <button
@@ -280,23 +318,22 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .address-section {
-  --gap: clamp(3px, 0.7dvh, 6px);
-  --meta-label: clamp(8px, 1.8dvh, 10px);
-  --meta-value: clamp(11px, 2.4dvh, 13px);
-  --card-pad: clamp(4px, 1dvh, 8px);
-  --thumb-h: clamp(32px, 6.5dvh, 48px);
-  --map-size: clamp(32px, 6.5dvh, 40px);
+  --row-gap: clamp(5px, 1.1dvh, 10px);
+  --meta-label: clamp(10px, 1.9dvh, 12px);
+  --meta-value: clamp(13px, 2.6dvh, 15px);
+  --icon-size: clamp(32px, 5.8dvh, 38px);
+  --card-pad: clamp(8px, 1.6dvh, 12px);
+  --map-strip-h: clamp(36px, 6.5dvh, 44px);
 
   height: 100%;
   scroll-snap-align: start;
   scroll-snap-stop: always;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   overflow: hidden;
   background: linear-gradient(180deg, #f8fafc 0%, #ffffff 60%, #eff6ff 100%);
-  padding: var(--gap) var(--spacing-md) calc(env(safe-area-inset-bottom) + var(--gap));
-  gap: var(--gap);
+  padding: var(--row-gap) var(--spacing-md) calc(env(safe-area-inset-bottom) + var(--row-gap));
+  gap: var(--row-gap);
   position: relative;
 }
 
@@ -315,41 +352,68 @@ onBeforeUnmount(() => {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--gap);
-  align-content: start;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--row-gap);
 }
 
 .metadata-row {
+  flex: 1 1 0;
+  min-height: clamp(36px, 6.2dvh, 46px);
+  max-height: clamp(44px, 7.8dvh, 56px);
   display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: var(--card-pad);
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 0 var(--card-pad);
   background-color: white;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   min-width: 0;
 }
 
-.metadata-row--wide {
-  grid-column: 1 / -1;
+.metadata-icon {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.metadata-icon svg {
+  width: clamp(14px, 3dvh, 18px);
+  height: clamp(14px, 3dvh, 18px);
+}
+
+.metadata-body {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1px, 0.4dvh, 4px);
+  min-width: 0;
+  flex: 1;
+  justify-content: center;
 }
 
 .metadata-label {
   font-size: var(--meta-label);
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
   font-weight: 500;
-  line-height: 1.15;
+  line-height: 1.2;
 }
 
 .metadata-value {
   font-size: var(--meta-value);
   color: var(--color-text);
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.25;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -368,7 +432,7 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--gap);
+  gap: clamp(10px, 2dvh, 16px);
   align-items: center;
   max-width: 480px;
   width: 100%;
@@ -378,8 +442,9 @@ onBeforeUnmount(() => {
 .bottom-actions-cards {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--gap);
+  gap: var(--row-gap);
   width: 100%;
+  align-items: stretch;
 }
 
 .bottom-actions-cards--single {
@@ -388,14 +453,16 @@ onBeforeUnmount(() => {
 
 .directions-card {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: clamp(4px, 0.8dvh, 6px);
   width: 100%;
   min-width: 0;
+  height: 100%;
   padding: var(--card-pad);
   background-color: white;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-lg);
   cursor: pointer;
   text-align: start;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
@@ -406,43 +473,54 @@ onBeforeUnmount(() => {
 }
 
 .directions-body {
-  flex: 1;
+  flex: 0 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: clamp(2px, 0.5dvh, 4px);
 }
 
 .directions-label {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   font-size: var(--meta-label);
   font-weight: 500;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--color-primary);
 }
 
 .directions-address {
-  font-size: var(--meta-value);
-  font-weight: 700;
+  font-size: clamp(11px, 2.2dvh, 13px);
+  font-weight: 600;
   color: var(--color-text);
-  line-height: 1.2;
+  line-height: 1.3;
   display: -webkit-box;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  word-break: break-word;
 }
 
 .directions-map {
   position: relative;
-  width: var(--map-size);
-  height: var(--map-size);
+  width: 100%;
+  height: var(--map-strip-h);
   flex-shrink: 0;
   border-radius: var(--radius-sm);
   overflow: hidden;
   background-color: var(--color-primary-light);
+}
+
+.bottom-actions-cards--single .directions-card {
+  flex-direction: row;
+  align-items: center;
+}
+
+.bottom-actions-cards--single .directions-map {
+  width: clamp(48px, 9dvh, 64px);
+  height: clamp(48px, 9dvh, 64px);
 }
 
 .directions-map-canvas {
@@ -465,14 +543,15 @@ onBeforeUnmount(() => {
 .steps-hint {
   display: inline-flex;
   align-items: center;
-  gap: clamp(4px, 1dvh, 8px);
-  padding: clamp(6px, 1.4dvh, 10px) clamp(14px, 3dvh, 20px);
+  gap: clamp(6px, 1.2dvh, 10px);
+  padding: clamp(10px, 1.8dvh, 13px) clamp(18px, 3.5dvh, 24px);
+  margin-top: clamp(2px, 0.5dvh, 4px);
   background-color: white;
   border: 2px solid var(--color-primary);
   border-radius: var(--radius-full);
   color: var(--color-text);
   cursor: pointer;
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.10);
   animation: bounce 1.8s ease-in-out infinite;
 }
 
@@ -489,12 +568,12 @@ onBeforeUnmount(() => {
 }
 
 .steps-hint-icon svg {
-  width: clamp(16px, 3.5dvh, 20px);
-  height: clamp(16px, 3.5dvh, 20px);
+  width: clamp(18px, 3.8dvh, 22px);
+  height: clamp(18px, 3.8dvh, 22px);
 }
 
 .steps-hint-text {
-  font-size: clamp(12px, 2.6dvh, 14px);
+  font-size: clamp(13px, 2.8dvh, 15px);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -508,21 +587,23 @@ onBeforeUnmount(() => {
 }
 
 .steps-hint-arrow svg {
-  width: clamp(14px, 3dvh, 18px);
-  height: clamp(14px, 3dvh, 18px);
+  width: clamp(16px, 3.4dvh, 20px);
+  height: clamp(16px, 3.4dvh, 20px);
 }
 
 .location-image-card {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 2px;
+  gap: clamp(4px, 0.8dvh, 6px);
   width: 100%;
   min-width: 0;
+  height: 100%;
+  min-height: 0;
   padding: var(--card-pad);
   background-color: white;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-lg);
   cursor: pointer;
   text-align: start;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
@@ -532,22 +613,43 @@ onBeforeUnmount(() => {
   border-color: var(--color-primary);
 }
 
-.location-image-thumb {
-  width: 100%;
-  height: var(--thumb-h);
-  object-fit: cover;
-  border-radius: calc(var(--radius-sm) - 1px);
-  flex-shrink: 0;
-}
-
 .location-image-label {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 3px;
+  gap: 4px;
+  flex-shrink: 0;
   font-size: var(--meta-label);
-  font-weight: 600;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   color: var(--color-primary);
+  line-height: 1.2;
+}
+
+.location-image-frame {
+  flex: 1 1 0;
+  min-height: var(--map-strip-h);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.location-image-thumb {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bottom-actions-cards--single .location-image-card {
+  flex-direction: row;
+  align-items: center;
+  height: auto;
+}
+
+.bottom-actions-cards--single .location-image-frame {
+  flex: 0 0 auto;
+  width: clamp(48px, 9dvh, 64px);
+  height: clamp(48px, 9dvh, 64px);
 }
 
 .image-viewer-overlay {
@@ -592,22 +694,12 @@ onBeforeUnmount(() => {
 
 @keyframes bounce {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(2px); }
+  50% { transform: translateY(3px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .steps-hint {
     animation: none;
-  }
-}
-
-@media (min-width: 400px) {
-  .metadata-list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .metadata-row--wide {
-    grid-column: span 2;
   }
 }
 </style>
