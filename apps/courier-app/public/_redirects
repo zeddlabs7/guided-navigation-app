@@ -1,1 +1,3 @@
-/*    /index.html   200
+/api/validateToken  https://me-central1-guided-navigation-app.cloudfunctions.net/validateToken  200!
+/api/loadGuidanceData  https://me-central1-guided-navigation-app.cloudfunctions.net/loadGuidanceData  200!
+/*  /index.html  200
