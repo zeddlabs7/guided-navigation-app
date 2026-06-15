@@ -291,8 +291,8 @@ onUnmounted(() => {
 }
 
 .cta-btn.disabled {
-  background: #d1d5db;
-  color: #9ca3af;
+  background: var(--color-secondary);
+  color: var(--color-text-light);
   cursor: not-allowed;
   box-shadow: none;
 }

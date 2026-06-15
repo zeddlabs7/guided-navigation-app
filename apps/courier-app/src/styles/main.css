@@ -1,5 +1,33 @@
 @import '@guidenav/ui/styles';
 
+/*
+ * Courier grey scale — darker than shared defaults, with clear hierarchy:
+ * text > text-secondary > text-muted > text-light
+ * border > border-light > primary-light (icon wells) > background
+ */
+:root {
+  --color-text-secondary: #3d4852;
+  --color-text-muted: #5c6672;
+  --color-text-light: #8b949e;
+
+  --color-border: #c5cad1;
+  --color-border-light: #dce0e5;
+
+  --color-primary-light: #dce1e7;
+  --color-primary-bg: #dce1e7;
+  --color-secondary: #dce0e5;
+  --color-secondary-dark: #c5cad1;
+
+  --color-background: #eef0f3;
+
+  --color-step-parking: #5c6672;
+  --color-step-parking-bg: #dce0e5;
+
+  --color-disabled: #dce0e5;
+  --color-disabled-text: #5c6672;
+  --color-disabled-dot: #8b949e;
+}
+
 html {
   height: 100%;
 }

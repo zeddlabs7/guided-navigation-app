@@ -143,7 +143,7 @@ const rows = computed<StepRow[]>(() =>
 
 .section-subtitle {
   font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   margin: 0;
 }
 
@@ -191,7 +191,7 @@ const rows = computed<StepRow[]>(() =>
 
 .step-card:hover {
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
-  border-color: var(--color-primary-light);
+  border-color: var(--color-border);
 }
 
 .step-card:active {
@@ -220,7 +220,7 @@ const rows = computed<StepRow[]>(() =>
 
 .step-thumbnail--placeholder {
   background-color: var(--color-background);
-  color: var(--color-text-muted);
+  color: var(--color-text-light);
 }
 
 .step-number {
@@ -276,13 +276,13 @@ const rows = computed<StepRow[]>(() =>
 
 .step-instruction--empty {
   font-weight: 400;
-  color: var(--color-text-muted);
+  color: var(--color-text-light);
   font-style: italic;
 }
 
 .step-chevron {
   flex-shrink: 0;
-  color: var(--color-text-muted);
+  color: var(--color-text-light);
 }
 
 [dir="rtl"] .step-chevron svg {
@@ -303,7 +303,7 @@ const rows = computed<StepRow[]>(() =>
   border-radius: var(--radius-full);
   border: 1px solid var(--color-border);
   background-color: white;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;

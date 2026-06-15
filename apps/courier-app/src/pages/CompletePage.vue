@@ -289,7 +289,7 @@ function handleHome() {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .location-badge {

@@ -331,7 +331,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 60%, #eff6ff 100%);
+  background: linear-gradient(180deg, var(--color-background) 0%, #ffffff 60%, #eff6ff 100%);
   padding: var(--row-gap) var(--spacing-md) calc(env(safe-area-inset-bottom) + var(--row-gap));
   gap: var(--row-gap);
   position: relative;
@@ -582,7 +582,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-muted);
+  color: var(--color-text-light);
   flex-shrink: 0;
 }
 

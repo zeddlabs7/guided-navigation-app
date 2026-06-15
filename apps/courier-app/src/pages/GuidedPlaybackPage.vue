@@ -544,7 +544,7 @@ function handleImageError() {
   align-items: center;
   justify-content: center;
   gap: var(--spacing-sm);
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 /* Step Type Badge */
@@ -671,14 +671,14 @@ function handleImageError() {
 
 .step-instruction {
   font-size: var(--font-size-base);
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   margin: 0;
   line-height: 1.5;
 }
 
 .step-divider {
   height: 1px;
-  background-color: var(--color-border);
+  background-color: var(--color-border-light);
   margin: var(--spacing-sm) 0;
 }
 
@@ -703,7 +703,7 @@ function handleImageError() {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   flex-shrink: 0;
 }
 

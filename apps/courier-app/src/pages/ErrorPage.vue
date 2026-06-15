@@ -150,8 +150,8 @@ function handleTryAgain() {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background-color: #f3f4f6;
-  color: #9ca3af;
+  background-color: var(--color-background);
+  color: var(--color-text-light);
   display: flex;
   align-items: center;
   justify-content: center;
