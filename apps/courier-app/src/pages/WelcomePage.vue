@@ -14,7 +14,6 @@ const {
   dataLoadError,
   setLanguage,
   translateUserContent,
-  isTranslating,
 } = useCourierSession();
 
 const waitingForData = ref(false);
