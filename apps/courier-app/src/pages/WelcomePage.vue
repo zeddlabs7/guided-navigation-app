@@ -18,6 +18,7 @@ const {
 } = useCourierSession();
 
 const waitingForData = ref(false);
+const isNavigating = ref(false);
 
 onMounted(() => {
   if (!isTokenValid.value) {
@@ -39,12 +40,12 @@ const languages: { code: Language; label: string; rtl: boolean }[] = [
   { code: 'bn', label: 'বাংলা', rtl: false },
 ];
 
-const ctaTexts: Record<Language, string> = {
-  en: 'Click to see location details',
-  ar: 'انقر لرؤية تفاصيل الموقع',
-  hi: 'स्थान विवरण देखने के लिए क्लिक करें',
-  ur: 'مقام کی تفصیلات دیکھنے کے لیے کلک کریں',
-  bn: 'অবস্থানের বিবরণ দেখতে ক্লিক করুন',
+const instructionTexts: Record<Language, string> = {
+  en: 'Choose your language to enter',
+  ar: 'اختر لغتك للدخول',
+  hi: 'प्रवेश के लिए अपनी भाषा चुनें',
+  ur: 'داخل ہونے کے لیے اپنی زبان منتخب کریں',
+  bn: 'প্রবেশ করতে আপনার ভাষা নির্বাচন করুন',
 };
 
 const selectedLanguage = ref<Language | null>(null);
@@ -54,22 +55,8 @@ let cycleTimer: ReturnType<typeof setInterval> | null = null;
 const currentCycleLanguage = computed(() => languages[cycleIndex.value].code);
 const currentCycleRtl = computed(() => languages[cycleIndex.value].rtl);
 
-const displayText = computed(() => {
-  if (selectedLanguage.value) {
-    return ctaTexts[selectedLanguage.value];
-  }
-  return ctaTexts[currentCycleLanguage.value];
-});
-
-const displayRtl = computed(() => {
-  if (selectedLanguage.value) {
-    return selectedLanguage.value === 'ar' || selectedLanguage.value === 'ur';
-  }
-  return currentCycleRtl.value;
-});
-
-const isLanguageSelected = computed(() => selectedLanguage.value !== null);
-const isProceedDisabled = computed(() => !isLanguageSelected.value || isTranslating.value || waitingForData.value);
+const instructionText = computed(() => instructionTexts[currentCycleLanguage.value]);
+const instructionRtl = computed(() => currentCycleRtl.value);
 
 function startCycling() {
   cycleTimer = setInterval(() => {
@@ -84,28 +71,27 @@ function stopCycling() {
   }
 }
 
-function selectLanguage(lang: Language) {
+async function selectLanguage(lang: Language) {
+  if (isNavigating.value) return;
+
   selectedLanguage.value = lang;
   setLanguage(lang);
   stopCycling();
-}
-
-async function proceed() {
-  if (!selectedLanguage.value) return;
+  isNavigating.value = true;
 
   if (!isDataReady.value) {
     waitingForData.value = true;
-    const unwatch = watch(isDataReady, (ready) => {
-      if (ready) {
-        unwatch();
-        waitingForData.value = false;
-        proceed();
-      }
+    await new Promise<void>((resolve) => {
+      const unwatch = watch(isDataReady, (ready) => {
+        if (ready) {
+          unwatch();
+          waitingForData.value = false;
+          resolve();
+        }
+      }, { immediate: true });
     });
-    return;
   }
 
-  const lang = selectedLanguage.value;
   if (lang !== 'en') {
     await translateUserContent();
   }
@@ -126,10 +112,22 @@ onUnmounted(() => {
     <div class="welcome-content">
       <div class="logo-section">
         <img
-          :src="displayRtl ? '/logo-ar.png' : '/logo-eng.png'"
+          :src="instructionRtl ? '/logo-ar.png' : '/logo-eng.png'"
           alt="Arriveo"
           class="logo"
         />
+      </div>
+
+      <div class="instruction-section">
+        <Transition name="fade" mode="out-in">
+          <p
+            :key="instructionText"
+            class="instruction-text"
+            :dir="instructionRtl ? 'rtl' : 'ltr'"
+          >
+            {{ instructionText }}
+          </p>
+        </Transition>
       </div>
 
       <div class="language-section">
@@ -138,49 +136,18 @@ onUnmounted(() => {
             v-for="lang in languages"
             :key="lang.code"
             class="language-btn"
-            :class="{ selected: selectedLanguage === lang.code }"
+            :class="{
+              selected: selectedLanguage === lang.code,
+              loading: selectedLanguage === lang.code && isNavigating,
+            }"
             :dir="lang.rtl ? 'rtl' : 'ltr'"
+            :disabled="isNavigating"
             @click="selectLanguage(lang.code)"
           >
-            {{ lang.label }}
+            <span v-if="selectedLanguage === lang.code && isNavigating" class="spinner" />
+            <span v-else>{{ lang.label }}</span>
           </button>
         </div>
-      </div>
-
-      <div class="cta-section">
-        <button
-          class="cta-btn"
-          :class="{ disabled: isProceedDisabled }"
-          :dir="displayRtl ? 'rtl' : 'ltr'"
-          :disabled="isProceedDisabled"
-          @click="proceed"
-        >
-          <template v-if="isTranslating || waitingForData">
-            <span class="spinner" />
-          </template>
-          <template v-else>
-            <Transition name="fade" mode="out-in">
-              <span :key="displayText" class="cta-text">{{ displayText }}</span>
-            </Transition>
-            <svg
-              class="cta-arrow"
-              :class="{ 'cta-arrow-rtl': displayRtl }"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M5 12h14M12 5l7 7-7 7"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </template>
-        </button>
       </div>
     </div>
   </div>
@@ -203,7 +170,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 48px;
+  gap: 40px;
 }
 
 .logo-section {
@@ -215,6 +182,21 @@ onUnmounted(() => {
   height: 48px;
   width: auto;
   object-fit: contain;
+}
+
+.instruction-section {
+  text-align: center;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.instruction-text {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
 }
 
 .language-section {
@@ -229,24 +211,39 @@ onUnmounted(() => {
 }
 
 .language-btn {
-  padding: 12px 24px;
+  padding: 14px 28px;
   border-radius: 999px;
   border: 2px solid #d1d5db;
   background: white;
   color: #374151;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
   outline: none;
-  min-width: 100px;
+  min-width: 110px;
   text-align: center;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
 }
 
-.language-btn:hover {
+.language-btn:not(:disabled):hover {
   border-color: #16a34a;
   background: #f0fdf4;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.language-btn:not(:disabled):active {
+  transform: translateY(0);
+}
+
+.language-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .language-btn.selected {
@@ -256,71 +253,22 @@ onUnmounted(() => {
   box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
 }
 
-.cta-section {
-  width: 100%;
-}
-
-.cta-btn {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 16px 24px;
-  border-radius: 16px;
-  border: none;
-  font-size: 17px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  outline: none;
-  background: #16a34a;
-  color: white;
-  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35);
-  min-height: 60px;
-}
-
-.cta-btn:not(.disabled):hover {
-  background: #15803d;
-  box-shadow: 0 6px 20px rgba(22, 163, 74, 0.4);
-  transform: translateY(-1px);
-}
-
-.cta-btn:not(.disabled):active {
-  transform: translateY(0);
-}
-
-.cta-btn.disabled {
-  background: var(--color-secondary);
-  color: var(--color-text-light);
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-.cta-text {
-  display: inline-block;
+.language-btn.loading {
+  pointer-events: none;
 }
 
 .spinner {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border: 3px solid rgba(255, 255, 255, 0.3);
   border-top-color: white;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
+  display: inline-block;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
-}
-
-.cta-arrow {
-  flex-shrink: 0;
-  transition: transform 0.2s ease;
-}
-
-.cta-arrow-rtl {
-  transform: scaleX(-1);
 }
 
 .fade-enter-active,
