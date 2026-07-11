@@ -1,7 +1,8 @@
-import React, { memo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { memo, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 import type { GuidanceSet, GuidanceStep, GuidanceStatus } from '@guidenav/types';
 import { STEP_TYPE_LABELS } from '@guidenav/types';
 import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
@@ -15,10 +16,10 @@ interface GuidanceSetCardProps {
   isDeleting?: boolean;
 }
 
-const STATUS_CONFIG: Record<GuidanceStatus, { bg: string; text: string; dot: string; label: string }> = {
-  PUBLISHED: { bg: '#D1FAE5', text: '#065F46', dot: '#10B981', label: 'Published' },
-  DRAFT: { bg: '#FEF3C7', text: '#92400E', dot: '#F59E0B', label: 'Draft' },
-  DISABLED: { bg: '#FEE2E2', text: '#991B1B', dot: '#EF4444', label: 'Disabled' },
+const STATUS_CONFIG: Record<GuidanceStatus, { bg: string; text: string; dot: string; labelKey: string }> = {
+  PUBLISHED: { bg: '#D1FAE5', text: '#065F46', dot: '#10B981', labelKey: 'card.published' },
+  DRAFT: { bg: '#FEF3C7', text: '#92400E', dot: '#F59E0B', labelKey: 'card.draft' },
+  DISABLED: { bg: '#FEE2E2', text: '#991B1B', dot: '#EF4444', labelKey: 'card.disabled' },
 };
 
 function formatDate(timestamp: unknown): string {
@@ -42,6 +43,29 @@ function formatDate(timestamp: unknown): string {
 
 const MAX_THUMBNAILS = 3;
 
+function ThumbnailImage({ uri, recyclingKey }: { uri: string; recyclingKey: string }) {
+  const [loading, setLoading] = useState(true);
+  return (
+    <>
+      <Image
+        source={{ uri }}
+        style={styles.thumbnail}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        recyclingKey={recyclingKey}
+        transition={200}
+        onLoad={() => setLoading(false)}
+        onError={() => setLoading(false)}
+      />
+      {loading && (
+        <View style={styles.thumbnailLoading}>
+          <ActivityIndicator size="small" color={Colors.textMuted} />
+        </View>
+      )}
+    </>
+  );
+}
+
 export const GuidanceSetCard = memo(function GuidanceSetCard({
   guidanceSet,
   steps,
@@ -50,6 +74,7 @@ export const GuidanceSetCard = memo(function GuidanceSetCard({
   onShare,
   isDeleting = false,
 }: GuidanceSetCardProps) {
+  const { t } = useTranslation();
   const status = STATUS_CONFIG[guidanceSet.status];
   const stepsWithImages = steps.filter((s) => s.image?.publicUrl);
   const visibleSteps = stepsWithImages.slice(0, MAX_THUMBNAILS);
@@ -68,14 +93,7 @@ export const GuidanceSetCard = memo(function GuidanceSetCard({
           <View style={styles.thumbnailRow}>
             {visibleSteps.map((step) => (
               <View key={step.id} style={styles.thumbnailWrapper}>
-                <Image
-                  source={{ uri: step.image!.publicUrl! }}
-                  style={styles.thumbnail}
-                  contentFit="cover"
-                  cachePolicy="memory-disk"
-                  recyclingKey={step.id}
-                  transition={200}
-                />
+                <ThumbnailImage uri={step.image!.publicUrl!} recyclingKey={step.id} />
                 <View style={styles.stepBadge}>
                   <View style={[styles.stepDot, { backgroundColor: status.dot }]} />
                   <Text style={styles.stepBadgeText} numberOfLines={1}>
@@ -95,7 +113,7 @@ export const GuidanceSetCard = memo(function GuidanceSetCard({
           <View style={[styles.statusOverlay, { backgroundColor: status.bg }]}>
             <View style={[styles.statusDot, { backgroundColor: status.dot }]} />
             <Text style={[styles.statusLabel, { color: status.text }]}>
-              {status.label}
+              {t(status.labelKey)}
             </Text>
           </View>
         </View>
@@ -111,7 +129,7 @@ export const GuidanceSetCard = memo(function GuidanceSetCard({
             </Text>
             <View style={[styles.statusBadgeInline, { backgroundColor: status.bg }]}>
               <Text style={[styles.statusLabelInline, { color: status.text }]}>
-                {status.label}
+                {t(status.labelKey)}
               </Text>
             </View>
           </View>
@@ -127,18 +145,18 @@ export const GuidanceSetCard = memo(function GuidanceSetCard({
         <View style={styles.meta}>
           <View style={styles.stepCountBadge}>
             <Text style={styles.stepCountText}>
-              {steps.length} {steps.length === 1 ? 'step' : 'steps'}
+              {steps.length} {steps.length === 1 ? t('card.step') : t('card.steps')}
             </Text>
           </View>
           <Text style={styles.metaDot}>·</Text>
           <Text style={styles.metaText}>
-            Modified {formatDate(guidanceSet.updatedAt)}
+            {t('card.modified', { date: formatDate(guidanceSet.updatedAt) })}
           </Text>
         </View>
 
         {guidanceSet.status === 'DISABLED' && (
           <Text style={styles.disabledNotice}>
-            Link disabled — not accessible to couriers.
+            {t('card.disabledHint')}
           </Text>
         )}
 
@@ -150,7 +168,7 @@ export const GuidanceSetCard = memo(function GuidanceSetCard({
               onPress={() => onShare(guidanceSet.id)}
             >
               <Text style={styles.shareIcon}>↗</Text>
-              <Text style={styles.shareText}>Share</Text>
+              <Text style={styles.shareText}>{t('common.share')}</Text>
             </TouchableOpacity>
           )}
 
@@ -181,7 +199,7 @@ export const GuidanceSetCard = memo(function GuidanceSetCard({
             onPress={() => onEdit(guidanceSet.id)}
           >
             <Text style={styles.editIcon}>✎</Text>
-            <Text style={styles.editText}>Edit</Text>
+            <Text style={styles.editText}>{t('common.edit')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -227,6 +245,12 @@ const styles = StyleSheet.create({
   thumbnail: {
     width: '100%',
     height: '100%',
+  },
+  thumbnailLoading: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   stepBadge: {
     position: 'absolute',

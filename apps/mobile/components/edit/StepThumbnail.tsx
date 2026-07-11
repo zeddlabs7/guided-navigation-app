@@ -1,4 +1,5 @@
-import { View, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import type { Overlay, ArrowDirection } from '@guidenav/types';
 import { Colors, BorderRadius } from '@/constants/theme';
@@ -141,20 +142,31 @@ export function StepThumbnail({
     );
   };
 
+  const [loading, setLoading] = useState(!!imageUrl);
+
   return (
     <View style={[styles.container, { width: dimension, height: dimension }]}>
       {imageUrl ? (
-        <Image
-          source={{ uri: imageUrl }}
-          style={styles.image}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-          transition={200}
-        />
+        <>
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.image}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={200}
+            onLoad={() => setLoading(false)}
+            onError={() => setLoading(false)}
+          />
+          {loading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="small" color={Colors.textMuted} />
+            </View>
+          )}
+        </>
       ) : (
         <View style={styles.placeholder} />
       )}
-      {imageUrl && overlays.length > 0 && (
+      {imageUrl && !loading && overlays.length > 0 && (
         <View style={styles.overlayContainer}>
           {overlays.map((overlay) => {
             if (overlay.type === 'arrow') return renderArrowOverlay(overlay);
@@ -183,6 +195,12 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     backgroundColor: Colors.background,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   overlayContainer: {
     position: 'absolute',

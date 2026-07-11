@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 interface LabelInputModalProps {
   visible: boolean;
@@ -21,10 +22,12 @@ interface LabelInputModalProps {
 export function LabelInputModal({
   visible,
   initialValue = '',
-  title = 'Add Note on the Marker',
+  title,
   onSave,
   onCancel,
 }: LabelInputModalProps) {
+  const { t } = useTranslation();
+  const resolvedTitle = title ?? t('overlay.labelModalTitle');
   const [inputValue, setInputValue] = useState(initialValue);
   const inputRef = useRef<TextInput>(null);
 
@@ -62,7 +65,7 @@ export function LabelInputModal({
             style={styles.modal}
             onPress={(e) => e.stopPropagation()}
           >
-            <Text style={styles.title}>{title}</Text>
+            <Text style={styles.title}>{resolvedTitle}</Text>
 
             <TextInput
               ref={inputRef}
@@ -72,7 +75,7 @@ export function LabelInputModal({
               ]}
               value={inputValue}
               onChangeText={setInputValue}
-              placeholder="e.g. PIN Keypad, Elevator Button"
+              placeholder={t('overlay.labelPlaceholder')}
               placeholderTextColor="#99a1af"
               maxLength={50}
               returnKeyType="done"
@@ -82,7 +85,7 @@ export function LabelInputModal({
 
             <View style={styles.actions}>
               <Pressable style={styles.cancelBtn} onPress={handleCancel}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
+                <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
               </Pressable>
               <Pressable
                 style={[
@@ -92,7 +95,7 @@ export function LabelInputModal({
                 onPress={handleSave}
                 disabled={!inputValue.trim()}
               >
-                <Text style={styles.saveBtnText}>Save</Text>
+                <Text style={styles.saveBtnText}>{t('common.save')}</Text>
               </Pressable>
             </View>
           </Pressable>

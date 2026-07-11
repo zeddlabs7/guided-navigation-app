@@ -1,11 +1,15 @@
 import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Redirect } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Colors, FontSize, Spacing } from '@/constants/theme';
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
+  const { language, toggleLanguage } = useLanguage();
   const { firebaseUser, signOut, isAuthenticated, isLoading } = useAuth();
 
   if (!isLoading && !isAuthenticated) {
@@ -13,10 +17,10 @@ export default function SettingsScreen() {
   }
 
   function handleSignOut() {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('settings.signOut'), t('settings.signOutConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Sign Out',
+        text: t('settings.signOut'),
         style: 'destructive',
         onPress: async () => {
           await signOut();
@@ -29,29 +33,31 @@ export default function SettingsScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>{t('common.back')}</Text>
         </Pressable>
-        <Text style={styles.title}>Settings</Text>
+        <Text style={styles.title}>{t('settings.title')}</Text>
       </View>
       <View style={styles.content}>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
+          <Text style={styles.sectionTitle}>{t('settings.account')}</Text>
           <View style={styles.row}>
-            <Text style={styles.rowLabel}>Phone</Text>
+            <Text style={styles.rowLabel}>{t('settings.phone')}</Text>
             <Text style={styles.rowValue}>
-              {firebaseUser?.phoneNumber ?? 'Not signed in'}
+              {firebaseUser?.phoneNumber ?? t('settings.notSignedIn')}
             </Text>
           </View>
         </View>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Language</Text>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>App Language</Text>
-            <Text style={styles.rowValue}>English</Text>
-          </View>
+          <Text style={styles.sectionTitle}>{t('settings.language')}</Text>
+          <Pressable style={styles.row} onPress={toggleLanguage}>
+            <Text style={styles.rowLabel}>{t('settings.appLanguage')}</Text>
+            <Text style={styles.rowValue}>
+              {language === 'en' ? t('settings.english') : t('settings.arabic')}
+            </Text>
+          </Pressable>
         </View>
         <Pressable style={styles.logoutButton} onPress={handleSignOut}>
-          <Text style={styles.logoutText}>Sign Out</Text>
+          <Text style={styles.logoutText}>{t('settings.signOut')}</Text>
         </Pressable>
       </View>
     </SafeAreaView>

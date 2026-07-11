@@ -1,24 +1,26 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Colors, FontSize, Spacing } from '@/constants/theme';
 
 export default function NotFoundScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.code}>404</Text>
-        <Text style={styles.title}>Page Not Found</Text>
+        <Text style={styles.code}>{t('notFound.code')}</Text>
+        <Text style={styles.title}>{t('notFound.title')}</Text>
         <Text style={styles.subtitle}>
-          The screen you're looking for doesn't exist.
+          {t('notFound.subtitle')}
         </Text>
         <Pressable
           style={styles.button}
           onPress={() => router.replace('/(tabs)/dashboard')}
         >
-          <Text style={styles.buttonText}>Go to Dashboard</Text>
+          <Text style={styles.buttonText}>{t('notFound.goToDashboard')}</Text>
         </Pressable>
       </View>
     </SafeAreaView>

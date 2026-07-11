@@ -13,9 +13,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
-import { sendVerificationCode, confirmCode } from '@/services/auth';
+import { sendVerificationCode, confirmCode, devSignIn } from '@/services/auth';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const logoEng = require('@/assets/logo-eng.png');
 const logoAr = require('@/assets/logo-ar.png');
@@ -28,7 +30,8 @@ export default function LoginScreen() {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentLanguage, setCurrentLanguage] = useState<'en' | 'ar'>('en');
+  const { t } = useTranslation();
+  const { language, toggleLanguage } = useLanguage();
   const { isAuthenticated } = useAuth();
   const router = useRouter();
 
@@ -40,7 +43,7 @@ export default function LoginScreen() {
 
   async function handleSendCode() {
     if (!phoneNumber.trim() || phoneNumber.length < 8) {
-      setError('Please enter a valid phone number');
+      setError(t('auth.errorInvalidPhone'));
       return;
     }
 
@@ -55,11 +58,11 @@ export default function LoginScreen() {
       console.error('Error code:', e?.code, 'Message:', e?.message, 'nativeErrorMessage:', e?.nativeErrorMessage);
       const errCode = e?.code;
       if (errCode === 'auth/invalid-phone-number') {
-        setError('Invalid phone number. Use format: +966XXXXXXXXX');
+        setError(t('auth.errorInvalidPhoneFormat'));
       } else if (errCode === 'auth/too-many-requests') {
-        setError('Too many attempts. Please try again later.');
+        setError(t('auth.errorTooManyRequests'));
       } else if (errCode === 'auth/quota-exceeded') {
-        setError('SMS quota exceeded. Please try again later.');
+        setError(t('auth.errorQuotaExceeded'));
       } else {
         setError(`[${errCode || 'unknown'}] ${e?.message || 'Failed to send verification code.'}`);
       }
@@ -70,7 +73,7 @@ export default function LoginScreen() {
 
   async function handleVerifyCode() {
     if (code.length !== 6) {
-      setError('Please enter the 6-digit code');
+      setError(t('auth.errorInvalidCode'));
       return;
     }
 
@@ -80,18 +83,28 @@ export default function LoginScreen() {
     try {
       await confirmCode(code);
     } catch (e: any) {
+      setLoading(false);
       const errCode = e?.code;
       if (errCode === 'auth/invalid-verification-code') {
-        setError('Invalid code. Please check and try again.');
+        setError(t('auth.errorInvalidVerification'));
       } else if (errCode === 'auth/session-expired') {
-        setError('Code expired. Please request a new one.');
+        setError(t('auth.errorSessionExpired'));
         setStep('phone');
         setCode('');
       } else {
-        setError(e?.message || 'Verification failed.');
+        setError(e?.message || t('auth.errorVerificationFailed'));
       }
-    } finally {
+    }
+  }
+
+  async function handleDevSignIn() {
+    setError(null);
+    setLoading(true);
+    try {
+      await devSignIn();
+    } catch (e: any) {
       setLoading(false);
+      setError(e?.message || t('auth.errorDevSignIn'));
     }
   }
 
@@ -106,18 +119,18 @@ export default function LoginScreen() {
       {/* Header with logo and language toggle */}
       <View style={styles.header}>
         <Image
-          source={currentLanguage === 'ar' ? logoAr : logoEng}
+          source={language === 'ar' ? logoAr : logoEng}
           style={styles.logoImage}
           resizeMode="contain"
         />
         <View style={styles.headerSpacer} />
         <TouchableOpacity
           style={styles.langButton}
-          onPress={() => setCurrentLanguage((l) => (l === 'en' ? 'ar' : 'en'))}
+          onPress={toggleLanguage}
           activeOpacity={0.7}
         >
           <Text style={styles.langText}>
-            {currentLanguage === 'en' ? 'عربي' : 'EN'}
+            {language === 'en' ? 'عربي' : 'EN'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -128,17 +141,17 @@ export default function LoginScreen() {
       >
         <View style={styles.content}>
           <View style={styles.branding}>
-            <Text style={styles.title}>Welcome</Text>
+            <Text style={styles.title}>{t('auth.welcome')}</Text>
             <Text style={styles.subtitle}>
               {step === 'phone'
-                ? 'Sign in with your phone number'
-                : 'Enter verification code'}
+                ? t('auth.signInSubtitle')
+                : t('auth.enterCode')}
             </Text>
           </View>
 
           {step === 'phone' ? (
             <View style={styles.form}>
-              <Text style={styles.label}>Phone Number</Text>
+              <Text style={styles.label}>{t('auth.phoneNumber')}</Text>
               <TextInput
                 style={styles.input}
                 value={phoneNumber}
@@ -146,7 +159,7 @@ export default function LoginScreen() {
                   setPhoneNumber(text);
                   setError(null);
                 }}
-                placeholder="+966XXXXXXXXX"
+                placeholder={t('auth.phonePlaceholder')}
                 placeholderTextColor={Colors.textMuted}
                 keyboardType="phone-pad"
                 autoComplete="tel"
@@ -154,7 +167,7 @@ export default function LoginScreen() {
                 editable={!loading}
               />
               <Text style={styles.hint}>
-                We'll send you a verification code via SMS
+                {t('auth.smsHint')}
               </Text>
 
               {error && <Text style={styles.error}>{error}</Text>}
@@ -167,18 +180,18 @@ export default function LoginScreen() {
                 {loading ? (
                   <ActivityIndicator color="#ffffff" />
                 ) : (
-                  <Text style={styles.buttonText}>Send Code</Text>
+                  <Text style={styles.buttonText}>{t('auth.sendCode')}</Text>
                 )}
               </Pressable>
             </View>
           ) : (
             <View style={styles.form}>
               <Pressable onPress={handleBack} style={styles.backLink}>
-                <Text style={styles.backLinkText}>← Change phone number</Text>
+                <Text style={styles.backLinkText}>{t('auth.changePhone')}</Text>
               </Pressable>
 
-              <Text style={styles.label}>Verification Code</Text>
-              <Text style={styles.phoneSent}>Sent to {phoneNumber}</Text>
+              <Text style={styles.label}>{t('auth.verificationCode')}</Text>
+              <Text style={styles.phoneSent}>{t('auth.sentTo', { phone: phoneNumber })}</Text>
               <TextInput
                 style={[styles.input, styles.codeInput]}
                 value={code}
@@ -206,7 +219,7 @@ export default function LoginScreen() {
                 {loading ? (
                   <ActivityIndicator color="#ffffff" />
                 ) : (
-                  <Text style={styles.buttonText}>Verify</Text>
+                  <Text style={styles.buttonText}>{t('auth.verify')}</Text>
                 )}
               </Pressable>
 
@@ -215,10 +228,28 @@ export default function LoginScreen() {
                 disabled={loading}
                 style={styles.resendLink}
               >
-                <Text style={styles.resendText}>Resend code</Text>
+                <Text style={styles.resendText}>{t('auth.resendCode')}</Text>
               </Pressable>
             </View>
           )}
+          <View style={styles.devSection}>
+              <View style={styles.devDivider}>
+                <View style={styles.devDividerLine} />
+                <Text style={styles.devDividerText}>{t('auth.devOnly')}</Text>
+                <View style={styles.devDividerLine} />
+              </View>
+              <Pressable
+                style={[styles.devButton, loading && styles.buttonDisabled]}
+                onPress={handleDevSignIn}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color={Colors.text} />
+                ) : (
+                  <Text style={styles.devButtonText}>{t('auth.devSignIn')}</Text>
+                )}
+              </Pressable>
+            </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -355,5 +386,38 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.textSecondary,
     fontWeight: '500',
+  },
+  devSection: {
+    marginTop: Spacing.xxl,
+    gap: Spacing.md,
+  },
+  devDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  devDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.border,
+  },
+  devDividerText: {
+    fontSize: FontSize.xs,
+    color: Colors.textMuted,
+    fontWeight: '600',
+    letterSpacing: 1,
+  },
+  devButton: {
+    borderWidth: 1.5,
+    borderColor: '#F59E0B',
+    backgroundColor: '#FFFBEB',
+    paddingVertical: 14,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+  },
+  devButtonText: {
+    color: '#B45309',
+    fontSize: FontSize.base,
+    fontWeight: '600',
   },
 });

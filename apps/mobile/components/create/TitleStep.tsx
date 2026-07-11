@@ -7,18 +7,21 @@ import {
   ScrollView,
   Pressable,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { validateGuidanceTitle } from '@guidenav/core';
 
 interface TitleStepProps {
   title: string;
+  titleArabic: string;
   onTitleChange: (title: string) => void;
+  onTitleArabicChange: (titleArabic: string) => void;
   onContinue: () => void;
 }
 
-export function TitleStep({ title, onTitleChange, onContinue }: TitleStepProps) {
+export function TitleStep({ title, titleArabic, onTitleChange, onTitleArabicChange, onContinue }: TitleStepProps) {
+  const { t } = useTranslation();
   const [touched, setTouched] = useState(false);
-  const [titleArabic, setTitleArabic] = useState('');
   const arabicInputRef = useRef<TextInput>(null);
 
   const validation = validateGuidanceTitle(title);
@@ -43,11 +46,11 @@ export function TitleStep({ title, onTitleChange, onContinue }: TitleStepProps) 
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
       >
-        <Text style={styles.sectionTitle}>Address Details</Text>
+        <Text style={styles.sectionTitle}>{t('create.titleLabel')}</Text>
 
         <View style={styles.fieldWrapper}>
           <Text style={styles.fieldLabel}>
-            Address Title <Text style={styles.required}>*</Text>
+            {t('create.titleField')} <Text style={styles.required}>*</Text>
           </Text>
           <TextInput
             style={[styles.input, showError && styles.inputError]}
@@ -55,7 +58,7 @@ export function TitleStep({ title, onTitleChange, onContinue }: TitleStepProps) 
             onChangeText={onTitleChange}
             onBlur={handleBlur}
             onSubmitEditing={() => arabicInputRef.current?.focus()}
-            placeholder="e.g. Al Nakheel Tower – Delivery Guide"
+            placeholder={t('create.titlePlaceholder')}
             placeholderTextColor={Colors.textMuted}
             maxLength={100}
             autoFocus
@@ -66,14 +69,14 @@ export function TitleStep({ title, onTitleChange, onContinue }: TitleStepProps) 
         </View>
 
         <View style={styles.fieldWrapper}>
-          <Text style={styles.fieldLabelOptional}>Arabic Title (optional)</Text>
+          <Text style={styles.fieldLabelOptional}>{t('create.arabicTitleLabel')}</Text>
           <TextInput
             ref={arabicInputRef}
             style={styles.input}
             value={titleArabic}
-            onChangeText={setTitleArabic}
+            onChangeText={onTitleArabicChange}
             onSubmitEditing={handleSubmit}
-            placeholder="عنوان عربي اختياري"
+            placeholder={t('create.arabicTitlePlaceholder')}
             placeholderTextColor={Colors.textMuted}
             textAlign="right"
             returnKeyType="done"
@@ -94,7 +97,7 @@ export function TitleStep({ title, onTitleChange, onContinue }: TitleStepProps) 
               !validation.valid && styles.continueButtonTextDisabled,
             ]}
           >
-            Continue
+            {t('create.continue')}
           </Text>
         </Pressable>
       </ScrollView>

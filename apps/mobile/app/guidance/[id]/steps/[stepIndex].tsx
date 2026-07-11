@@ -11,6 +11,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenFooter, useFooterScrollPadding } from '@/components/ui/ScreenFooter';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import type { StepType, AddressType, StepImage, GuidanceStep, Overlay, LocationData } from '@guidenav/types';
 import { STEP_TYPE_LABELS, getStepTypesForAddressType } from '@guidenav/types';
 import {
@@ -25,8 +26,11 @@ import {
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { StepTypeDropdown, STEP_TYPE_COLORS, PhotoUpload, LocationPicker } from '@/components/steps';
 import { OverlayEditor } from '@/components/overlay';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function StepBuilderScreen() {
+  const { t } = useTranslation();
+  const { language } = useLanguage();
   const footerScrollPadding = useFooterScrollPadding(56);
   const router = useRouter();
   const { id: guidanceSetId, stepIndex: stepIndexParam } = useLocalSearchParams<{
@@ -57,6 +61,7 @@ export default function StepBuilderScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadFailed, setUploadFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [instructionsTouched, setInstructionsTouched] = useState(false);
@@ -82,7 +87,7 @@ export default function StepBuilderScreen() {
   }, [addressType, stepIndex]);
 
   const selectedTypeColors = STEP_TYPE_COLORS[selectedStepType] || STEP_TYPE_COLORS.OTHER;
-  const selectedTypeLabel = STEP_TYPE_LABELS[selectedStepType]?.en || selectedStepType;
+  const selectedTypeLabel = (STEP_TYPE_LABELS[selectedStepType] as any)?.[language] || STEP_TYPE_LABELS[selectedStepType]?.en || selectedStepType;
 
   // Load address type if not provided
   useEffect(() => {
@@ -188,7 +193,7 @@ export default function StepBuilderScreen() {
 
   const validateLocation = useCallback((): boolean => {
     if (selectedStepType === 'LOCATION_CHECK' && !locationData) {
-      setLocationError('Drop-off location is required');
+      setLocationError(t('steps.dropOffRequired'));
       return false;
     }
     setLocationError(null);
@@ -197,7 +202,7 @@ export default function StepBuilderScreen() {
 
   const validateInstructions = useCallback((): boolean => {
     if (selectedStepType !== 'LOCATION_CHECK' && !instructions.trim()) {
-      setInstructionsError('Instructions are required');
+      setInstructionsError(t('steps.instructionsRequired'));
       return false;
     }
     setInstructionsError(null);
@@ -231,6 +236,10 @@ export default function StepBuilderScreen() {
     }
     if (uploading) {
       setError('Please wait for image upload to complete');
+      return;
+    }
+    if (uploadFailed) {
+      setError('Image upload failed. Please retry the upload or remove the photo before saving.');
       return;
     }
 
@@ -271,16 +280,15 @@ export default function StepBuilderScreen() {
     pendingImage,
     existingStep,
     locationData,
+    uploadFailed,
     router,
   ]);
 
-  const handleImageSelected = useCallback(
+  const doUpload = useCallback(
     async (uri: string) => {
       if (!stepIdRef.current || !guidanceSetId) return;
-      setImageUri(uri);
-      setImageStoragePath(null);
-      setPendingImage(null);
       setUploading(true);
+      setUploadFailed(false);
       setError(null);
 
       try {
@@ -289,7 +297,8 @@ export default function StepBuilderScreen() {
         setPendingImage(uploaded);
       } catch (err: any) {
         console.error('Failed to upload image:', err);
-        setError('Failed to upload image. Please try again.');
+        setUploadFailed(true);
+        setError('Image upload failed. You can retry or remove the photo.');
         setImageStoragePath(null);
         setPendingImage(null);
       } finally {
@@ -299,12 +308,29 @@ export default function StepBuilderScreen() {
     [guidanceSetId],
   );
 
+  const handleImageSelected = useCallback(
+    async (uri: string) => {
+      if (!stepIdRef.current || !guidanceSetId) return;
+      setImageUri(uri);
+      setImageStoragePath(null);
+      setPendingImage(null);
+      doUpload(uri);
+    },
+    [guidanceSetId, doUpload],
+  );
+
+  const handleRetryUpload = useCallback(() => {
+    if (!imageUri) return;
+    doUpload(imageUri);
+  }, [imageUri, doUpload]);
+
   const handleRemovePhoto = useCallback(() => {
     const pathToDelete = imageStoragePath;
 
     setImageUri(null);
     setImageStoragePath(null);
     setPendingImage(null);
+    setUploadFailed(false);
     setOverlays([]);
 
     if (pathToDelete) {
@@ -333,7 +359,7 @@ export default function StepBuilderScreen() {
         </Pressable>
         <View style={styles.headerInfo}>
           <Text style={styles.headerLabel}>
-            {isEditMode ? 'EDIT STEP' : 'NEW STEP'}
+            {isEditMode ? t('steps.editStep') : t('steps.newStep')}
           </Text>
           <View
             style={[
@@ -363,7 +389,7 @@ export default function StepBuilderScreen() {
           disabled={saving || uploading || loading}
         >
           <Text style={styles.saveButtonText}>
-            {saving ? 'Saving...' : 'Save Step'}
+            {saving ? t('steps.saving') : t('steps.saveStep')}
           </Text>
         </Pressable>
       </View>
@@ -412,8 +438,8 @@ export default function StepBuilderScreen() {
                   if (data) setLocationError(null);
                 }}
                 disabled={saving}
-                label="Drop-off Location"
-                placeholder="Search for the delivery address..."
+                label={t('location.title')}
+                placeholder={t('location.searchPlaceholder')}
               />
               {locationTouched && locationError && (
                 <Text style={styles.errorText}>{locationError}</Text>
@@ -428,21 +454,33 @@ export default function StepBuilderScreen() {
           {imageUri ? (
             <View style={styles.photoEditorSection}>
               <View style={styles.photoLabelRow}>
-                <Text style={styles.photoLabel}>Upload Photo (optional)</Text>
-                <Pressable onPress={handleRemovePhoto} disabled={saving || uploading}>
-                  <Text style={styles.removeText}>Remove</Text>
-                </Pressable>
+                <Text style={styles.photoLabel}>{t('steps.uploadPhoto')}</Text>
+                {!uploading && (
+                  <Pressable onPress={handleRemovePhoto} disabled={saving}>
+                    <Text style={styles.removeText}>{t('steps.remove')}</Text>
+                  </Pressable>
+                )}
               </View>
               <OverlayEditor
                 imageUrl={imageUri}
                 overlays={overlays}
                 readonly={saving}
+                uploadStatus={uploading ? 'uploading' : uploadFailed ? 'failed' : 'idle'}
                 onUpdateOverlays={setOverlays}
+                onRetryUpload={handleRetryUpload}
               />
               {uploading && (
                 <View style={styles.uploadOverlay}>
                   <ActivityIndicator color="#ffffff" size="small" />
-                  <Text style={styles.uploadOverlayText}>Uploading...</Text>
+                  <Text style={styles.uploadOverlayText}>{t('steps.uploading')}</Text>
+                </View>
+              )}
+              {uploadFailed && !uploading && (
+                <View style={styles.uploadFailedBanner}>
+                  <Text style={styles.uploadFailedText}>{t('steps.uploadFailed')}</Text>
+                  <Pressable style={styles.retryButton} onPress={handleRetryUpload}>
+                    <Text style={styles.retryButtonText}>{t('steps.retryUpload')}</Text>
+                  </Pressable>
                 </View>
               )}
             </View>
@@ -466,8 +504,8 @@ export default function StepBuilderScreen() {
         >
           <View style={styles.fieldWrapper}>
             <Text style={selectedStepType === 'LOCATION_CHECK' ? styles.fieldLabelOptional : styles.fieldLabel}>
-              {selectedStepType === 'LOCATION_CHECK' ? 'Notes (optional)' : (
-                <>Instructions <Text style={styles.required}>*</Text></>
+              {selectedStepType === 'LOCATION_CHECK' ? t('steps.notes') : (
+                <>{t('steps.instructions')} <Text style={styles.required}>*</Text></>
               )}
             </Text>
             <Text style={styles.helperText}>
@@ -491,7 +529,7 @@ export default function StepBuilderScreen() {
               onSubmitEditing={() => arabicInputRef.current?.focus()}
               placeholder={selectedStepType === 'LOCATION_CHECK'
                 ? 'e.g. Ring the doorbell, leave at the gate...'
-                : 'Enter instructions for the courier...'}
+                : t('steps.instructionsPlaceholder')}
               placeholderTextColor={Colors.textMuted}
               multiline
               numberOfLines={3}
@@ -512,7 +550,7 @@ export default function StepBuilderScreen() {
             }}
           >
             <Text style={styles.fieldLabelOptional}>
-              Arabic Instructions (optional)
+              {t('steps.arabicInstructions')}
             </Text>
             <TextInput
               ref={arabicInputRef}
@@ -524,7 +562,7 @@ export default function StepBuilderScreen() {
                   scrollRef.current?.scrollTo({ y: arabicSectionY.current, animated: true });
                 }, 250);
               }}
-              placeholder="أضف التعليمات بالعربية…"
+              placeholder={t('steps.arabicInstructionsPlaceholder')}
               placeholderTextColor={Colors.textMuted}
               multiline
               numberOfLines={3}
@@ -547,7 +585,7 @@ export default function StepBuilderScreen() {
           disabled={saving || uploading || loading}
         >
           <Text style={styles.footerSaveButtonText}>
-            {saving ? 'Saving...' : 'Save Step'}
+            {saving ? t('steps.saving') : t('steps.saveStep')}
           </Text>
         </Pressable>
       </ScreenFooter>
@@ -700,6 +738,33 @@ const styles = StyleSheet.create({
   uploadOverlayText: {
     fontSize: FontSize.xs,
     fontWeight: '500',
+    color: '#ffffff',
+  },
+  uploadFailedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    marginTop: 6,
+  },
+  uploadFailedText: {
+    fontSize: FontSize.sm,
+    color: Colors.danger,
+    fontWeight: '500',
+  },
+  retryButton: {
+    backgroundColor: Colors.danger,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
+  },
+  retryButtonText: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
     color: '#ffffff',
   },
   fieldWrapper: {

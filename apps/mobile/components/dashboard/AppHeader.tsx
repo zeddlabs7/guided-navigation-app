@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
 
 const logoEng = require('@/assets/logo-eng.png');
@@ -12,9 +14,11 @@ interface AppHeaderProps {
   onLanguageToggle?: () => void;
 }
 
-export function AppHeader({ currentLanguage = 'en', onLanguageToggle }: AppHeaderProps) {
+export function AppHeader({ currentLanguage: _legacyLang, onLanguageToggle: _legacyToggle }: AppHeaderProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const { signOut } = useAuth();
+  const { language, toggleLanguage } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
 
   function handleNew() {
@@ -31,10 +35,10 @@ export function AppHeader({ currentLanguage = 'en', onLanguageToggle }: AppHeade
 
   function handleLogout() {
     setMenuOpen(false);
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('settings.signOut'), t('dashboard.logOutConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Sign Out',
+        text: t('settings.signOut'),
         style: 'destructive',
         onPress: async () => {
           await signOut();
@@ -50,7 +54,7 @@ export function AppHeader({ currentLanguage = 'en', onLanguageToggle }: AppHeade
         {/* Logo */}
         <TouchableOpacity onPress={handleLogoPress} style={styles.logoButton}>
           <Image
-            source={currentLanguage === 'ar' ? logoAr : logoEng}
+            source={language === 'ar' ? logoAr : logoEng}
             style={styles.logoImage}
             resizeMode="contain"
           />
@@ -58,18 +62,16 @@ export function AppHeader({ currentLanguage = 'en', onLanguageToggle }: AppHeade
 
         <View style={styles.spacer} />
 
-        {onLanguageToggle && (
-          <TouchableOpacity style={styles.langButton} onPress={onLanguageToggle} activeOpacity={0.7}>
-            <Text style={styles.langText}>
-              {currentLanguage === 'en' ? 'عربي' : 'EN'}
-            </Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity style={styles.langButton} onPress={toggleLanguage} activeOpacity={0.7}>
+          <Text style={styles.langText}>
+            {language === 'en' ? 'عربي' : 'EN'}
+          </Text>
+        </TouchableOpacity>
 
         {/* + New button */}
         <TouchableOpacity style={styles.newButton} onPress={handleNew} activeOpacity={0.8}>
           <Text style={styles.newButtonPlus}>+</Text>
-          <Text style={styles.newButtonLabel}>New</Text>
+          <Text style={styles.newButtonLabel}>{t('common.new')}</Text>
         </TouchableOpacity>
 
         {/* User menu icon */}
@@ -96,7 +98,7 @@ export function AppHeader({ currentLanguage = 'en', onLanguageToggle }: AppHeade
           <View style={styles.dropdown}>
             <TouchableOpacity style={styles.dropdownItem} onPress={handleLogout}>
               <Text style={styles.logoutIcon}>↗</Text>
-              <Text style={styles.logoutText}>Log Out</Text>
+              <Text style={styles.logoutText}>{t('dashboard.logOut')}</Text>
             </TouchableOpacity>
           </View>
         </>

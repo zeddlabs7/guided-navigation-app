@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { validateGuidanceTitle } from '@guidenav/core';
 import { requiresMetadata as checkRequiresMetadata } from '@guidenav/types';
@@ -20,24 +21,26 @@ type FormStep = 'title' | 'addressType' | 'metadata' | 'steps';
 
 export default function CreateGuidanceScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { firebaseUser } = useAuth();
 
   const [currentStep, setCurrentStep] = useState<FormStep>('title');
   const [title, setTitle] = useState('');
+  const [titleArabic, setTitleArabic] = useState('');
   const [addressType, setAddressType] = useState<AddressType | null>(null);
   const [metadata, setMetadata] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
-  const displayTitle = title.trim() || 'Untitled Address';
+  const displayTitle = title.trim() || t('create.untitledAddress');
 
   const stepIndicatorConfig = useMemo(
     () => [
-      { key: 'title', label: 'Title', enabled: true },
-      { key: 'addressType', label: 'Type', enabled: true },
-      { key: 'metadata', label: 'Details', enabled: addressType !== null },
-      { key: 'steps', label: 'Steps', enabled: addressType !== null },
+      { key: 'title', label: t('create.stepTitle'), enabled: true },
+      { key: 'addressType', label: t('create.stepType'), enabled: true },
+      { key: 'metadata', label: t('create.stepDetails'), enabled: addressType !== null },
+      { key: 'steps', label: t('create.stepSteps'), enabled: addressType !== null },
     ],
-    [addressType],
+    [addressType, t],
   );
 
   const handleBack = useCallback(() => {
@@ -112,8 +115,10 @@ export default function CreateGuidanceScreen() {
     if (metadata.apartmentNumber) metadataPayload.apartmentNumber = metadata.apartmentNumber;
     if (metadata.locationDescription) metadataPayload.locationDescription = metadata.locationDescription;
 
+    const arTitle = titleArabic.trim();
     const input: CreateGuidanceSetInput = {
       title: title.trim(),
+      ...(arTitle ? { titleArabic: arTitle } : {}),
       description: null,
       languageOriginal: 'en',
       availabilityMode: 'ANYTIME_TODAY',
@@ -123,7 +128,7 @@ export default function CreateGuidanceScreen() {
     };
 
     return createGuidanceSet(firebaseUser.uid, input);
-  }, [firebaseUser, title, addressType, metadata]);
+  }, [firebaseUser, title, titleArabic, addressType, metadata]);
 
   const handleSaveDraft = useCallback(async () => {
     if (!firebaseUser?.uid || !addressType) return;
@@ -134,11 +139,11 @@ export default function CreateGuidanceScreen() {
         router.replace(`/guidance/${guidanceSetId}/edit`);
       }
     } catch (error: any) {
-      Alert.alert('Error', error?.message ?? 'Failed to save draft. Please try again.');
+      Alert.alert(t('common.error'), error?.message ?? t('create.errorSave'));
     } finally {
       setSaving(false);
     }
-  }, [firebaseUser, addressType, buildAndCreate, router]);
+  }, [firebaseUser, addressType, buildAndCreate, router, t]);
 
   const handleAddFirstStep = useCallback(async () => {
     if (!firebaseUser?.uid || !addressType) return;
@@ -151,11 +156,11 @@ export default function CreateGuidanceScreen() {
         );
       }
     } catch (error: any) {
-      Alert.alert('Error', error?.message ?? 'Failed to save. Please try again.');
+      Alert.alert(t('common.error'), error?.message ?? t('create.errorSave'));
     } finally {
       setSaving(false);
     }
-  }, [firebaseUser, addressType, buildAndCreate, router]);
+  }, [firebaseUser, addressType, buildAndCreate, router, t]);
 
   const renderStep = () => {
     switch (currentStep) {
@@ -163,7 +168,9 @@ export default function CreateGuidanceScreen() {
         return (
           <TitleStep
             title={title}
+            titleArabic={titleArabic}
             onTitleChange={setTitle}
+            onTitleArabicChange={setTitleArabic}
             onContinue={handleTitleContinue}
           />
         );
@@ -213,7 +220,7 @@ export default function CreateGuidanceScreen() {
         </View>
 
         <View style={styles.headerInfo}>
-          <Text style={styles.headerLabel}>NEW ADDRESS</Text>
+          <Text style={styles.headerLabel}>{t('create.newAddress')}</Text>
           <Text style={styles.headerTitle} numberOfLines={1}>
             {displayTitle}
           </Text>
@@ -226,7 +233,7 @@ export default function CreateGuidanceScreen() {
             disabled={saving}
           >
             <Text style={styles.saveDraftButtonText}>
-              {saving ? 'Saving...' : 'Save Draft'}
+              {saving ? t('create.saving') : t('create.saveDraft')}
             </Text>
           </Pressable>
         )}

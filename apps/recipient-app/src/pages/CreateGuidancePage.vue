@@ -258,8 +258,10 @@ async function handleSaveDraft() {
   error.value = null;
   
   try {
+    const arTitle = titleArabic.value.trim();
     const guidanceSetId = await createGuidanceSet(userId.value, {
       title: title.value.trim(),
+      ...(arTitle ? { titleArabic: arTitle } : {}),
       description: null,
       languageOriginal: 'en',
       availabilityMode: 'ANYTIME_TODAY',
@@ -303,8 +305,10 @@ async function handlePreviewAndPublish() {
   error.value = null;
   
   try {
+    const arTitle2 = titleArabic.value.trim();
     const guidanceSetId = await createGuidanceSet(userId.value, {
       title: title.value.trim(),
+      ...(arTitle2 ? { titleArabic: arTitle2 } : {}),
       description: null,
       languageOriginal: 'en',
       availabilityMode: 'ANYTIME_TODAY',
@@ -371,8 +375,10 @@ async function handleAddStep() {
   error.value = null;
   
   try {
+    const arTitle3 = titleArabic.value.trim();
     const guidanceSetId = await createGuidanceSet(userId.value, {
       title: title.value.trim(),
+      ...(arTitle3 ? { titleArabic: arTitle3 } : {}),
       description: null,
       languageOriginal: 'en',
       availabilityMode: 'ANYTIME_TODAY',

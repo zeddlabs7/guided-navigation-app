@@ -1,27 +1,36 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { Image, type ImageLoadEventData } from 'expo-image';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
+import { useTranslation } from 'react-i18next';
+import { Colors } from '@/constants/theme';
 import Svg, { Path } from 'react-native-svg';
 import type { Overlay } from '@guidenav/types';
 import { ArrowOverlay } from './ArrowOverlay';
 import { MarkerDot, MarkerLabel, computeLabelPosition } from './MarkerOverlay';
 import { OverlayEditorModal } from './OverlayEditorModal';
 
+type UploadStatus = 'idle' | 'uploading' | 'failed';
+
 interface OverlayEditorProps {
   imageUrl: string;
   overlays: Overlay[];
   readonly?: boolean;
+  uploadStatus?: UploadStatus;
   userId?: string;
   onUpdateOverlays: (overlays: Overlay[]) => void;
+  onRetryUpload?: () => void;
 }
 
 export function OverlayEditor({
   imageUrl,
   overlays,
   readonly = false,
+  uploadStatus = 'idle',
   userId = 'dev-user-placeholder',
   onUpdateOverlays,
+  onRetryUpload,
 }: OverlayEditorProps) {
+  const { t } = useTranslation();
   const [modalVisible, setModalVisible] = useState(false);
 
   const handleOpenEditor = useCallback(() => {
@@ -66,7 +75,7 @@ export function OverlayEditor({
               />
             </Svg>
             <Text style={styles.editBadgeText}>
-              {overlays.length > 0 ? 'Edit Overlays' : 'Add Overlays'}
+              {overlays.length > 0 ? t('overlay.editOverlays') : t('overlay.addOverlays')}
             </Text>
           </View>
         )}
@@ -78,8 +87,10 @@ export function OverlayEditor({
         imageUrl={imageUrl}
         overlays={overlays}
         userId={userId}
+        uploadStatus={uploadStatus}
         onSave={handleSave}
         onCancel={handleCancel}
+        onRetryUpload={onRetryUpload}
       />
     </View>
   );
@@ -88,19 +99,11 @@ export function OverlayEditor({
 /**
  * Static (non-interactive) rendering of image + overlays for the preview thumbnail.
  */
+const FIXED_ASPECT_RATIO = 4 / 5;
+
 function ImageWithOverlays({ imageUrl, overlays }: { imageUrl: string; overlays: Overlay[] }) {
   const [layout, setLayout] = useState({ width: 0, height: 0 });
-  const [imageAspect, setImageAspect] = useState(4 / 3);
-
-  const handleImageLoad = useCallback(
-    (event: ImageLoadEventData) => {
-      const { width, height } = event.source;
-      if (width && height) {
-        setImageAspect(width / height);
-      }
-    },
-    [],
-  );
+  const [loading, setLoading] = useState(true);
 
   return (
     <View
@@ -112,14 +115,21 @@ function ImageWithOverlays({ imageUrl, overlays }: { imageUrl: string; overlays:
     >
       <Image
         source={{ uri: imageUrl }}
-        style={[styles.previewImage, { aspectRatio: imageAspect }]}
+        style={[styles.previewImage, { aspectRatio: FIXED_ASPECT_RATIO }]}
         contentFit="contain"
         cachePolicy="memory-disk"
         transition={200}
-        onLoad={handleImageLoad}
+        onLoad={() => setLoading(false)}
+        onError={() => setLoading(false)}
       />
 
-      {layout.width > 0 &&
+      {loading && (
+        <View style={styles.imageLoading}>
+          <ActivityIndicator size="small" color={Colors.textMuted} />
+        </View>
+      )}
+
+      {!loading && layout.width > 0 &&
         overlays.map((overlay) => (
           <PreviewOverlayItem key={overlay.id} overlay={overlay} layout={layout} />
         ))}
@@ -223,5 +233,11 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 13,
     fontWeight: '600',
+  },
+  imageLoading: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#f3f4f6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

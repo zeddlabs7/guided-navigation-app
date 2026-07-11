@@ -1,8 +1,10 @@
 import { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import type { StepType } from '@guidenav/types';
 import { STEP_TYPE_LABELS, getStepTypesForAddressType } from '@guidenav/types';
 import type { AddressType } from '@guidenav/types';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const STEP_TYPE_COLORS: Record<StepType, { bg: string; dot: string; text: string }> = {
   LOCATION_CHECK: { bg: '#fffbeb', dot: '#ffb900', text: '#bb4d00' },
@@ -47,24 +49,26 @@ export function StepTypeDropdown({
   stepIndex,
   disabled,
 }: StepTypeDropdownProps) {
+  const { t } = useTranslation();
+  const { language } = useLanguage();
   const [expanded, setExpanded] = useState(false);
 
   const options = useMemo<StepTypeOption[]>(() => {
     if (!addressType) {
       return Object.entries(STEP_TYPE_LABELS).map(([type, labels]) => ({
         type: type as StepType,
-        label: labels.en,
+        label: (labels as any)[language] || labels.en,
         orderHint: '',
         orderIndex: 99,
       }));
     }
     return getStepTypesForAddressType(addressType).map((config) => ({
       type: config.type,
-      label: STEP_TYPE_LABELS[config.type].en,
+      label: (STEP_TYPE_LABELS[config.type] as any)[language] || STEP_TYPE_LABELS[config.type].en,
       orderHint: config.orderHint,
       orderIndex: config.orderIndex,
     }));
-  }, [addressType]);
+  }, [addressType, language]);
 
   const suggestedType = useMemo<StepType | null>(() => {
     if (options.length === 0) return null;
@@ -87,7 +91,7 @@ export function StepTypeDropdown({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionLabel}>STEP TYPE</Text>
+      <Text style={styles.sectionLabel}>{t('steps.stepType')}</Text>
       <Pressable
         style={[styles.trigger, { borderColor: expanded ? selectedColors.dot : '#e5e7eb' }]}
         onPress={() => !disabled && setExpanded(!expanded)}
@@ -96,7 +100,7 @@ export function StepTypeDropdown({
         <View style={[styles.triggerBadge, { backgroundColor: selectedColors.bg }]}>
           <View style={[styles.triggerDot, { backgroundColor: selectedColors.dot }]} />
           <Text style={[styles.triggerLabel, { color: selectedColors.text }]}>
-            {selectedOption?.label || STEP_TYPE_LABELS[value]?.en || value}
+            {selectedOption?.label || (STEP_TYPE_LABELS[value] as any)?.[language] || STEP_TYPE_LABELS[value]?.en || value}
           </Text>
           {selectedOption?.orderHint ? (
             <View style={styles.triggerHintBadge}>
@@ -109,7 +113,7 @@ export function StepTypeDropdown({
 
       {expanded && (
         <View style={styles.dropdown}>
-          <Text style={styles.dropdownHelper}>Hints show typical delivery order</Text>
+          <Text style={styles.dropdownHelper}>{t('steps.stepTypeHint')}</Text>
           <ScrollView
             style={styles.dropdownScroll}
             nestedScrollEnabled
@@ -147,7 +151,7 @@ export function StepTypeDropdown({
                   </View>
                   <View style={styles.optionRight}>
                     {isSuggested && (
-                      <Text style={styles.suggestedText}>Suggested</Text>
+                      <Text style={styles.suggestedText}>{t('steps.suggested')}</Text>
                     )}
                     {isSelected && (
                       <Text style={styles.checkmark}>✓</Text>

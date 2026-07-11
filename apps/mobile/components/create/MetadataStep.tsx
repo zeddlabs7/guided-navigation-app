@@ -7,6 +7,7 @@ import {
   ScrollView,
   Pressable,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import {
   getMetadataFieldConfigs,
@@ -27,6 +28,7 @@ export function MetadataStep({
   onMetadataChange,
   onContinue,
 }: MetadataStepProps) {
+  const { t } = useTranslation();
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const inputRefs = useRef<Record<string, TextInput | null>>({});
@@ -75,7 +77,7 @@ export function MetadataStep({
       if (config && !validateField(config)) {
         setFieldErrors((prev) => ({
           ...prev,
-          [field]: `${config.label.en} is required`,
+          [field]: t('create.fieldRequired', { field: config.label.en }),
         }));
       } else {
         setFieldErrors((prev) => {
@@ -96,7 +98,7 @@ export function MetadataStep({
     for (const fc of visibleFields) {
       newTouched.add(fc.field);
       if (!validateField(fc)) {
-        newErrors[fc.field] = `${fc.label.en} is required`;
+        newErrors[fc.field] = t('create.fieldRequired', { field: fc.label.en });
         allValid = false;
       }
     }
@@ -221,7 +223,7 @@ export function MetadataStep({
           {sectionTitle?.en ?? 'Address Details'}
         </Text>
         <Text style={styles.sectionSubtitle}>
-          These details help couriers find you faster
+          {t('create.detailsSubtitle')}
         </Text>
 
         <View style={styles.fields}>
@@ -233,7 +235,7 @@ export function MetadataStep({
         </View>
 
         <Pressable style={styles.continueButton} onPress={handleContinue}>
-          <Text style={styles.continueButtonText}>Continue to Steps</Text>
+          <Text style={styles.continueButtonText}>{t('create.continueToSteps')}</Text>
         </Pressable>
       </ScrollView>
     </View>

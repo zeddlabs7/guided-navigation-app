@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
 
 interface EmptyStateProps {
@@ -7,16 +8,17 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({ hasSearchQuery }: EmptyStateProps) {
+  const { t } = useTranslation();
   return (
     <View style={styles.wrapper}>
       <View style={styles.card}>
         <Text style={styles.title}>
-          {hasSearchQuery ? 'No results found' : 'No address created yet'}
+          {hasSearchQuery ? t('dashboard.emptySearchTitle') : t('dashboard.emptyTitle')}
         </Text>
         <Text style={styles.description}>
           {hasSearchQuery
-            ? 'Try adjusting your search or filter criteria.'
-            : 'Create your first delivery address to help couriers find your location.'}
+            ? t('dashboard.emptySearchDescription')
+            : t('dashboard.emptyDescription')}
         </Text>
       </View>
     </View>

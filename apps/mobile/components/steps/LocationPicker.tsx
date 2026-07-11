@@ -11,6 +11,7 @@ import {
   Platform,
   ScrollView as RNScrollView,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import MapView, { Marker, PROVIDER_GOOGLE, PROVIDER_DEFAULT, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
 import Svg, { Circle, Path } from 'react-native-svg';
@@ -118,6 +119,7 @@ export function LocationPicker({
   placeholder = 'Search for the delivery address...',
   defaultCenter = DEFAULT_CENTER,
 }: LocationPickerProps) {
+  const { t } = useTranslation();
   const mapRef = useRef<MapView>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ignoreNextMapPressRef = useRef(false);
@@ -239,8 +241,8 @@ export function LocationPicker({
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(
-          'Permission Denied',
-          'Please allow location access in your device settings to use this feature.',
+          t('location.permissionDenied'),
+          t('location.locationError'),
         );
         return;
       }
@@ -258,7 +260,7 @@ export function LocationPicker({
       onChange({ coordinates: coord, ...geo });
       setSearchText(geo.formattedAddress);
     } catch {
-      Alert.alert('Error', 'Unable to get your location. Please try again.');
+      Alert.alert(t('common.error'), t('location.locationError'));
     } finally {
       setLoadingGps(false);
     }
@@ -290,9 +292,9 @@ export function LocationPicker({
             <Circle cx={12} cy={12} r={10} stroke="#dc2626" strokeWidth={2} />
             <Path d="M12 7v6M12 16v1" stroke="#dc2626" strokeWidth={2} strokeLinecap="round" />
           </Svg>
-          <Text style={styles.errorText}>Google Maps API key is not configured</Text>
+          <Text style={styles.errorText}>{t('location.apiKeyMissing')}</Text>
           <Text style={styles.errorHint}>
-            Set EXPO_PUBLIC_GOOGLE_MAPS_API_KEY in apps/mobile/.env (or as an EAS secret) and rebuild the app.
+            {t('location.apiKeyHint')}
           </Text>
         </View>
       </View>
@@ -426,7 +428,7 @@ export function LocationPicker({
         {!mapReady && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color="#2c3e50" />
-            <Text style={styles.loadingText}>Loading map...</Text>
+            <Text style={styles.loadingText}>{t('location.loadingMap')}</Text>
           </View>
         )}
 
@@ -441,7 +443,7 @@ export function LocationPicker({
               <Circle cx={12} cy={10} r={3} stroke="#2c3e50" strokeWidth={2} />
             </Svg>
             <Text style={styles.hintText}>
-              Search for an address or tap on the map to drop a pin
+              {t('location.searchHint')}
             </Text>
           </View>
         )}

@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { ADDRESS_TYPE_LABELS, getMetadataFieldConfigs } from '@guidenav/types';
 import type { AddressType } from '@guidenav/types';
@@ -26,6 +27,7 @@ export function StepsOverviewStep({
   saving,
   onAddFirstStep,
 }: StepsOverviewStepProps) {
+  const { t } = useTranslation();
   const typeLabel = ADDRESS_TYPE_LABELS[addressType]?.en ?? addressType;
   const fieldConfigs = getMetadataFieldConfigs(addressType);
 
@@ -64,7 +66,7 @@ export function StepsOverviewStep({
 
         {/* Steps header */}
         <View style={styles.stepsHeader}>
-          <Text style={styles.stepsTitle}>Steps</Text>
+          <Text style={styles.stepsTitle}>{t('create.stepsTitle')}</Text>
           <View style={styles.stepsBadge}>
             <Text style={styles.stepsBadgeText}>0</Text>
           </View>
@@ -74,28 +76,28 @@ export function StepsOverviewStep({
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>🛡️</Text>
           <Text style={styles.emptyTitle}>
-            Add step-by-step guidance for couriers
+            {t('create.stepsSubtitle')}
           </Text>
           <Text style={styles.emptySubtitle}>
-            Help delivery couriers complete deliveries by adding:
+            {t('create.stepsDescription1')}
           </Text>
           <View style={styles.examplesList}>
             <View style={styles.exampleRow}>
               <Text style={styles.exampleIcon}>🖼️</Text>
               <Text style={styles.exampleText}>
-                Photos with arrows pointing to entrances
+                {t('create.stepsDescription2')}
               </Text>
             </View>
             <View style={styles.exampleRow}>
               <Text style={styles.exampleIcon}>📋</Text>
               <Text style={styles.exampleText}>
-                Instructions for parking or access codes
+                {t('create.stepsDescription3')}
               </Text>
             </View>
             <View style={styles.exampleRow}>
               <Text style={styles.exampleIcon}>📍</Text>
               <Text style={styles.exampleText}>
-                Markers highlighting key landmarks
+                {t('create.stepsDescription4')}
               </Text>
             </View>
           </View>
@@ -110,7 +112,7 @@ export function StepsOverviewStep({
           {saving ? (
             <ActivityIndicator color={Colors.textSecondary} size="small" />
           ) : (
-            <Text style={styles.addStepButtonText}>+ Add First Step</Text>
+            <Text style={styles.addStepButtonText}>+ {t('create.addFirstStep')}</Text>
           )}
         </Pressable>
       </ScrollView>

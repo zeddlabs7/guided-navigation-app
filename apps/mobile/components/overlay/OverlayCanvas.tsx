@@ -5,9 +5,10 @@ import {
   StyleSheet,
   type LayoutChangeEvent,
 } from 'react-native';
-import { Image, type ImageLoadEventData } from 'expo-image';
+import { Image } from 'expo-image';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Svg, { Path } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 import type { Overlay } from '@guidenav/types';
 import { ArrowOverlay } from './ArrowOverlay';
 import { MarkerDot, MarkerLabel, computeLabelPosition } from './MarkerOverlay';
@@ -48,8 +49,9 @@ export function OverlayCanvas({
   onUpdateOverlay,
   onCanvasTap,
 }: OverlayCanvasProps) {
+  const { t } = useTranslation();
+  const FIXED_ASPECT_RATIO = 4 / 5;
   const [imageLayout, setImageLayout] = useState({ width: 0, height: 0 });
-  const [imageAspect, setImageAspect] = useState(4 / 3);
   const canvasLayoutRef = useRef<CanvasLayout>(INITIAL_LAYOUT);
   const overlayLayerRef = useRef<View>(null);
 
@@ -63,17 +65,6 @@ export function OverlayCanvas({
 
   const handleOverlayLayerLayout = useCallback(
     (_event: LayoutChangeEvent) => {
-      syncCanvasLayout();
-    },
-    [syncCanvasLayout],
-  );
-
-  const handleImageLoad = useCallback(
-    (event: ImageLoadEventData) => {
-      const { width, height } = event.source;
-      if (width && height) {
-        setImageAspect(width / height);
-      }
       syncCanvasLayout();
     },
     [syncCanvasLayout],
@@ -138,10 +129,10 @@ export function OverlayCanvas({
     <View style={styles.canvas}>
       <Image
         source={{ uri: imageUrl }}
-        style={[styles.image, { aspectRatio: imageAspect }]}
+        style={[styles.image, { aspectRatio: FIXED_ASPECT_RATIO }]}
         contentFit="contain"
         cachePolicy="memory-disk"
-        onLoad={handleImageLoad}
+        onLoad={syncCanvasLayout}
       />
 
       <View
@@ -171,7 +162,7 @@ export function OverlayCanvas({
       {(mode === 'add-arrow' || mode === 'add-marker') && (
         <View style={styles.hint} pointerEvents="none">
           <Text style={styles.hintText}>
-            {mode === 'add-arrow' ? 'Tap to place arrow' : 'Tap to place marker'}
+            {mode === 'add-arrow' ? t('overlay.tapToPlaceArrow') : t('overlay.tapToPlaceMarker')}
           </Text>
         </View>
       )}

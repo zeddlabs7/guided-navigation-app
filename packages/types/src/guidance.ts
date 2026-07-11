@@ -49,6 +49,7 @@ export interface GuidanceSet {
   id: string;
   recipientUserId: string;
   title: string;
+  titleArabic?: string;
   description: string | null;
   status: GuidanceStatus;
   languageOriginal: Language;
@@ -133,6 +134,7 @@ export type CreateGuidanceSetInput = Pick<
   GuidanceSet,
   'title' | 'description' | 'languageOriginal' | 'availabilityMode' | 'destinationCoordinates' | 'addressType'
 > & {
+  titleArabic?: string;
   availabilityStartTs?: Timestamp;
   availabilityEndTs?: Timestamp;
   buildingNumber?: string;
@@ -151,6 +153,7 @@ export type UpdateGuidanceSetInput = Partial<
   Pick<
     GuidanceSet,
     | 'title'
+    | 'titleArabic'
     | 'description'
     | 'status'
     | 'availabilityMode'

@@ -166,6 +166,7 @@ async function loadGuidanceSet() {
     }
     
     title.value = guidanceSet.title;
+    titleArabic.value = guidanceSet.titleArabic || '';
     status.value = guidanceSet.status;
     addressType.value = guidanceSet.addressType || null;
     
@@ -312,8 +313,10 @@ async function handleSaveDraft() {
   error.value = null;
   
   try {
+    const arTitle = titleArabic.value.trim();
     await updateGuidanceSet(guidanceSetId, {
       title: title.value.trim(),
+      ...(arTitle ? { titleArabic: arTitle } : {}),
       addressType: addressType.value,
       ...(requiresMetadata.value && buildMetadataPayload()),
     });

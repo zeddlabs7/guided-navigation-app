@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import type { GuidanceStatus } from '@guidenav/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGuidanceSets } from '@/hooks/useGuidanceSets';
@@ -22,6 +23,7 @@ type FilterKey = 'all' | GuidanceStatus;
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { firebaseUser } = useAuth();
   const userId = firebaseUser?.uid;
 
@@ -31,7 +33,6 @@ export default function DashboardScreen() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
-  const [currentLanguage, setCurrentLanguage] = useState<'en' | 'ar'>('en');
 
   const optimisticDeletedRef = useRef<Set<string>>(new Set());
 
@@ -70,12 +71,12 @@ export default function DashboardScreen() {
     (id: string) => {
       const set = guidanceSets.find((s) => s.id === id);
       Alert.alert(
-        'Delete Address',
-        `Are you sure you want to delete "${set?.title ?? 'this address'}"? This cannot be undone.`,
+        t('dashboard.deleteTitle'),
+        t('dashboard.deleteMessage', { title: set?.title ?? 'this address' }),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Delete',
+            text: t('common.delete'),
             style: 'destructive',
             onPress: async () => {
               optimisticDeletedRef.current.add(id);
@@ -90,7 +91,7 @@ export default function DashboardScreen() {
                   next.delete(id);
                   return next;
                 });
-                Alert.alert('Error', 'Failed to delete. Please try again.');
+                Alert.alert(t('common.error'), t('dashboard.deleteError'));
               }
             },
           },
@@ -111,10 +112,10 @@ export default function DashboardScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorTitle}>{t('dashboard.errorTitle')}</Text>
           <Text style={styles.errorMessage}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={refresh}>
-            <Text style={styles.retryText}>Try Again</Text>
+            <Text style={styles.retryText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -123,15 +124,12 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <AppHeader
-        currentLanguage={currentLanguage}
-        onLanguageToggle={() => setCurrentLanguage((l) => (l === 'en' ? 'ar' : 'en'))}
-      />
+      <AppHeader />
 
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.text} />
-          <Text style={styles.loadingText}>Loading your addresses...</Text>
+          <Text style={styles.loadingText}>{t('dashboard.loading')}</Text>
         </View>
       ) : (
         <ScrollView
@@ -147,9 +145,9 @@ export default function DashboardScreen() {
           }
         >
           <View style={styles.pageTitle}>
-            <Text style={styles.title}>My Addresses</Text>
+            <Text style={styles.title}>{t('dashboard.title')}</Text>
             <Text style={styles.subtitle}>
-              Create and manage step-by-step delivery addresses for couriers.
+              {t('dashboard.subtitle')}
             </Text>
           </View>
 

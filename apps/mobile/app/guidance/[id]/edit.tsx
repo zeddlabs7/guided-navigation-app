@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { ScreenFooter, useFooterScrollPadding } from '@/components/ui/ScreenFooter';
 import { requiresMetadata as checkRequiresMetadata } from '@guidenav/types';
@@ -22,6 +23,7 @@ import type {
   Overlay,
 } from '@guidenav/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   getGuidanceSet,
   getGuidanceSteps,
@@ -51,11 +53,11 @@ const ADDRESS_TYPE_ICONS: Record<AddressType, string> = {
 
 const STATUS_CONFIG: Record<
   GuidanceStatus,
-  { bg: string; dot: string; text: string; label: string }
+  { bg: string; dot: string; text: string; labelKey: string }
 > = {
-  PUBLISHED: { bg: '#f0fdf4', dot: '#00c950', text: '#008236', label: 'Published' },
-  DRAFT: { bg: '#fffbeb', dot: '#ffb900', text: '#bb4d00', label: 'Draft' },
-  DISABLED: { bg: '#f3f4f6', dot: '#99a1af', text: '#6a7282', label: 'Disabled' },
+  PUBLISHED: { bg: '#f0fdf4', dot: '#00c950', text: '#008236', labelKey: 'card.published' },
+  DRAFT: { bg: '#fffbeb', dot: '#ffb900', text: '#bb4d00', labelKey: 'card.draft' },
+  DISABLED: { bg: '#f3f4f6', dot: '#99a1af', text: '#6a7282', labelKey: 'card.disabled' },
 };
 
 interface StepData {
@@ -67,12 +69,15 @@ interface StepData {
 }
 
 export default function EditGuidanceScreen() {
+  const { t } = useTranslation();
+  const { language } = useLanguage();
   const router = useRouter();
   const { id: guidanceSetId } = useLocalSearchParams<{ id: string }>();
   const { firebaseUser } = useAuth();
 
   const [currentStep, setCurrentStep] = useState<FormStep>('steps');
   const [title, setTitle] = useState('');
+  const [titleArabic, setTitleArabic] = useState('');
   const [status, setStatus] = useState<GuidanceStatus>('DRAFT');
   const [addressType, setAddressType] = useState<AddressType | null>(null);
   const [metadata, setMetadata] = useState<Record<string, string>>({});
@@ -81,7 +86,7 @@ export default function EditGuidanceScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const displayTitle = title.trim() || 'Untitled Address';
+  const displayTitle = title.trim() || t('edit.untitledAddress');
   const footerScrollPadding = useFooterScrollPadding(60);
 
   const loadData = useCallback(async () => {
@@ -95,12 +100,13 @@ export default function EditGuidanceScreen() {
       ]);
 
       if (!guidanceSet) {
-        setError('Address set not found');
+        setError(t('edit.errorTitle'));
         setLoading(false);
         return;
       }
 
       setTitle(guidanceSet.title);
+      setTitleArabic(guidanceSet.titleArabic || '');
       setStatus(guidanceSet.status);
       setAddressType(guidanceSet.addressType || null);
       setMetadata({
@@ -125,7 +131,7 @@ export default function EditGuidanceScreen() {
       );
     } catch (err) {
       console.error('Failed to load address set:', err);
-      setError('Failed to load address set. Please try again.');
+      setError(t('edit.errorSave'));
     } finally {
       setLoading(false);
     }
@@ -139,14 +145,14 @@ export default function EditGuidanceScreen() {
 
   const stepIndicatorConfig = useMemo(
     () => [
-      { key: 'title', label: 'Title', enabled: true },
-      { key: 'addressType', label: 'Type', enabled: true },
+      { key: 'title', label: t('create.stepTitle'), enabled: true },
+      { key: 'addressType', label: t('create.stepType'), enabled: true },
       ...(addressType && checkRequiresMetadata(addressType)
-        ? [{ key: 'metadata', label: 'Details', enabled: true }]
+        ? [{ key: 'metadata', label: t('create.stepDetails'), enabled: true }]
         : []),
-      { key: 'steps', label: 'Steps', enabled: true },
+      { key: 'steps', label: t('create.stepSteps'), enabled: true },
     ],
-    [addressType],
+    [addressType, t],
   );
 
   const handleStepPress = useCallback((stepKey: string) => {
@@ -238,8 +244,10 @@ export default function EditGuidanceScreen() {
         addressType && checkRequiresMetadata(addressType)
           ? buildMetadataPayload()
           : {};
+      const arTitle = titleArabic.trim();
       await updateGuidanceSet(guidanceSetId, {
         title: title.trim(),
+        ...(arTitle ? { titleArabic: arTitle } : {}),
         addressType,
         ...metaPayload,
       });
@@ -249,11 +257,11 @@ export default function EditGuidanceScreen() {
       }
     } catch (err) {
       console.error('Failed to save guidance set:', err);
-      setError('Failed to save. Please try again.');
+      setError(t('edit.errorSave'));
     } finally {
       setSaving(false);
     }
-  }, [guidanceSetId, title, addressType, steps, buildMetadataPayload]);
+  }, [guidanceSetId, title, titleArabic, addressType, steps, buildMetadataPayload]);
 
   const handlePreviewAndPublish = useCallback(() => {
     router.push(`/guidance/${guidanceSetId}/preview` as any);
@@ -334,12 +342,12 @@ export default function EditGuidanceScreen() {
   const handleDeleteStep = useCallback(
     (index: number) => {
       Alert.alert(
-        'Delete Step',
-        'Are you sure you want to delete this step?',
+        t('edit.deleteStepTitle'),
+        t('edit.deleteStepMessage'),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Delete',
+            text: t('common.delete'),
             style: 'destructive',
             onPress: async () => {
               const step = steps[index];
@@ -353,7 +361,7 @@ export default function EditGuidanceScreen() {
                 const revert = [...newSteps];
                 revert.splice(index, 0, step);
                 setSteps(revert);
-                Alert.alert('Error', 'Failed to delete step. Please try again.');
+                Alert.alert(t('common.error'), t('edit.errorDelete'));
               }
             },
           },
@@ -365,12 +373,12 @@ export default function EditGuidanceScreen() {
 
   const handleDeleteGuidance = useCallback(() => {
     Alert.alert(
-      'Delete Address',
-      `Are you sure you want to delete "${title}"? This action cannot be undone.`,
+      t('edit.deleteAddressTitle'),
+      t('edit.deleteAddressMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             setSaving(true);
@@ -379,7 +387,7 @@ export default function EditGuidanceScreen() {
               router.replace('/(tabs)/dashboard');
             } catch (err) {
               console.error('Failed to delete guidance set:', err);
-              Alert.alert('Error', 'Failed to delete. Please try again.');
+              Alert.alert(t('common.error'), t('edit.errorDelete'));
               setSaving(false);
             }
           },
@@ -392,7 +400,7 @@ export default function EditGuidanceScreen() {
 
   const renderStepsContent = () => {
     const typeLabel = addressType
-      ? ADDRESS_TYPE_LABELS[addressType]?.en ?? addressType
+      ? ADDRESS_TYPE_LABELS[addressType]?.[language] ?? ADDRESS_TYPE_LABELS[addressType]?.en ?? addressType
       : '';
     const fieldConfigs = addressType ? getMetadataFieldConfigs(addressType) : [];
     const visibleMeta = fieldConfigs
@@ -455,7 +463,7 @@ export default function EditGuidanceScreen() {
 
           {/* Steps header */}
           <View style={styles.stepsHeader}>
-            <Text style={styles.stepsTitle}>Steps</Text>
+            <Text style={styles.stepsTitle}>{t('edit.stepsSection')}</Text>
             <View style={styles.stepsCountBadge}>
               <Text style={styles.stepsCountText}>{steps.length}</Text>
             </View>
@@ -466,28 +474,28 @@ export default function EditGuidanceScreen() {
             <View style={styles.emptyState}>
               <Text style={styles.emptyIcon}>🛡️</Text>
               <Text style={styles.emptyTitle}>
-                Add step-by-step guidance for couriers
+                {t('edit.stepsSubtitle')}
               </Text>
               <Text style={styles.emptySubtitle}>
-                Help delivery couriers complete deliveries by adding:
+                {t('edit.stepsDescription1')}
               </Text>
               <View style={styles.examplesList}>
                 <View style={styles.exampleRow}>
                   <Text style={styles.exampleEmoji}>🖼️</Text>
                   <Text style={styles.exampleText}>
-                    Photos with arrows pointing to entrances
+                    {t('edit.stepsDescription2')}
                   </Text>
                 </View>
                 <View style={styles.exampleRow}>
                   <Text style={styles.exampleEmoji}>📋</Text>
                   <Text style={styles.exampleText}>
-                    Instructions for parking or access codes
+                    {t('edit.stepsDescription3')}
                   </Text>
                 </View>
                 <View style={styles.exampleRow}>
                   <Text style={styles.exampleEmoji}>📍</Text>
                   <Text style={styles.exampleText}>
-                    Markers highlighting key landmarks
+                    {t('edit.stepsDescription4')}
                   </Text>
                 </View>
               </View>
@@ -529,7 +537,7 @@ export default function EditGuidanceScreen() {
               />
             </Svg>
             <Text style={styles.addStepButtonText}>
-              {steps.length === 0 ? 'Add First Step' : 'Add Step'}
+              {steps.length === 0 ? t('edit.addFirstStep') : t('edit.addStep')}
             </Text>
           </Pressable>
 
@@ -551,7 +559,7 @@ export default function EditGuidanceScreen() {
                 strokeLinejoin="round"
               />
             </Svg>
-            <Text style={styles.deleteButtonText}>Delete Address</Text>
+            <Text style={styles.deleteButtonText}>{t('edit.deleteAddress')}</Text>
           </Pressable>
         </ScrollView>
 
@@ -562,7 +570,7 @@ export default function EditGuidanceScreen() {
             disabled={saving}
           >
             <Text style={styles.footerBtnSecondaryText}>
-              {saving ? 'Saving...' : 'Save Draft'}
+              {saving ? t('edit.saving') : t('edit.saveDraft')}
             </Text>
           </Pressable>
           <Pressable
@@ -570,7 +578,7 @@ export default function EditGuidanceScreen() {
             onPress={handlePreviewAndPublish}
             disabled={saving}
           >
-            <Text style={styles.footerBtnPrimaryText}>Preview & Publish</Text>
+            <Text style={styles.footerBtnPrimaryText}>{t('edit.previewPublish')}</Text>
           </Pressable>
         </ScreenFooter>
       </View>
@@ -583,7 +591,9 @@ export default function EditGuidanceScreen() {
         return (
           <TitleStep
             title={title}
+            titleArabic={titleArabic}
             onTitleChange={setTitle}
+            onTitleArabicChange={setTitleArabic}
             onContinue={handleTitleContinue}
           />
         );
@@ -626,16 +636,16 @@ export default function EditGuidanceScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorTitle}>{t('edit.errorTitle')}</Text>
           <Text style={styles.errorDescription}>{error}</Text>
           <Pressable style={styles.retryButton} onPress={loadData}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
+            <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
           </Pressable>
           <Pressable
             style={styles.backToDashboardButton}
             onPress={handleGoToDashboard}
           >
-            <Text style={styles.backToDashboardText}>Back to Dashboard</Text>
+            <Text style={styles.backToDashboardText}>{t('edit.backToDashboard')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -662,7 +672,7 @@ export default function EditGuidanceScreen() {
         </View>
 
         <View style={styles.headerInfo}>
-          <Text style={styles.headerLabel}>EDIT ADDRESS</Text>
+          <Text style={styles.headerLabel}>{t('edit.title')}</Text>
           <Text style={styles.headerTitle} numberOfLines={1}>
             {displayTitle}
           </Text>
@@ -672,7 +682,7 @@ export default function EditGuidanceScreen() {
         <View style={[styles.statusBadge, { backgroundColor: statusConf.bg }]}>
           <View style={[styles.statusDot, { backgroundColor: statusConf.dot }]} />
           <Text style={[styles.statusText, { color: statusConf.text }]}>
-            {statusConf.label}
+            {t(statusConf.labelKey)}
           </Text>
         </View>
 
@@ -684,7 +694,7 @@ export default function EditGuidanceScreen() {
             disabled={saving || loading}
           >
             <Text style={styles.headerSaveBtnText}>
-              {saving ? 'Saving...' : 'Save'}
+              {saving ? t('edit.saving') : t('edit.save')}
             </Text>
           </Pressable>
         )}

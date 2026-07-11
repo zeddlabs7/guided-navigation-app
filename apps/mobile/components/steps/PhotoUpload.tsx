@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,8 @@ import {
   Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { validateImageFile } from '@guidenav/core';
-
-function getImagePicker() {
-  return require('expo-image-picker') as typeof import('expo-image-picker');
-}
+import ImageCropPicker from 'react-native-image-crop-picker';
+import { useTranslation } from 'react-i18next';
 
 interface PhotoUploadProps {
   imageUri: string | null;
@@ -24,6 +21,10 @@ interface PhotoUploadProps {
   disabled?: boolean;
 }
 
+const FIXED_ASPECT_RATIO = 4 / 5;
+const CROP_WIDTH = 800;
+const CROP_HEIGHT = 1000;
+
 export function PhotoUpload({
   imageUri,
   uploading,
@@ -31,12 +32,81 @@ export function PhotoUpload({
   onRemove,
   disabled,
 }: PhotoUploadProps) {
-  const [imageAspect, setImageAspect] = useState(4 / 3);
+  const { t } = useTranslation();
+
+  const handleResult = useCallback(
+    (image: { path: string }) => {
+      onImageSelected(image.path);
+    },
+    [onImageSelected],
+  );
+
+  const handleError = useCallback((err: any) => {
+    if (err?.code === 'E_PICKER_CANCELLED') return;
+    console.error('Image picker error:', err);
+    Alert.alert(t('common.error'), t('steps.failedToPick'));
+  }, []);
+
+  const launchCamera = useCallback(async () => {
+    try {
+      const image = await ImageCropPicker.openCamera({
+        width: CROP_WIDTH,
+        height: CROP_HEIGHT,
+        cropping: true,
+        cropperToolbarTitle: t('steps.cropPhoto'),
+        cropperChooseText: t('common.done'),
+        cropperCancelText: t('common.cancel'),
+        cropperChooseColor: '#ffffff',
+        mediaType: 'photo',
+        compressImageQuality: 0.7,
+        freeStyleCropEnabled: false,
+        hideBottomControls: true,
+        enableRotationGesture: true,
+        cropperActiveWidgetColor: '#2563eb',
+        cropperStatusBarColor: '#000000',
+        cropperToolbarColor: '#000000',
+        cropperToolbarWidgetColor: '#ffffff',
+        showCropGuidelines: false,
+        showCropFrame: true,
+      });
+      handleResult(image);
+    } catch (err: any) {
+      handleError(err);
+    }
+  }, [handleResult, handleError, t]);
+
+  const launchGallery = useCallback(async () => {
+    try {
+      const image = await ImageCropPicker.openPicker({
+        width: CROP_WIDTH,
+        height: CROP_HEIGHT,
+        cropping: true,
+        cropperToolbarTitle: t('steps.cropPhoto'),
+        cropperChooseText: t('common.done'),
+        cropperCancelText: t('common.cancel'),
+        cropperChooseColor: '#ffffff',
+        mediaType: 'photo',
+        compressImageQuality: 0.7,
+        freeStyleCropEnabled: false,
+        hideBottomControls: true,
+        enableRotationGesture: true,
+        cropperActiveWidgetColor: '#2563eb',
+        cropperStatusBarColor: '#000000',
+        cropperToolbarColor: '#000000',
+        cropperToolbarWidgetColor: '#ffffff',
+        showCropGuidelines: false,
+        showCropFrame: true,
+      });
+      handleResult(image);
+    } catch (err: any) {
+      handleError(err);
+    }
+  }, [handleResult, handleError, t]);
 
   const showPicker = useCallback(async () => {
     if (disabled) return;
 
-    const options = ['Camera', 'Choose from Gallery', 'Cancel'];
+    const options = [t('steps.camera'), t('steps.chooseGallery'), t('common.cancel')];
     const cancelButtonIndex = 2;
 
     if (Platform.OS === 'ios') {
@@ -48,102 +118,35 @@ export function PhotoUpload({
         },
       );
     } else {
-      Alert.alert('Upload Photo', 'Choose a source', [
-        { text: 'Camera', onPress: launchCamera },
-        { text: 'Choose from Gallery', onPress: launchGallery },
-        { text: 'Cancel', style: 'cancel' },
+      Alert.alert(t('steps.uploadPhotoTitle'), t('steps.chooseSource'), [
+        { text: t('steps.camera'), onPress: launchCamera },
+        { text: t('steps.chooseGallery'), onPress: launchGallery },
+        { text: t('common.cancel'), style: 'cancel' },
       ]);
     }
-  }, [disabled]);
-
-  const launchCamera = useCallback(async () => {
-    const picker = getImagePicker();
-    const { status } = await picker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Camera access is required to take photos.');
-      return;
-    }
-
-    const result = await picker.launchCameraAsync({
-      mediaTypes: ['images'],
-      quality: 0.5,
-      allowsEditing: false,
-      exif: false,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      handleAsset(result.assets[0]);
-    }
-  }, []);
-
-  const launchGallery = useCallback(async () => {
-    const picker = getImagePicker();
-    const { status } = await picker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Photo library access is required.');
-      return;
-    }
-
-    const result = await picker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.5,
-      allowsEditing: false,
-      exif: false,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      handleAsset(result.assets[0]);
-    }
-  }, []);
-
-  const handleAsset = useCallback(
-    (asset: any) => {
-      const fileSize = asset.fileSize ?? 0;
-      const width = asset.width ?? 0;
-      const height = asset.height ?? 0;
-      const mimeType = asset.mimeType ?? 'image/jpeg';
-
-      const validation = validateImageFile({
-        size: fileSize,
-        type: mimeType,
-        width,
-        height,
-      });
-
-      if (!validation.valid) {
-        Alert.alert('Invalid Image', validation.errors.join('\n'));
-        return;
-      }
-
-      if (width > 0 && height > 0) {
-        setImageAspect(width / height);
-      }
-
-      onImageSelected(asset.uri);
-    },
-    [onImageSelected],
-  );
+  }, [disabled, launchCamera, launchGallery, t]);
 
   if (imageUri) {
     return (
       <View style={styles.container}>
         <View style={styles.labelRow}>
-          <Text style={styles.label}>Upload Photo (optional)</Text>
-          <Pressable onPress={onRemove} disabled={disabled || uploading}>
-            <Text style={styles.removeText}>Remove</Text>
-          </Pressable>
+          <Text style={styles.label}>{t('steps.uploadPhoto')}</Text>
+          {!uploading && (
+            <Pressable onPress={onRemove} disabled={disabled}>
+              <Text style={styles.removeText}>{t('steps.remove')}</Text>
+            </Pressable>
+          )}
         </View>
         <View style={styles.privacyBanner}>
           <Text style={styles.privacyIcon}>🛡️</Text>
           <Text style={styles.privacyText}>
-            For privacy, avoid uploading photos with faces, license plates, or
-            private documents.
+            {t('steps.privacyBanner')}
           </Text>
         </View>
         <View style={styles.previewContainer}>
           <Image
             source={{ uri: imageUri }}
-            style={[styles.previewImage, { aspectRatio: imageAspect }]}
+            style={[styles.previewImage, { aspectRatio: FIXED_ASPECT_RATIO }]}
             contentFit="contain"
             cachePolicy="memory-disk"
             transition={200}
@@ -151,7 +154,7 @@ export function PhotoUpload({
           {uploading && (
             <View style={styles.uploadIndicator}>
               <ActivityIndicator color="#ffffff" size="small" />
-              <Text style={styles.uploadIndicatorText}>Uploading...</Text>
+              <Text style={styles.uploadIndicatorText}>{t('steps.uploading')}</Text>
             </View>
           )}
         </View>
@@ -161,12 +164,11 @@ export function PhotoUpload({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Upload Photo (optional)</Text>
+      <Text style={styles.label}>{t('steps.uploadPhoto')}</Text>
       <View style={styles.privacyBanner}>
         <Text style={styles.privacyIcon}>🛡️</Text>
         <Text style={styles.privacyText}>
-          For privacy, avoid uploading photos with faces, license plates, or
-          private documents.
+          {t('steps.privacyBanner')}
         </Text>
       </View>
       <Pressable
@@ -175,7 +177,7 @@ export function PhotoUpload({
         disabled={disabled}
       >
         <Text style={styles.uploadIcon}>📷</Text>
-        <Text style={styles.uploadText}>Tap to take or choose a photo</Text>
+        <Text style={styles.uploadText}>{t('steps.tapToUpload')}</Text>
       </Pressable>
     </View>
   );

@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Svg, { Path } from 'react-native-svg';
 import type { OverlayType, ArrowDirection } from '@guidenav/types';
 
-const DIRECTIONS: { value: ArrowDirection; label: string }[] = [
-  { value: 'left', label: 'Left' },
-  { value: 'right', label: 'Right' },
-  { value: 'up-down', label: 'Up/Down' },
-  { value: 'forward-backward', label: 'Forward' },
-];
+const DIRECTION_VALUES: ArrowDirection[] = ['left', 'right', 'up-down', 'forward-backward'];
+
+const DIRECTION_KEYS: Record<ArrowDirection, string> = {
+  'left': 'overlay.left',
+  'right': 'overlay.right',
+  'up-down': 'overlay.up',
+  'forward-backward': 'overlay.forward',
+};
 
 function DirectionSvgIcon({
   direction,
@@ -75,6 +78,7 @@ export function OverlayToolbar({
   onDelete,
   onDone,
 }: OverlayToolbarProps) {
+  const { t } = useTranslation();
   const [showDirectionPicker, setShowDirectionPicker] = useState(false);
 
   if (!visible) return null;
@@ -106,17 +110,17 @@ export function OverlayToolbar({
 
           {showDirectionPicker && (
             <View style={styles.directionPicker}>
-              {DIRECTIONS.map((dir) => (
+              {DIRECTION_VALUES.map((dirValue) => (
                 <Pressable
-                  key={dir.value}
+                  key={dirValue}
                   style={[
                     styles.directionOption,
-                    arrowDirection === dir.value && styles.directionOptionSelected,
+                    arrowDirection === dirValue && styles.directionOptionSelected,
                   ]}
-                  onPress={() => selectDirection(dir.value)}
+                  onPress={() => selectDirection(dirValue)}
                 >
-                  <DirectionSvgIcon direction={dir.value} size={14} color="#101828" />
-                  <Text style={styles.directionOptionLabel}>{dir.label}</Text>
+                  <DirectionSvgIcon direction={dirValue} size={14} color="#101828" />
+                  <Text style={styles.directionOptionLabel}>{t(DIRECTION_KEYS[dirValue])}</Text>
                 </Pressable>
               ))}
             </View>
@@ -142,7 +146,7 @@ export function OverlayToolbar({
               strokeLinejoin="round"
             />
           </Svg>
-          <Text style={styles.labelBtnText}>{hasLabel ? 'Edit' : 'Add Note'}</Text>
+          <Text style={styles.labelBtnText}>{hasLabel ? t('overlay.editNote') : t('overlay.addNote')}</Text>
         </Pressable>
       )}
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, View, ScrollView, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import type { GuidanceStatus } from '@guidenav/types';
 import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
 
@@ -11,22 +12,23 @@ interface FilterTabsProps {
   counts: Record<FilterKey, number>;
 }
 
-const TABS: { key: FilterKey; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'PUBLISHED', label: 'Published' },
-  { key: 'DRAFT', label: 'Draft' },
-  { key: 'DISABLED', label: 'Disabled' },
+const TAB_KEYS: { key: FilterKey; labelKey: string }[] = [
+  { key: 'all', labelKey: 'dashboard.filterAll' },
+  { key: 'PUBLISHED', labelKey: 'dashboard.filterPublished' },
+  { key: 'DRAFT', labelKey: 'dashboard.filterDraft' },
+  // { key: 'DISABLED', labelKey: 'dashboard.filterDisabled' },
 ];
 
 export function FilterTabs({ activeFilter, onFilterChange, counts }: FilterTabsProps) {
+  const { t } = useTranslation();
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.wrapper}
       style={styles.scrollView}
+      contentContainerStyle={styles.wrapper}
     >
-      {TABS.map((tab) => {
+      {TAB_KEYS.map((tab) => {
         const isActive = activeFilter === tab.key;
         return (
           <TouchableOpacity
@@ -36,7 +38,7 @@ export function FilterTabs({ activeFilter, onFilterChange, counts }: FilterTabsP
             activeOpacity={0.7}
           >
             <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
-              {tab.label}
+              {t(tab.labelKey)}
             </Text>
             <View style={[styles.countBadge, isActive && styles.countBadgeActive]}>
               <Text style={[styles.countText, isActive && styles.countTextActive]}>
@@ -53,21 +55,25 @@ export function FilterTabs({ activeFilter, onFilterChange, counts }: FilterTabsP
 const styles = StyleSheet.create({
   scrollView: {
     flexGrow: 0,
+    width: '100%'
   },
   wrapper: {
     flexDirection: 'row',
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.sm,
+    width: '100%',
     gap: 8,
   },
   tab: {
     flexDirection: 'row',
+    flexGrow: 1,
     alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: BorderRadius.full,
     backgroundColor: Colors.surface,
     borderWidth: 1,
+    justifyContent: 'space-between',
     borderColor: Colors.border,
   },
   tabActive: {

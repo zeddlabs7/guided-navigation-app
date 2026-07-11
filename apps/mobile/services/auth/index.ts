@@ -1,4 +1,5 @@
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
+import functions from '@react-native-firebase/functions';
 
 export type FirebaseUser = FirebaseAuthTypes.User;
 export type ConfirmationResult = FirebaseAuthTypes.ConfirmationResult;
@@ -38,4 +39,17 @@ export async function signOut(): Promise<void> {
 
 export function getCurrentUser(): FirebaseUser | null {
   return auth().currentUser;
+}
+
+const DEV_BYPASS_UID = 'YCAilJHBfpeqoSrInaYJeqQVmwp1';
+
+/**
+ * Dev-only: calls the devSignIn Cloud Function to get a custom token
+ * and signs in as the designated test user (same as web app).
+ */
+export async function devSignIn(): Promise<void> {
+  const fn = functions().httpsCallable('devSignIn');
+  const result = await fn({ uid: DEV_BYPASS_UID });
+  const { customToken } = result.data as { customToken: string };
+  await auth().signInWithCustomToken(customToken);
 }

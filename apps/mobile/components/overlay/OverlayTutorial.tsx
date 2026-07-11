@@ -1,47 +1,45 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Svg, { Path, Circle } from 'react-native-svg';
 
 export type OverlayTutorialType = 'arrow' | 'marker';
 
 interface TutorialStep {
-  title: string;
-  description: string;
+  titleKey: string;
+  descKey: string;
   icon: string;
   forTypes: OverlayTutorialType[];
 }
 
 const ALL_STEPS: TutorialStep[] = [
   {
-    title: 'Drag to Move',
-    description: 'Tap and hold the arrow, then drag your finger to move it anywhere on the image.',
+    titleKey: 'overlay.tutorialDragTitle',
+    descKey: 'overlay.tutorialDragDesc',
     icon: 'drag',
     forTypes: ['arrow', 'marker'],
   },
   {
-    title: 'Resize with Handle',
-    description: 'See the resize icon on the right side of the arrow? Drag it UP to make the arrow bigger, or DOWN to make it smaller.',
+    titleKey: 'overlay.tutorialResizeTitle',
+    descKey: 'overlay.tutorialResizeDesc',
     icon: 'resize',
     forTypes: ['arrow'],
   },
   {
-    title: 'Rotate with Handle',
-    description:
-      'See the rotate icon below the arrow? Drag it LEFT or RIGHT in a circular motion to point the arrow in any direction.',
+    titleKey: 'overlay.tutorialRotateTitle',
+    descKey: 'overlay.tutorialRotateDesc',
     icon: 'rotate',
     forTypes: ['arrow'],
   },
   {
-    title: 'Drag to Move',
-    description:
-      'Tap and hold the marker, then drag your finger to move it anywhere on the image.',
+    titleKey: 'overlay.tutorialDragTitle',
+    descKey: 'overlay.tutorialDragDesc',
     icon: 'drag',
     forTypes: ['marker'],
   },
   {
-    title: 'Add Note on the Marker',
-    description:
-      'Use the "Add Note" button at the bottom to label your marker with helpful text for the courier.',
+    titleKey: 'overlay.tutorialNoteTitle',
+    descKey: 'overlay.tutorialNoteDesc',
     icon: 'label',
     forTypes: ['marker'],
   },
@@ -60,6 +58,7 @@ export function OverlayTutorial({
   onComplete,
   onSkip,
 }: OverlayTutorialProps) {
+  const { t } = useTranslation();
   const [currentStep, setCurrentStep] = useState(0);
 
   const steps = ALL_STEPS.filter((step) => step.forTypes.includes(type));
@@ -105,7 +104,7 @@ export function OverlayTutorial({
       <Pressable style={styles.overlay} onPress={handleSkip}>
         <Pressable style={styles.modal} onPress={(e) => e.stopPropagation()}>
           <Pressable style={styles.skipBtn} onPress={handleSkip}>
-            <Text style={styles.skipText}>Skip</Text>
+            <Text style={styles.skipText}>{t('overlay.tutorialSkip')}</Text>
           </Pressable>
 
           <View style={styles.content}>
@@ -121,9 +120,9 @@ export function OverlayTutorial({
               <TutorialIcon icon={currentStepData.icon} />
             </View>
 
-            <Text style={styles.title}>{currentStepData.title}</Text>
+            <Text style={styles.title}>{t(currentStepData.titleKey)}</Text>
             <Text style={styles.description}>
-              {currentStepData.description}
+              {t(currentStepData.descKey)}
             </Text>
           </View>
 
@@ -142,7 +141,7 @@ export function OverlayTutorial({
           <View style={styles.actions}>
             {currentStep > 0 && (
               <Pressable style={styles.btnSecondary} onPress={handleBack}>
-                <Text style={styles.btnSecondaryText}>Back</Text>
+                <Text style={styles.btnSecondaryText}>{t('overlay.tutorialBack')}</Text>
               </Pressable>
             )}
             <Pressable
@@ -150,7 +149,7 @@ export function OverlayTutorial({
               onPress={handleNext}
             >
               <Text style={styles.btnPrimaryText}>
-                {isLastStep ? 'Got it!' : 'Next'}
+                {isLastStep ? t('overlay.tutorialDone') : t('overlay.tutorialNext')}
               </Text>
             </Pressable>
           </View>

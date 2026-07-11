@@ -217,6 +217,7 @@ export async function createGuidanceSet(
   const docData: Record<string, any> = {
     recipientUserId: userId,
     title: input.title,
+    ...(input.titleArabic ? { titleArabic: input.titleArabic } : {}),
     description: input.description ?? null,
     status: 'DRAFT',
     languageOriginal: input.languageOriginal,
@@ -324,8 +325,9 @@ export async function deleteGuidanceStep(stepId: string): Promise<void> {
     });
 }
 
-const MAX_IMAGE_WIDTH = 1280;
-const COMPRESS_QUALITY = 0.7;
+const MAX_IMAGE_WIDTH = 800;
+const COMPRESS_QUALITY = 0.5;
+
 
 async function compressImage(localUri: string): Promise<{
   uri: string;
@@ -356,17 +358,39 @@ export async function uploadStepImage(
   localUri: string,
 ): Promise<StepImage> {
   const compressed = await compressImage(localUri);
-  const filePath = compressed.uri.replace(/^file:\/\//, '');
 
   const storagePath = `guidanceSets/${guidanceSetId}/steps/${stepId}/main.jpg`;
   const mimeType: SupportedImageMimeType = 'image/jpeg';
 
-  const ref = storage().ref(storagePath);
-  await ref.putFile(filePath, {
-    contentType: 'image/jpeg',
-    cacheControl: 'public, max-age=1209600',
+  const localResponse = await fetch(compressed.uri);
+  const fileBlob = await localResponse.blob();
+
+  const auth = require('@react-native-firebase/auth') as typeof import('@react-native-firebase/auth');
+  const idToken = await auth.default().currentUser?.getIdToken();
+  if (!idToken) throw new Error('Not authenticated');
+
+  const bucket = 'guided-navigation-app.firebasestorage.app';
+  const encodedPath = encodeURIComponent(storagePath);
+  const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodedPath}`;
+
+  const response = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${idToken}`,
+      'Content-Type': 'image/jpeg',
+      'X-Goog-Upload-Protocol': 'raw',
+    },
+    body: fileBlob,
   });
-  const publicUrl = await ref.getDownloadURL();
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Upload failed: ${response.status} — ${errText}`);
+  }
+
+  const metadata = await response.json();
+  const downloadToken = metadata.downloadTokens;
+  const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodedPath}?alt=media&token=${downloadToken}`;
 
   return {
     storagePath,

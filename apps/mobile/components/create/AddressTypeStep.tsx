@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { ADDRESS_TYPE_LABELS } from '@guidenav/types';
 import type { AddressType } from '@guidenav/types';
@@ -28,6 +29,7 @@ export function AddressTypeStep({
   onTypeSelect,
   onContinue,
 }: AddressTypeStepProps) {
+  const { t } = useTranslation();
   const handleContinue = useCallback(() => {
     if (selectedType) {
       onContinue();
@@ -41,8 +43,8 @@ export function AddressTypeStep({
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.sectionTitle}>Address Type</Text>
-        <Text style={styles.sectionSubtitle}>What type of address is this?</Text>
+        <Text style={styles.sectionTitle}>{t('create.addressType')}</Text>
+        <Text style={styles.sectionSubtitle}>{t('create.addressTypeSubtitle')}</Text>
 
         <View style={styles.grid}>
           {addressTypes.map(([type, labels]) => {
@@ -83,7 +85,7 @@ export function AddressTypeStep({
               !selectedType && styles.continueButtonTextDisabled,
             ]}
           >
-            Continue
+            {t('create.continue')}
           </Text>
         </Pressable>
       </ScrollView>

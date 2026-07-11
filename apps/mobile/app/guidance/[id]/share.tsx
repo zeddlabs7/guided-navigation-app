@@ -18,10 +18,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Svg, { Path, Circle } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 import type { AvailabilityMode, GuidanceSet } from '@guidenav/types';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { getBottomInset } from '@/components/ui/ScreenFooter';
-import { openWhatsAppShare } from '@/lib/share-whatsapp';
+import { openWhatsAppShare, openWhatsAppShareToNumber } from '@/lib/share-whatsapp';
 import { getGuidanceSet, updateGuidanceSet } from '@/services/guidance';
 import {
   createShareLink,
@@ -37,26 +38,26 @@ import {
 
 const AVAILABILITY_OPTIONS: {
   value: AvailabilityMode;
-  label: string;
-  description: string;
+  labelKey: string;
+  descriptionKey: string;
   icon: 'check' | 'clock' | 'x';
 }[] = [
   {
     value: 'ANYTIME_TODAY',
-    label: 'Available Anytime',
-    description: 'I can receive deliveries at any time today',
+    labelKey: 'share.availAnytime',
+    descriptionKey: 'share.availAnytimeDesc',
     icon: 'check',
   },
   {
     value: 'TIME_WINDOW',
-    label: 'Specific Time Window',
-    description: 'I can only receive deliveries during specific hours',
+    labelKey: 'share.availTimeWindow',
+    descriptionKey: 'share.availTimeWindowDesc',
     icon: 'clock',
   },
   {
     value: 'NOT_AVAILABLE_TODAY',
-    label: 'Not Available Today',
-    description: 'I cannot receive deliveries today',
+    labelKey: 'share.availNotAvailable',
+    descriptionKey: 'share.availNotAvailableDesc',
     icon: 'x',
   },
 ];
@@ -88,6 +89,7 @@ function AvailabilityIcon({ icon, selected }: { icon: 'check' | 'clock' | 'x'; s
 }
 
 export default function ShareScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { id: guidanceSetId } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
@@ -114,6 +116,9 @@ export default function ShareScreen() {
   const [showEndPicker, setShowEndPicker] = useState(false);
   const isIOS = Platform.OS === 'ios';
   const [selectedValidity, setSelectedValidity] = useState<LinkValidityOption>(DEFAULT_VALIDITY_OPTION);
+
+  const [showWhatsAppNumberModal, setShowWhatsAppNumberModal] = useState(false);
+  const [whatsAppNumber, setWhatsAppNumber] = useState('+966');
 
   const courierAppUrl = shareToken ? buildShareUrl(shareToken) : null;
 
@@ -208,11 +213,11 @@ export default function ShareScreen() {
       setLinkStatus('ACTIVE');
     } catch (err) {
       console.error('Failed to generate share link:', err);
-      Alert.alert('Error', 'Failed to generate share link. Please try again.');
+      Alert.alert(t('common.error'), t('share.errorGenerate'));
     } finally {
       setGenerating(false);
     }
-  }, [guidanceSetId, selectedAvailability, startTime, endTime, shareLinkId, selectedValidity]);
+  }, [guidanceSetId, selectedAvailability, startTime, endTime, shareLinkId, selectedValidity, t]);
 
   const handleCopyLink = useCallback(async () => {
     if (!courierAppUrl) return;
@@ -224,14 +229,25 @@ export default function ShareScreen() {
 
   const handleWhatsAppShare = useCallback(async () => {
     if (!courierAppUrl) return;
-    await openWhatsAppShare(`Here are directions to my address: ${courierAppUrl}`);
-  }, [courierAppUrl]);
+    await openWhatsAppShare(t('share.shareMessage', { url: courierAppUrl }));
+  }, [courierAppUrl, t]);
+
+  const handleWhatsAppShareToNumber = useCallback(async () => {
+    if (!courierAppUrl) return;
+    const digits = whatsAppNumber.replace(/[^\d]/g, '');
+    if (digits.length < 8) {
+      Alert.alert(t('share.whatsAppInvalidNumber'), t('share.whatsAppInvalidMessage'));
+      return;
+    }
+    await openWhatsAppShareToNumber(whatsAppNumber, t('share.shareMessage', { url: courierAppUrl }));
+    setShowWhatsAppNumberModal(false);
+  }, [courierAppUrl, whatsAppNumber, t]);
 
   const handleNativeShare = useCallback(async () => {
     if (!courierAppUrl) return;
     try {
       await Share.share({
-        message: `Here are directions to my address: ${courierAppUrl}`,
+        message: t('share.shareMessage', { url: courierAppUrl }),
         url: courierAppUrl,
       });
     } catch {
@@ -241,10 +257,10 @@ export default function ShareScreen() {
 
   const handleRevoke = useCallback(async () => {
     if (!shareLinkId) return;
-    Alert.alert('Revoke Link', 'This will permanently disable this share link. Continue?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('share.revokeTitle'), t('share.revokeMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Revoke',
+        text: t('share.revokeConfirm'),
         style: 'destructive',
         onPress: async () => {
           setRevoking(true);
@@ -255,14 +271,14 @@ export default function ShareScreen() {
             setLinkStatus(null);
           } catch (err) {
             console.error('Failed to revoke share link:', err);
-            Alert.alert('Error', 'Failed to revoke link. Please try again.');
+            Alert.alert(t('common.error'), t('share.errorRevoke'));
           } finally {
             setRevoking(false);
           }
         },
       },
     ]);
-  }, [shareLinkId]);
+  }, [shareLinkId, t]);
 
   if (loading) {
     return (
@@ -296,9 +312,9 @@ export default function ShareScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Title section */}
         <View style={styles.titleSection}>
-          <Text style={styles.pageTitle}>Share Link</Text>
+          <Text style={styles.pageTitle}>{t('share.title')}</Text>
           <Text style={styles.pageSubtitle}>
-            Share this link with couriers to guide them to your address.
+            {t('share.subtitle')}
           </Text>
         </View>
 
@@ -325,12 +341,12 @@ export default function ShareScreen() {
                 </Svg>
               </View>
               <Text style={styles.noLinkTitle}>
-                {shareLinkId ? 'Link generated but token not available' : 'No active share link'}
+                {shareLinkId ? t('share.tokenUnavailable') : t('share.noActiveLink')}
               </Text>
               <Text style={styles.noLinkText}>
                 {shareLinkId
-                  ? 'Generate a new link to get a shareable URL'
-                  : 'Generate a link to share your address with couriers'}
+                  ? t('share.tokenUnavailableHint')
+                  : t('share.noActiveLinkHint')}
               </Text>
               <Pressable
                 style={[styles.generateBtn, generating && styles.btnDisabled]}
@@ -341,7 +357,7 @@ export default function ShareScreen() {
                   <ActivityIndicator size="small" color="#ffffff" />
                 ) : (
                   <Text style={styles.generateBtnText}>
-                    {shareLinkId ? 'Regenerate Share Link' : 'Generate Share Link'}
+                    {shareLinkId ? t('share.regenerate') : t('share.generate')}
                   </Text>
                 )}
               </Pressable>
@@ -352,7 +368,7 @@ export default function ShareScreen() {
               {/* Status badge */}
               <View style={styles.activeLinkBadgeRow}>
                 <View style={styles.activeBadge}>
-                  <Text style={styles.activeBadgeText}>ACTIVE</Text>
+                  <Text style={styles.activeBadgeText}>{t('share.active')}</Text>
                 </View>
               </View>
 
@@ -368,11 +384,11 @@ export default function ShareScreen() {
                   style={[styles.copyBtn, copied && styles.copyBtnCopied]}
                   onPress={handleCopyLink}
                 >
-                  <Text style={styles.copyBtnText}>{copied ? 'Copied!' : 'Copy'}</Text>
+                  <Text style={styles.copyBtnText}>{copied ? t('share.copied') : t('share.copy')}</Text>
                 </Pressable>
               </View>
 
-              <Text style={styles.linkHint}>This link opens the courier delivery guide app.</Text>
+              <Text style={styles.linkHint}>{t('share.linkHint')}</Text>
 
               {/* Share actions (mobile-specific) */}
               <View style={styles.shareActions}>
@@ -380,7 +396,16 @@ export default function ShareScreen() {
                   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
                     <Path d="M21 11.5C21.0034 12.8199 20.6951 14.1219 20.1 15.3C19.3944 16.7118 18.3098 17.8992 16.9674 18.7293C15.6251 19.5594 14.0782 19.9994 12.5 20C11.1801 20.0035 9.87812 19.6951 8.7 19.1L3 21L4.9 15.3C4.30493 14.1219 3.99656 12.8199 4 11.5C4.00061 9.92179 4.44061 8.37488 5.27072 7.03258C6.10083 5.69028 7.28825 4.6056 8.7 3.90003C9.87812 3.30496 11.1801 2.99659 12.5 3.00003H13C15.0843 3.11502 17.053 3.99479 18.5291 5.47089C20.0052 6.94699 20.885 8.91568 21 11V11.5Z" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                   </Svg>
-                  <Text style={styles.whatsappBtnText}>Share via WhatsApp</Text>
+                  <Text style={styles.whatsappBtnText}>{t('share.shareViaWhatsApp')}</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.whatsappNumberBtn}
+                  onPress={() => setShowWhatsAppNumberModal(true)}
+                >
+                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                    <Path d="M21 11.5C21.0034 12.8199 20.6951 14.1219 20.1 15.3C19.3944 16.7118 18.3098 17.8992 16.9674 18.7293C15.6251 19.5594 14.0782 19.9994 12.5 20C11.1801 20.0035 9.87812 19.6951 8.7 19.1L3 21L4.9 15.3C4.30493 14.1219 3.99656 12.8199 4 11.5C4.00061 9.92179 4.44061 8.37488 5.27072 7.03258C6.10083 5.69028 7.28825 4.6056 8.7 3.90003C9.87812 3.30496 11.1801 2.99659 12.5 3.00003H13C15.0843 3.11502 17.053 3.99479 18.5291 5.47089C20.0052 6.94699 20.885 8.91568 21 11V11.5Z" stroke="#25D366" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                  </Svg>
+                  <Text style={styles.whatsappNumberBtnText}>{t('share.sendToNumber')}</Text>
                 </Pressable>
                 <Pressable style={styles.nativeShareBtn} onPress={handleNativeShare}>
                   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
@@ -388,7 +413,7 @@ export default function ShareScreen() {
                     <Path d="M16 6L12 2L8 6" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                     <Path d="M12 2V15" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                   </Svg>
-                  <Text style={styles.nativeShareBtnText}>Share...</Text>
+                  <Text style={styles.nativeShareBtnText}>{t('share.shareNative')}</Text>
                 </Pressable>
               </View>
 
@@ -402,7 +427,7 @@ export default function ShareScreen() {
                   {generating ? (
                     <ActivityIndicator size="small" color="#4a5565" />
                   ) : (
-                    <Text style={styles.regenerateBtnText}>Regenerate</Text>
+                    <Text style={styles.regenerateBtnText}>{t('share.regenerateBtn')}</Text>
                   )}
                 </Pressable>
                 <Pressable
@@ -413,7 +438,7 @@ export default function ShareScreen() {
                   {revoking ? (
                     <ActivityIndicator size="small" color="#dc2626" />
                   ) : (
-                    <Text style={styles.revokeBtnText}>Revoke</Text>
+                    <Text style={styles.revokeBtnText}>{t('share.revoke')}</Text>
                   )}
                 </Pressable>
               </View>
@@ -461,8 +486,8 @@ export default function ShareScreen() {
             <View style={styles.modalHandle} />
 
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Set Availability</Text>
-              <Text style={styles.modalSubtitle}>Let couriers know when you can receive deliveries</Text>
+              <Text style={styles.modalTitle}>{t('share.setAvailability')}</Text>
+              <Text style={styles.modalSubtitle}>{t('share.availabilitySubtitle')}</Text>
             </View>
 
             <ScrollView
@@ -494,8 +519,8 @@ export default function ShareScreen() {
                         <AvailabilityIcon icon={option.icon} selected={isSelected} />
                       </View>
                       <View style={styles.availabilityText}>
-                        <Text style={styles.availabilityLabel}>{option.label}</Text>
-                        <Text style={styles.availabilityDescription}>{option.description}</Text>
+                        <Text style={styles.availabilityLabel}>{t(option.labelKey)}</Text>
+                        <Text style={styles.availabilityDescription}>{t(option.descriptionKey)}</Text>
                       </View>
                     </Pressable>
                   );
@@ -506,7 +531,7 @@ export default function ShareScreen() {
               {selectedAvailability === 'TIME_WINDOW' && (
                 <View style={styles.timeWindow}>
                   <View style={styles.timeRow}>
-                    <Text style={styles.timeLabel}>From</Text>
+                    <Text style={styles.timeLabel}>{t('share.from')}</Text>
                     {isIOS ? (
                       <DateTimePicker
                         value={startTime}
@@ -527,7 +552,7 @@ export default function ShareScreen() {
                   </View>
                   <View style={styles.timeRowDivider} />
                   <View style={styles.timeRow}>
-                    <Text style={styles.timeLabel}>To</Text>
+                    <Text style={styles.timeLabel}>{t('share.to')}</Text>
                     {isIOS ? (
                       <DateTimePicker
                         value={endTime}
@@ -551,9 +576,9 @@ export default function ShareScreen() {
 
               {/* Link validity picker (mobile-specific) */}
               <View style={styles.validitySection}>
-                <Text style={styles.validitySectionTitle}>Link Validity</Text>
+                <Text style={styles.validitySectionTitle}>{t('share.linkValidity')}</Text>
                 <Text style={styles.validitySectionSubtitle}>
-                  How long should this link remain active?
+                  {t('share.linkValiditySubtitle')}
                 </Text>
                 <View style={styles.validityOptions}>
                   {LINK_VALIDITY_OPTIONS.map((option) => {
@@ -586,11 +611,11 @@ export default function ShareScreen() {
                               option.premium && styles.validityOptionLabelDisabled,
                             ]}
                           >
-                            {option.label}
+                            {t(option.labelKey)}
                           </Text>
                           {option.premium && (
                             <View style={styles.comingSoonBadge}>
-                              <Text style={styles.comingSoonText}>Coming Soon</Text>
+                              <Text style={styles.comingSoonText}>{t('share.comingSoon')}</Text>
                             </View>
                           )}
                         </View>
@@ -604,7 +629,7 @@ export default function ShareScreen() {
             {/* Modal actions */}
             <View style={styles.modalActions}>
               <Pressable style={styles.modalCancelBtn} onPress={() => setShowModal(false)}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
               </Pressable>
               <Pressable
                 style={[styles.modalConfirmBtn, generating && styles.btnDisabled]}
@@ -615,9 +640,49 @@ export default function ShareScreen() {
                   <ActivityIndicator size="small" color="#ffffff" />
                 ) : (
                   <Text style={styles.modalConfirmText}>
-                    {shareLinkId ? 'Update & Regenerate' : 'Generate Link'}
+                    {shareLinkId ? t('share.updateRegenerate') : t('share.generateLink')}
                   </Text>
                 )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* WhatsApp Number Modal */}
+      <Modal
+        visible={showWhatsAppNumberModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowWhatsAppNumberModal(false)}
+      >
+        <View style={styles.waNumModalOverlay}>
+          <View style={styles.waNumModalContent}>
+            <Text style={styles.waNumModalTitle}>{t('share.whatsAppModalTitle')}</Text>
+            <Text style={styles.waNumModalSubtitle}>
+              {t('share.whatsAppModalSubtitle')}
+            </Text>
+            <TextInput
+              style={styles.waNumInput}
+              value={whatsAppNumber}
+              onChangeText={setWhatsAppNumber}
+              placeholder="+966XXXXXXXXX"
+              placeholderTextColor={Colors.textMuted}
+              keyboardType="phone-pad"
+              autoFocus
+            />
+            <View style={styles.waNumModalActions}>
+              <Pressable
+                style={styles.waNumCancelBtn}
+                onPress={() => setShowWhatsAppNumberModal(false)}
+              >
+                <Text style={styles.waNumCancelText}>{t('common.cancel')}</Text>
+              </Pressable>
+              <Pressable
+                style={styles.waNumSendBtn}
+                onPress={handleWhatsAppShareToNumber}
+              >
+                <Text style={styles.waNumSendText}>{t('share.send')}</Text>
               </Pressable>
             </View>
           </View>
@@ -824,6 +889,22 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  whatsappNumberBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    backgroundColor: Colors.surface,
+    borderWidth: 1.5,
+    borderColor: '#25D366',
+    borderRadius: BorderRadius.full,
+  },
+  whatsappNumberBtnText: {
+    fontSize: FontSize.base,
+    fontWeight: '600',
+    color: '#25D366',
   },
   nativeShareBtn: {
     flexDirection: 'row',
@@ -1115,6 +1196,70 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalConfirmText: {
+    fontSize: FontSize.base,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+
+  waNumModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  waNumModalContent: {
+    width: '100%',
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    gap: Spacing.md,
+  },
+  waNumModalTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  waNumModalSubtitle: {
+    fontSize: FontSize.sm,
+    color: Colors.textMuted,
+  },
+  waNumInput: {
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 14,
+    fontSize: FontSize.lg,
+    color: Colors.text,
+  },
+  waNumModalActions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  waNumCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+  },
+  waNumCancelText: {
+    fontSize: FontSize.base,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+  },
+  waNumSendBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: BorderRadius.full,
+    backgroundColor: '#25D366',
+    alignItems: 'center',
+  },
+  waNumSendText: {
     fontSize: FontSize.base,
     fontWeight: '600',
     color: '#ffffff',

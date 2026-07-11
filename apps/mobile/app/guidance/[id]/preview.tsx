@@ -14,6 +14,7 @@ import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import Svg, { Path, Circle } from 'react-native-svg';
 import type { GuidanceSet, GuidanceStep, GuidanceStatus, Overlay, ArrowDirection, AddressType } from '@guidenav/types';
 import { STEP_TYPE_LABELS, ADDRESS_TYPE_LABELS } from '@guidenav/types';
@@ -22,15 +23,57 @@ import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { ScreenFooter, useFooterScrollPadding } from '@/components/ui/ScreenFooter';
 import { hasUnpublishedStepChanges } from '@guidenav/core';
 import { getGuidanceSet, getGuidanceSteps, updateGuidanceSet, publishGuidanceWithSteps } from '@/services/guidance';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const arrowCurvedLeft = require('@/assets/arrows/arrow-curved-left.png');
 const arrowCurvedRight = require('@/assets/arrows/arrow-curved-right.png');
 const arrowForward = require('@/assets/arrows/arrow-forward.png');
 
-const STATUS_CONFIG: Record<GuidanceStatus, { bg: string; dot: string; text: string; label: string }> = {
-  PUBLISHED: { bg: '#dcfce7', dot: '#22c55e', text: '#16a34a', label: 'Published' },
-  DRAFT: { bg: '#fef3c7', dot: '#f59e0b', text: '#d97706', label: 'Draft' },
-  DISABLED: { bg: '#f3f4f6', dot: '#99a1af', text: '#6a7282', label: 'Disabled' },
+function StepImageWithLoader({
+  uri,
+  height,
+  overlays,
+  imageContainerWidth,
+  renderOverlay,
+}: {
+  uri: string;
+  height: number;
+  overlays?: Overlay[];
+  imageContainerWidth: number;
+  renderOverlay: (overlay: Overlay, width: number, height: number) => React.ReactNode;
+}) {
+  const [loading, setLoading] = useState(true);
+  return (
+    <View style={[styles.stepImageContainer, { height }]}>
+      <Image
+        source={{ uri }}
+        style={styles.stepImage}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        transition={200}
+        onLoad={() => setLoading(false)}
+        onError={() => setLoading(false)}
+      />
+      {loading && (
+        <View style={styles.imageLoading}>
+          <ActivityIndicator size="small" color={Colors.textMuted} />
+        </View>
+      )}
+      {!loading && overlays && overlays.length > 0 && (
+        <View style={StyleSheet.absoluteFill}>
+          {overlays.map((overlay) =>
+            renderOverlay(overlay, imageContainerWidth, height)
+          )}
+        </View>
+      )}
+    </View>
+  );
+}
+
+const STATUS_CONFIG: Record<GuidanceStatus, { bg: string; dot: string; text: string; labelKey: string }> = {
+  PUBLISHED: { bg: '#dcfce7', dot: '#22c55e', text: '#16a34a', labelKey: 'card.published' },
+  DRAFT: { bg: '#fef3c7', dot: '#f59e0b', text: '#d97706', labelKey: 'card.draft' },
+  DISABLED: { bg: '#f3f4f6', dot: '#99a1af', text: '#6a7282', labelKey: 'card.disabled' },
 };
 
 const ADDRESS_TYPE_ICONS: Record<AddressType, string> = {
@@ -74,6 +117,8 @@ function getArrowImage(direction?: ArrowDirection) {
 }
 
 export default function PreviewScreen() {
+  const { t } = useTranslation();
+  const { language } = useLanguage();
   const router = useRouter();
   const { id: guidanceSetId } = useLocalSearchParams<{ id: string }>();
   const { width: screenWidth } = useWindowDimensions();
@@ -106,14 +151,14 @@ export default function PreviewScreen() {
         getGuidanceSteps(guidanceSetId),
       ]);
       if (!gs) {
-        setError('Address set not found');
+        setError(t('edit.errorTitle'));
         return;
       }
       setGuidanceSet(gs);
       setSteps(gSteps);
     } catch (err) {
       console.error('Failed to load preview data:', err);
-      setError('Failed to load preview data. Please try again.');
+      setError(t('edit.errorSave'));
     } finally {
       setLoading(false);
     }
@@ -135,7 +180,7 @@ export default function PreviewScreen() {
       setSteps(gSteps);
     } catch (err) {
       console.error('Failed to publish:', err);
-      setError('Failed to publish. Please try again.');
+      setError(t('edit.errorSave'));
     } finally {
       setPublishing(false);
     }
@@ -143,10 +188,10 @@ export default function PreviewScreen() {
 
   const handleUnpublish = useCallback(async () => {
     if (!guidanceSetId) return;
-    Alert.alert('Unpublish', 'This will deactivate any existing share links. Continue?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('preview.unpublishTitle'), t('preview.unpublishMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Unpublish',
+        text: t('preview.unpublishConfirm'),
         style: 'destructive',
         onPress: async () => {
           setPublishing(true);
@@ -156,7 +201,7 @@ export default function PreviewScreen() {
             setGuidanceSet((prev) => prev ? { ...prev, status: 'DRAFT' } : prev);
           } catch (err) {
             console.error('Failed to unpublish:', err);
-            setError('Failed to unpublish. Please try again.');
+            setError(t('edit.errorSave'));
           } finally {
             setPublishing(false);
           }
@@ -260,7 +305,7 @@ export default function PreviewScreen() {
 
   const renderStepCard = (step: GuidanceStep, index: number) => {
     const overlayCount = step.overlays?.length ?? 0;
-    const typeLabel = STEP_TYPE_LABELS[step.stepType]?.en ?? step.stepType;
+    const typeLabel = STEP_TYPE_LABELS[step.stepType]?.[language] ?? STEP_TYPE_LABELS[step.stepType]?.en ?? step.stepType;
     const hasImage = !!step.image?.publicUrl;
 
     return (
@@ -278,7 +323,7 @@ export default function PreviewScreen() {
             <View style={styles.overlayCount}>
               <View style={styles.overlayCountDot} />
               <Text style={styles.overlayCountText}>
-                {overlayCount} {overlayCount === 1 ? 'overlay' : 'overlays'}
+                {overlayCount} {overlayCount === 1 ? t('preview.overlay') : t('preview.overlays')}
               </Text>
             </View>
           )}
@@ -286,22 +331,13 @@ export default function PreviewScreen() {
 
         {/* Image with overlays */}
         {hasImage && (
-          <View style={[styles.stepImageContainer, { height: imageHeight }]}>
-            <Image
-              source={{ uri: step.image!.publicUrl }}
-              style={styles.stepImage}
-              contentFit="cover"
-              cachePolicy="memory-disk"
-              transition={200}
-            />
-            {step.overlays && step.overlays.length > 0 && (
-              <View style={StyleSheet.absoluteFill}>
-                {step.overlays.map((overlay) =>
-                  renderOverlay(overlay, imageContainerWidth, imageHeight)
-                )}
-              </View>
-            )}
-          </View>
+          <StepImageWithLoader
+            uri={step.image!.publicUrl!}
+            height={imageHeight}
+            overlays={step.overlays}
+            imageContainerWidth={imageContainerWidth}
+            renderOverlay={renderOverlay}
+          />
         )}
 
         {/* Location data for LOCATION_CHECK steps */}
@@ -351,10 +387,10 @@ export default function PreviewScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorTitle}>{t('edit.errorTitle')}</Text>
           <Text style={styles.errorDescription}>{error}</Text>
           <Pressable style={styles.retryButton} onPress={loadData}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
+            <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -369,14 +405,14 @@ export default function PreviewScreen() {
           <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
             <Path d="M19 12H5M5 12L12 19M5 12L12 5" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
           </Svg>
-          <Text style={styles.backButtonText}>Back</Text>
+          <Text style={styles.backButtonText}>{t('preview.back')}</Text>
         </Pressable>
 
-        <Text style={styles.headerTitle}>Preview & Publish</Text>
+        <Text style={styles.headerTitle}>{t('preview.title')}</Text>
 
         <View style={[styles.statusBadge, { backgroundColor: statusCfg.bg }]}>
           <View style={[styles.statusDot, { backgroundColor: statusCfg.dot }]} />
-          <Text style={[styles.statusText, { color: statusCfg.text }]}>{statusCfg.label}</Text>
+          <Text style={[styles.statusText, { color: statusCfg.text }]}>{t(statusCfg.labelKey)}</Text>
         </View>
       </View>
 
@@ -390,7 +426,7 @@ export default function PreviewScreen() {
       {hasUnpublishedChanges && (
         <View style={styles.unpublishedBanner}>
           <Text style={styles.unpublishedBannerText}>
-            You have unpublished changes. Republish to make them visible to couriers.
+            {t('preview.unpublishedChanges')}
           </Text>
         </View>
       )}
@@ -410,14 +446,14 @@ export default function PreviewScreen() {
           </View>
           <View style={styles.summaryContent}>
             <Text style={styles.summaryTitle}>{guidanceSet?.title}</Text>
-            <Text style={styles.summaryDescription}>Review your address before sharing with couriers.</Text>
+            <Text style={styles.summaryDescription}>{t('preview.reviewSubtitle')}</Text>
             <View style={styles.summaryMeta}>
               <Text style={styles.summaryMetaText}>
-                {totalSteps} {totalSteps === 1 ? 'step' : 'steps'}
+                {totalSteps} {totalSteps === 1 ? t('card.step') : t('card.steps')}
               </Text>
               <Text style={styles.metaDot}>•</Text>
               <Text style={styles.summaryMetaText}>
-                Modified {formatDate(guidanceSet?.updatedAt || guidanceSet?.createdAt || '')}
+                {t('preview.modified', { date: formatDate(guidanceSet?.updatedAt || guidanceSet?.createdAt || '') })}
               </Text>
             </View>
           </View>
@@ -431,7 +467,7 @@ export default function PreviewScreen() {
                 {ADDRESS_TYPE_ICONS[guidanceSet.addressType]}
               </Text>
               <Text style={styles.addressSummaryLabel}>
-                {ADDRESS_TYPE_LABELS[guidanceSet.addressType]?.en ?? guidanceSet.addressType}
+                {ADDRESS_TYPE_LABELS[guidanceSet.addressType]?.[language] ?? ADDRESS_TYPE_LABELS[guidanceSet.addressType]?.en ?? guidanceSet.addressType}
               </Text>
             </View>
             {checkRequiresMetadata(guidanceSet.addressType) && (() => {
@@ -446,7 +482,7 @@ export default function PreviewScreen() {
                 <View style={styles.addressSummaryDetails}>
                   {visibleMeta.map((fc) => (
                     <Text key={fc.field} style={styles.addressSummaryDetail}>
-                      {FIELD_SHORT_LABELS[fc.field] || fc.label.en}: {gs[fc.field]}
+                      {FIELD_SHORT_LABELS[fc.field] || (language === 'ar' ? fc.label.ar : fc.label.en)}: {gs[fc.field]}
                     </Text>
                   ))}
                 </View>
@@ -457,13 +493,13 @@ export default function PreviewScreen() {
 
         {/* Steps */}
         <View style={styles.stepsSection}>
-          <Text style={styles.stepsSectionTitle}>Steps ({totalSteps})</Text>
+          <Text style={styles.stepsSectionTitle}>{t('preview.stepsSection', { count: totalSteps })}</Text>
 
           {totalSteps === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>No steps added yet.</Text>
+              <Text style={styles.emptyStateText}>{t('preview.noSteps')}</Text>
               <Pressable style={styles.emptyStateButton} onPress={handleAddSteps}>
-                <Text style={styles.emptyStateButtonText}>Add Steps</Text>
+                <Text style={styles.emptyStateButtonText}>{t('preview.addSteps')}</Text>
               </Pressable>
             </View>
           ) : (
@@ -489,7 +525,7 @@ export default function PreviewScreen() {
                     <Path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                   </Svg>
                   <Text style={styles.footerBtnPrimaryText}>
-                    {publishing ? 'Publishing...' : 'Publish'}
+                    {publishing ? t('preview.publishing') : t('preview.publish')}
                   </Text>
                 </Pressable>
                 <Pressable style={[styles.footerBtn, styles.footerBtnSecondary, styles.footerBtnDisabled]} disabled>
@@ -499,10 +535,10 @@ export default function PreviewScreen() {
                     <Path d="M18 22C19.6569 22 21 20.6569 21 19C21 17.3431 19.6569 16 18 16C16.3431 16 15 17.3431 15 19C15 20.6569 16.3431 22 18 22Z" stroke="#99a1af" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                     <Path d="M8.59 13.51L15.42 17.49M15.41 6.51L8.59 10.49" stroke="#99a1af" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                   </Svg>
-                  <Text style={styles.footerBtnSecondaryText}>Share Link</Text>
+                  <Text style={styles.footerBtnSecondaryText}>{t('preview.shareLink')}</Text>
                 </Pressable>
               </View>
-              <Text style={styles.footerHint}>Publish to generate a shareable link for couriers</Text>
+              <Text style={styles.footerHint}>{t('preview.publishToShare')}</Text>
             </>
           ) : (
             <>
@@ -516,7 +552,7 @@ export default function PreviewScreen() {
                     <Path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                   </Svg>
                   <Text style={styles.footerBtnPrimaryText}>
-                    {publishing ? 'Republishing...' : 'Republish'}
+                    {publishing ? t('preview.republishing') : t('preview.republish')}
                   </Text>
                 </Pressable>
               )}
@@ -531,7 +567,7 @@ export default function PreviewScreen() {
                     <Path d="M15 9L9 15M9 9L15 15" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                   </Svg>
                   <Text style={styles.footerBtnOutlineText}>
-                    {publishing ? 'Unpublishing...' : 'Unpublish'}
+                    {publishing ? t('preview.unpublishing') : t('preview.unpublish')}
                   </Text>
                 </Pressable>
                 <Pressable
@@ -545,7 +581,7 @@ export default function PreviewScreen() {
                     <Path d="M18 22C19.6569 22 21 20.6569 21 19C21 17.3431 19.6569 16 18 16C16.3431 16 15 17.3431 15 19C15 20.6569 16.3431 22 18 22Z" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                     <Path d="M8.59 13.51L15.42 17.49M15.41 6.51L8.59 10.49" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                   </Svg>
-                  <Text style={styles.footerBtnSecondaryText}>Share Link</Text>
+                  <Text style={styles.footerBtnSecondaryText}>{t('preview.shareLink')}</Text>
                 </Pressable>
               </View>
             </>
@@ -664,7 +700,10 @@ const styles = StyleSheet.create({
   unpublishedBanner: {
     marginHorizontal: Spacing.lg,
     marginTop: Spacing.sm,
-    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.md,
     backgroundColor: '#fffbeb',
     borderWidth: 1,
     borderColor: '#fde68a',
@@ -877,6 +916,12 @@ const styles = StyleSheet.create({
   stepImage: {
     width: '100%',
     height: '100%',
+  },
+  imageLoading: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   stepLocationCard: {

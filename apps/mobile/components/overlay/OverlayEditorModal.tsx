@@ -15,17 +15,20 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 import type { Overlay, ArrowDirection } from '@guidenav/types';
 import { OverlayCanvas, type EditorMode } from './OverlayCanvas';
 import { LabelInputModal } from './LabelInputModal';
 import { OverlayTutorial, type OverlayTutorialType } from './OverlayTutorial';
 
-const ARROW_DIRECTIONS: { value: ArrowDirection; label: string }[] = [
-  { value: 'left', label: 'Left' },
-  { value: 'right', label: 'Right' },
-  { value: 'up-down', label: 'Up/Down' },
-  { value: 'forward-backward', label: 'Forward' },
-];
+const ARROW_DIRECTION_VALUES: ArrowDirection[] = ['left', 'right', 'up-down', 'forward-backward'];
+
+const ARROW_DIRECTION_KEYS: Record<ArrowDirection, string> = {
+  'left': 'overlay.left',
+  'right': 'overlay.right',
+  'up-down': 'overlay.up',
+  'forward-backward': 'overlay.forward',
+};
 
 function ArrowDirectionIcon({ direction, size = 18 }: { direction: ArrowDirection; size?: number }) {
   const color = '#555555';
@@ -122,6 +125,7 @@ export function OverlayEditorModal({
   onSave,
   onCancel,
 }: OverlayEditorModalProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [overlays, setOverlays] = useState<Overlay[]>(initialOverlays);
   const [mode, setMode] = useState<EditorMode>('view');
@@ -177,10 +181,10 @@ export function OverlayEditorModal({
   const labelModalTitle = useMemo(() => {
     if (editingLabelOverlayId) {
       const overlay = overlays.find((o) => o.id === editingLabelOverlayId);
-      return overlay?.label ? 'Edit Note' : 'Add Note on the Marker';
+      return overlay?.label ? t('overlay.editNote') : t('overlay.labelModalTitle');
     }
-    return 'Add Note on the Marker';
-  }, [editingLabelOverlayId, overlays]);
+    return t('overlay.labelModalTitle');
+  }, [editingLabelOverlayId, overlays, t]);
 
   const labelModalInitialValue = useMemo(() => {
     if (editingLabelOverlayId) {
@@ -377,11 +381,11 @@ export function OverlayEditorModal({
         {/* Header */}
         <View style={styles.header}>
           <Pressable style={styles.headerBtn} onPress={handleCancel}>
-            <Text style={styles.headerBtnTextCancel}>Cancel</Text>
+            <Text style={styles.headerBtnTextCancel}>{t('common.cancel')}</Text>
           </Pressable>
-          <Text style={styles.headerTitle}>Edit Overlays</Text>
+          <Text style={styles.headerTitle}>{t('overlay.editOverlays')}</Text>
           <Pressable style={styles.headerBtn} onPress={handleDone}>
-            <Text style={styles.headerBtnTextDone}>Done</Text>
+            <Text style={styles.headerBtnTextDone}>{t('common.done')}</Text>
           </Pressable>
         </View>
 
@@ -404,23 +408,23 @@ export function OverlayEditorModal({
           <View style={styles.contextBar}>
             {selectedOverlay.type === 'arrow' && (
               <View style={styles.directionRow}>
-                {ARROW_DIRECTIONS.map((dir) => (
+                {ARROW_DIRECTION_VALUES.map((dirValue) => (
                   <Pressable
-                    key={dir.value}
+                    key={dirValue}
                     style={[
                       styles.directionChip,
-                      selectedOverlay.arrowDirection === dir.value && styles.directionChipActive,
+                      selectedOverlay.arrowDirection === dirValue && styles.directionChipActive,
                     ]}
-                    onPress={() => handleChangeDirection(dir.value)}
+                    onPress={() => handleChangeDirection(dirValue)}
                   >
-                    <ArrowDirectionIcon direction={dir.value} size={16} />
+                    <ArrowDirectionIcon direction={dirValue} size={16} />
                     <Text
                       style={[
                         styles.directionChipText,
-                        selectedOverlay.arrowDirection === dir.value && styles.directionChipTextActive,
+                        selectedOverlay.arrowDirection === dirValue && styles.directionChipTextActive,
                       ]}
                     >
-                      {dir.label}
+                      {t(ARROW_DIRECTION_KEYS[dirValue])}
                     </Text>
                   </Pressable>
                 ))}
@@ -446,7 +450,7 @@ export function OverlayEditorModal({
                   />
                 </Svg>
                 <Text style={styles.labelBtnText}>
-                  {selectedOverlay.label ? 'Edit Note' : 'Add Note'}
+                  {selectedOverlay.label ? t('overlay.editNote') : t('overlay.addNote')}
                 </Text>
               </Pressable>
             )}
@@ -481,20 +485,43 @@ export function OverlayEditorModal({
             <Text style={styles.gestureHint}>Drag to move</Text>
           )}
 
-          <View style={styles.addButtonsRow}>
-            <View style={styles.arrowBtnWrapper}>
+          {showArrowTypePicker ? (
+            <View style={styles.arrowPickerInline}>
+              <View style={styles.arrowPickerInlineHeader}>
+                <Text style={styles.arrowPickerInlineTitle}>{t('overlay.chooseArrowType')}</Text>
+                <Pressable style={styles.arrowPickerBackBtn} onPress={handleArrowTypePickerCancel}>
+                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                    <Path d="M18 6L6 18M6 6L18 18" stroke="#9ca3af" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                  </Svg>
+                </Pressable>
+              </View>
+              <View style={styles.arrowPickerInlineGrid}>
+                {ARROW_DIRECTION_VALUES.map((dirValue) => (
+                  <Pressable
+                    key={dirValue}
+                    style={styles.arrowPickerInlineOption}
+                    onPress={() => handleArrowTypeSelect(dirValue)}
+                  >
+                    <ArrowDirectionIcon direction={dirValue} size={18} />
+                    <Text style={styles.arrowPickerInlineLabel}>{t(ARROW_DIRECTION_KEYS[dirValue])}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          ) : (
+            <View style={styles.addButtonsRow}>
               <PulsingButton
                 pulse={showPulse}
                 style={[
                   styles.addBtn,
-                  (mode === 'add-arrow' || showArrowTypePicker) && styles.addBtnActive,
+                  mode === 'add-arrow' && styles.addBtnActive,
                 ]}
                 onPress={handleAddArrowClick}
               >
                 <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
                   <Path
                     d="M7 17L17 7M17 7H7M17 7V17"
-                    stroke={(mode === 'add-arrow' || showArrowTypePicker) ? 'white' : '#e5e7eb'}
+                    stroke={mode === 'add-arrow' ? 'white' : '#e5e7eb'}
                     strokeWidth={2}
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -503,50 +530,25 @@ export function OverlayEditorModal({
                 <Text
                   style={[
                     styles.addBtnText,
-                    (mode === 'add-arrow' || showArrowTypePicker) && styles.addBtnTextActive,
+                    mode === 'add-arrow' && styles.addBtnTextActive,
                   ]}
                 >
-                  {hasArrow ? 'Replace Arrow' : 'Add Arrow'}
+                  {hasArrow ? t('overlay.replaceArrow') : t('overlay.addArrow')}
                 </Text>
               </PulsingButton>
 
-              {showArrowTypePicker && (
-                <View style={styles.arrowPicker}>
-                  <View style={styles.arrowPickerHeader}>
-                    <Text style={styles.arrowPickerTitle}>Choose arrow type</Text>
-                    <Pressable style={styles.arrowPickerClose} onPress={handleArrowTypePickerCancel}>
-                      <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                        <Path d="M18 6L6 18M6 6L18 18" stroke="#99a1af" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                      </Svg>
-                    </Pressable>
-                  </View>
-                  <View style={styles.arrowPickerGrid}>
-                    {ARROW_DIRECTIONS.map((dir) => (
-                      <Pressable
-                        key={dir.value}
-                        style={styles.arrowPickerOption}
-                        onPress={() => handleArrowTypeSelect(dir.value)}
-                      >
-                        <ArrowDirectionIcon direction={dir.value} size={18} />
-                        <Text style={styles.arrowPickerLabel} numberOfLines={1}>{dir.label}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                </View>
-              )}
+              <PulsingButton
+                pulse={showPulse}
+                style={[styles.addBtn, mode === 'add-marker' && styles.addBtnActive]}
+                onPress={handleAddMarkerClick}
+              >
+                <View style={[styles.markerDot, mode === 'add-marker' && styles.markerDotActive]} />
+                <Text style={[styles.addBtnText, mode === 'add-marker' && styles.addBtnTextActive]}>
+                  {t('overlay.addMarker')}
+                </Text>
+              </PulsingButton>
             </View>
-
-            <PulsingButton
-              pulse={showPulse}
-              style={[styles.addBtn, mode === 'add-marker' && styles.addBtnActive]}
-              onPress={handleAddMarkerClick}
-            >
-              <View style={[styles.markerDot, mode === 'add-marker' && styles.markerDotActive]} />
-              <Text style={[styles.addBtnText, mode === 'add-marker' && styles.addBtnTextActive]}>
-                {hasMarker ? 'Replace Marker' : 'Add Marker'}
-              </Text>
-            </PulsingButton>
-          </View>
+          )}
         </View>
 
         <LabelInputModal
@@ -689,9 +691,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  arrowBtnWrapper: {
-    position: 'relative',
-  },
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -727,54 +726,46 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderColor: '#ffffff',
   },
-  arrowPicker: {
-    position: 'absolute',
-    bottom: '100%',
-    left: 0,
-    marginBottom: 8,
-    width: 200,
-    padding: 10,
-    backgroundColor: '#1f2937',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#374151',
-    zIndex: 20,
+  arrowPickerInline: {
+    gap: 8,
   },
-  arrowPickerHeader: {
+  arrowPickerInlineHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
   },
-  arrowPickerTitle: {
+  arrowPickerInlineTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#e5e7eb',
+    color: '#9ca3af',
   },
-  arrowPickerClose: {
-    width: 24,
-    height: 24,
+  arrowPickerBackBtn: {
+    width: 28,
+    height: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 4,
+    borderRadius: 6,
   },
-  arrowPickerGrid: {
+  arrowPickerInlineGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 8,
   },
-  arrowPickerOption: {
+  arrowPickerInlineOption: {
+    width: '48%',
+    flexGrow: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#374151',
-    borderRadius: 8,
-    width: '48%',
+    backgroundColor: '#1f2937',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#374151',
   },
-  arrowPickerLabel: {
-    fontSize: 12,
+  arrowPickerInlineLabel: {
+    fontSize: 13,
     fontWeight: '500',
     color: '#e5e7eb',
   },
