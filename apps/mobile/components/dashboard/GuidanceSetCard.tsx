@@ -1,5 +1,13 @@
-import React, { memo, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { memo, useState, useRef } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Modal,
+  Pressable,
+} from 'react-native';
 import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
@@ -80,6 +88,20 @@ export const GuidanceSetCard = memo(function GuidanceSetCard({
   const visibleSteps = stepsWithImages.slice(0, MAX_THUMBNAILS);
   const overflowCount = stepsWithImages.length - MAX_THUMBNAILS;
 
+  const isDraft = guidanceSet.status === 'DRAFT';
+  const isPublished = guidanceSet.status === 'PUBLISHED';
+
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 });
+  const moreButtonRef = useRef<View>(null);
+
+  const openMenu = () => {
+    moreButtonRef.current?.measureInWindow((x, y, width, height) => {
+      setMenuPosition({ top: y + height + 4, right: Spacing.xl + Spacing.lg });
+      setMenuVisible(true);
+    });
+  };
+
   return (
     <TouchableOpacity
       style={[styles.card, isDeleting && styles.cardDeleting]}
@@ -87,7 +109,7 @@ export const GuidanceSetCard = memo(function GuidanceSetCard({
       activeOpacity={0.8}
       disabled={isDeleting}
     >
-      {/* Thumbnail section */}
+      {/* Thumbnail section — published cards with images */}
       {visibleSteps.length > 0 && (
         <View style={styles.thumbnailSection}>
           <View style={styles.thumbnailRow}>
@@ -109,7 +131,6 @@ export const GuidanceSetCard = memo(function GuidanceSetCard({
             )}
           </View>
 
-          {/* Status badge overlaid on thumbnails */}
           <View style={[styles.statusOverlay, { backgroundColor: status.bg }]}>
             <View style={[styles.statusDot, { backgroundColor: status.dot }]} />
             <Text style={[styles.statusLabel, { color: status.text }]}>
@@ -121,7 +142,6 @@ export const GuidanceSetCard = memo(function GuidanceSetCard({
 
       {/* Content section */}
       <View style={styles.content}>
-        {/* Title row with status (shown inline if no thumbnails) */}
         {visibleSteps.length === 0 && (
           <View style={styles.inlineStatusRow}>
             <Text style={styles.title} numberOfLines={1}>
@@ -141,18 +161,29 @@ export const GuidanceSetCard = memo(function GuidanceSetCard({
           </Text>
         )}
 
-        {/* Meta info */}
+        {/* Meta info — draft with 0 steps gets special treatment */}
         <View style={styles.meta}>
-          <View style={styles.stepCountBadge}>
-            <Text style={styles.stepCountText}>
-              {steps.length} {steps.length === 1 ? t('card.step') : t('card.steps')}
-            </Text>
-          </View>
-          <Text style={styles.metaDot}>·</Text>
-          <Text style={styles.metaText}>
-            {t('card.modified', { date: formatDate(guidanceSet.updatedAt) })}
-          </Text>
+          {isDraft && steps.length === 0 ? (
+            <Text style={styles.metaTextMuted}>{t('card.setupNotStarted')}</Text>
+          ) : (
+            <>
+              <View style={styles.stepCountBadge}>
+                <Text style={styles.stepCountText}>
+                  {steps.length} {steps.length === 1 ? t('card.step') : t('card.steps')}
+                </Text>
+              </View>
+              <Text style={styles.metaDot}>·</Text>
+              <Text style={styles.metaText}>
+                {t('card.modified', { date: formatDate(guidanceSet.updatedAt) })}
+              </Text>
+            </>
+          )}
         </View>
+
+        {/* Draft empty-state prompt */}
+        {isDraft && steps.length === 0 && (
+          <Text style={styles.draftPrompt}>{t('card.addFirstGuidanceStep')}</Text>
+        )}
 
         {guidanceSet.status === 'DISABLED' && (
           <Text style={styles.disabledNotice}>
@@ -160,49 +191,105 @@ export const GuidanceSetCard = memo(function GuidanceSetCard({
           </Text>
         )}
 
-        {/* Action buttons */}
+        {/* Action buttons — different layout per status */}
         <View style={styles.actions}>
-          {guidanceSet.status === 'PUBLISHED' && (
-            <TouchableOpacity
-              style={styles.shareButton}
-              onPress={() => onShare(guidanceSet.id)}
-            >
-              <Text style={styles.shareIcon}>↗</Text>
-              <Text style={styles.shareText}>{t('common.share')}</Text>
-            </TouchableOpacity>
+          {isPublished ? (
+            <>
+              {/* Primary: Send to courier */}
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={() => onShare(guidanceSet.id)}
+              >
+                <Text style={styles.primaryIcon}>↗</Text>
+                <Text style={styles.primaryText}>{t('common.sendToCourier')}</Text>
+              </TouchableOpacity>
+
+              {/* Secondary: Edit */}
+              <TouchableOpacity
+                style={styles.secondaryButton}
+                onPress={() => onEdit(guidanceSet.id)}
+              >
+                <Text style={styles.secondaryIcon}>✎</Text>
+                <Text style={styles.secondaryText}>{t('common.edit')}</Text>
+              </TouchableOpacity>
+
+              {/* Overflow: ⋮ menu with Delete */}
+              <View ref={moreButtonRef} collapsable={false}>
+                <TouchableOpacity
+                  style={styles.moreButton}
+                  onPress={openMenu}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.moreIcon}>⋮</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <>
+              {/* Draft / Disabled: primary is Continue setup (or Edit for disabled) */}
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={() => onEdit(guidanceSet.id)}
+              >
+                <Text style={styles.primaryText}>
+                  {isDraft ? t('common.continueSetup') : t('common.edit')}
+                </Text>
+              </TouchableOpacity>
+
+              <View style={styles.actionSpacer} />
+
+              {/* Overflow: ⋮ menu with Delete */}
+              <View ref={moreButtonRef} collapsable={false}>
+                <TouchableOpacity
+                  style={styles.moreButton}
+                  onPress={openMenu}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.moreIcon}>⋮</Text>
+                </TouchableOpacity>
+              </View>
+            </>
           )}
-
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => onDelete(guidanceSet.id)}
-          >
-            <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
-              <Path
-                d="M3 6H5H21"
-                stroke={Colors.textMuted}
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <Path
-                d="M8 6V4C8 3.47 8.21 2.96 8.59 2.59C8.96 2.21 9.47 2 10 2H14C14.53 2 15.04 2.21 15.41 2.59C15.79 2.96 16 3.47 16 4V6M19 6V20C19 20.53 18.79 21.04 18.41 21.41C18.04 21.79 17.53 22 17 22H7C6.47 22 5.96 21.79 5.59 21.41C5.21 21.04 5 20.53 5 20V6H19Z"
-                stroke={Colors.textMuted}
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </Svg>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => onEdit(guidanceSet.id)}
-          >
-            <Text style={styles.editIcon}>✎</Text>
-            <Text style={styles.editText}>{t('common.edit')}</Text>
-          </TouchableOpacity>
         </View>
       </View>
+
+      {/* Overflow menu modal */}
+      <Modal
+        visible={menuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <Pressable style={styles.menuOverlay} onPress={() => setMenuVisible(false)}>
+          <View style={[styles.menuDropdown, { top: menuPosition.top, right: menuPosition.right }]}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuVisible(false);
+                onDelete(guidanceSet.id);
+              }}
+            >
+              <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M3 6H5H21"
+                  stroke={Colors.danger}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <Path
+                  d="M8 6V4C8 3.47 8.21 2.96 8.59 2.59C8.96 2.21 9.47 2 10 2H14C14.53 2 15.04 2.21 15.41 2.59C15.79 2.96 16 3.47 16 4V6M19 6V20C19 20.53 18.79 21.04 18.41 21.41C18.04 21.79 17.53 22 17 22H7C6.47 22 5.96 21.79 5.59 21.41C5.21 21.04 5 20.53 5 20V6H19Z"
+                  stroke={Colors.danger}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
+              <Text style={styles.menuItemTextDanger}>{t('common.delete')}</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </TouchableOpacity>
   );
 });
@@ -362,10 +449,21 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     color: Colors.textMuted,
   },
+  draftPrompt: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.sm,
+    lineHeight: 18,
+  },
   disabledNotice: {
     fontSize: FontSize.xs,
     color: Colors.danger,
     marginBottom: Spacing.sm,
+    fontStyle: 'italic',
+  },
+  metaTextMuted: {
+    fontSize: FontSize.xs,
+    color: Colors.textMuted,
     fontStyle: 'italic',
   },
   actions: {
@@ -375,35 +473,7 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: Colors.border,
   },
-  shareButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginRight: Spacing.sm,
-  },
-  shareIcon: {
-    fontSize: 13,
-    marginRight: 4,
-    color: Colors.text,
-  },
-  shareText: {
-    fontSize: FontSize.sm,
-    fontWeight: '500',
-    color: Colors.text,
-  },
-  deleteButton: {
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 'auto',
-    marginRight: 6,
-  },
-  editButton: {
+  primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
@@ -411,14 +481,80 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.full,
     backgroundColor: Colors.text,
   },
-  editIcon: {
+  primaryIcon: {
     fontSize: 13,
     marginRight: 5,
     color: '#FFFFFF',
   },
-  editText: {
+  primaryText: {
     fontSize: FontSize.sm,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginLeft: Spacing.sm,
+  },
+  secondaryIcon: {
+    fontSize: 13,
+    marginRight: 4,
+    color: Colors.text,
+  },
+  secondaryText: {
+    fontSize: FontSize.sm,
+    fontWeight: '500',
+    color: Colors.text,
+  },
+  actionSpacer: {
+    flex: 1,
+  },
+  moreButton: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: Spacing.sm,
+  },
+  moreIcon: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.textMuted,
+    lineHeight: 22,
+  },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+  },
+  menuDropdown: {
+    position: 'absolute',
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingVertical: 4,
+    minWidth: 150,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    gap: Spacing.sm,
+  },
+  menuItemTextDanger: {
+    fontSize: FontSize.sm,
+    fontWeight: '500',
+    color: Colors.danger,
   },
 });
