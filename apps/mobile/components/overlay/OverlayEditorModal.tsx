@@ -108,13 +108,17 @@ function PulsingButton({
   );
 }
 
+type UploadStatus = 'idle' | 'uploading' | 'failed';
+
 interface OverlayEditorModalProps {
   visible: boolean;
   imageUrl: string;
   overlays: Overlay[];
   userId?: string;
+  uploadStatus?: UploadStatus;
   onSave: (overlays: Overlay[]) => void;
   onCancel: () => void;
+  onRetryUpload?: () => void;
 }
 
 export function OverlayEditorModal({
@@ -122,8 +126,10 @@ export function OverlayEditorModal({
   imageUrl,
   overlays: initialOverlays,
   userId = 'dev-user-placeholder',
+  uploadStatus = 'idle',
   onSave,
   onCancel,
+  onRetryUpload,
 }: OverlayEditorModalProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -388,6 +394,24 @@ export function OverlayEditorModal({
             <Text style={styles.headerBtnTextDone}>{t('common.done')}</Text>
           </Pressable>
         </View>
+
+        {/* Upload status banner */}
+        {uploadStatus === 'uploading' && (
+          <View style={styles.uploadBanner}>
+            <View style={styles.uploadBannerDot} />
+            <Text style={styles.uploadBannerText}>{t('steps.uploading')}</Text>
+          </View>
+        )}
+        {uploadStatus === 'failed' && (
+          <View style={styles.uploadFailedBanner}>
+            <Text style={styles.uploadFailedBannerText}>{t('steps.uploadFailed')}</Text>
+            {onRetryUpload && (
+              <Pressable style={styles.retryBtn} onPress={onRetryUpload}>
+                <Text style={styles.retryBtnText}>{t('steps.retryUpload')}</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
 
         {/* Canvas area */}
         <View style={styles.canvasArea}>
@@ -768,5 +792,49 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     color: '#e5e7eb',
+  },
+  uploadBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    backgroundColor: '#1e3a5f',
+  },
+  uploadBannerDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#60a5fa',
+  },
+  uploadBannerText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#93c5fd',
+  },
+  uploadFailedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#451a1a',
+  },
+  uploadFailedBannerText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#fca5a5',
+  },
+  retryBtn: {
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 6,
+  },
+  retryBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });

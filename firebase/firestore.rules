@@ -44,14 +44,12 @@ service cloud.firestore {
     }
 
     // Share Links collection
+    // Courier access goes through Cloud Functions (admin SDK), not direct Firestore
     match /shareLinks/{shareLinkId} {
-      // Anyone with the link can read (for courier access)
-      allow read: if true;
-      // Anyone can update (courier increments accessCount)
-      allow update: if true;
-      // Only authenticated users can create/delete their own share links
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow delete: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if false;
     }
 
     // Feedback Events collection - append-only for couriers

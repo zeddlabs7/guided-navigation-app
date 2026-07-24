@@ -13,17 +13,29 @@ const CORS_ORIGINS = [
 
 const db = admin.firestore();
 
-interface CreateShareLinkData {
-  guidanceSetId: string;
-  expiryDurationMinutes?: number;
-}
+const OLD_TOKEN_LENGTH = 64;
 
-function generateSecureToken(): string {
-  return crypto.randomBytes(32).toString('hex');
-}
-
-function hashToken(token: string): string {
+/** Legacy hash for backward compat with old 64-char hex tokens */
+function hashTokenLegacy(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+/**
+ * Resolve a share link doc from a token.
+ * New tokens (16-char base62) are used as doc IDs directly.
+ * Old tokens (64-char hex) need SHA-256 hashing to find the doc ID.
+ */
+async function resolveShareLinkDoc(
+  token: string,
+): Promise<admin.firestore.DocumentSnapshot | null> {
+  if (token.length === OLD_TOKEN_LENGTH && /^[0-9a-f]+$/.test(token)) {
+    const tokenHash = hashTokenLegacy(token);
+    const snap = await db.collection('shareLinks').doc(tokenHash).get();
+    if (snap.exists) return snap;
+  }
+
+  const snap = await db.collection('shareLinks').doc(token).get();
+  return snap.exists ? snap : null;
 }
 
 // --- v2 courier-facing functions (onRequest for lower overhead) ---
@@ -39,19 +51,15 @@ export const validateToken = onRequest(
       return;
     }
 
-    const tokenHash = hashToken(token);
-    const tHash = Date.now();
-
-    const shareLinkSnap = await db.collection('shareLinks').doc(tokenHash).get();
+    const shareLinkSnap = await resolveShareLinkDoc(token);
     const tFirestore = Date.now();
 
     logger.info('validateToken timing', {
-      hashMs: tHash - t0,
-      firestoreMs: tFirestore - tHash,
+      firestoreMs: tFirestore - t0,
       totalMs: tFirestore - t0,
     });
 
-    if (!shareLinkSnap.exists) {
+    if (!shareLinkSnap) {
       res.json({ valid: false, error: 'NOT_FOUND' });
       return;
     }
@@ -83,12 +91,10 @@ export const loadGuidanceData = onRequest(
       return;
     }
 
-    const tokenHash = hashToken(token);
-
-    const shareLinkSnap = await db.collection('shareLinks').doc(tokenHash).get();
+    const shareLinkSnap = await resolveShareLinkDoc(token);
     const tShareLink = Date.now();
 
-    if (!shareLinkSnap.exists) {
+    if (!shareLinkSnap) {
       res.json({ valid: false, error: 'NOT_FOUND' });
       return;
     }
@@ -180,51 +186,6 @@ export const loadGuidanceData = onRequest(
 
 // --- v1 functions (recipient-app, not on courier critical path) ---
 
-export const createShareLink = functions.https.onCall(
-  async (data: CreateShareLinkData, context) => {
-    if (!context.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
-    }
-
-    const { guidanceSetId, expiryDurationMinutes = 1440 } = data;
-
-    const guidanceSetRef = db.collection('guidanceSets').doc(guidanceSetId);
-    const guidanceSet = await guidanceSetRef.get();
-
-    if (!guidanceSet.exists) {
-      throw new functions.https.HttpsError('not-found', 'Guidance set not found');
-    }
-
-    if (guidanceSet.data()?.recipientUserId !== context.auth.uid) {
-      throw new functions.https.HttpsError('permission-denied', 'Not authorized');
-    }
-
-    const token = generateSecureToken();
-    const tokenHash = hashToken(token);
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + expiryDurationMinutes * 60 * 1000);
-
-    await db.collection('shareLinks').doc(tokenHash).set({
-      guidanceSetId,
-      tokenHash,
-      status: 'ACTIVE',
-      expiresAt: expiresAt.toISOString(),
-      expiryDurationMinutes,
-      revokedAt: null,
-      accessCount: 0,
-      lastAccessedAt: null,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    return {
-      shareLinkId: tokenHash,
-      token,
-      expiresAt: expiresAt.toISOString(),
-    };
-  }
-);
-
 export const validateShareLink = functions.https.onCall(async (data: { token: string }) => {
   const { token } = data;
 
@@ -232,11 +193,9 @@ export const validateShareLink = functions.https.onCall(async (data: { token: st
     throw new functions.https.HttpsError('invalid-argument', 'Token is required');
   }
 
-  const tokenHash = hashToken(token);
+  const shareLinkSnap = await resolveShareLinkDoc(token);
 
-  const shareLinkSnap = await db.collection('shareLinks').doc(tokenHash).get();
-
-  if (!shareLinkSnap.exists) {
+  if (!shareLinkSnap) {
     return { valid: false, error: 'NOT_FOUND' };
   }
 
@@ -270,11 +229,9 @@ export const loadGuidanceByToken = functions.https.onCall(async (data: { token: 
     throw new functions.https.HttpsError('invalid-argument', 'Token is required');
   }
 
-  const tokenHash = hashToken(token);
+  const shareLinkSnap = await resolveShareLinkDoc(token);
 
-  const shareLinkSnap = await db.collection('shareLinks').doc(tokenHash).get();
-
-  if (!shareLinkSnap.exists) {
+  if (!shareLinkSnap) {
     return { valid: false, error: 'NOT_FOUND' };
   }
 

@@ -44,14 +44,14 @@ const AVAILABILITY_OPTIONS: {
 }[] = [
   {
     value: 'ANYTIME_TODAY',
-    labelKey: 'share.availAnytime',
-    descriptionKey: 'share.availAnytimeDesc',
+    labelKey: 'share.availToday',
+    descriptionKey: 'share.availTodayDesc',
     icon: 'check',
   },
   {
     value: 'TIME_WINDOW',
-    labelKey: 'share.availTimeWindow',
-    descriptionKey: 'share.availTimeWindowDesc',
+    labelKey: 'share.availSpecificTimes',
+    descriptionKey: 'share.availSpecificTimesDesc',
     icon: 'clock',
   },
   {
@@ -88,6 +88,34 @@ function AvailabilityIcon({ icon, selected }: { icon: 'check' | 'clock' | 'x'; s
   );
 }
 
+function formatTimeShort(date: Date) {
+  const h = date.getHours().toString().padStart(2, '0');
+  const m = date.getMinutes().toString().padStart(2, '0');
+  return `${h}:${m}`;
+}
+
+function formatExpiryDate(expiresAt: string): string {
+  const expiry = new Date(expiresAt);
+  const now = new Date();
+  const diffMs = expiry.getTime() - now.getTime();
+
+  if (diffMs <= 0) return 'Expired';
+
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+  if (diffHours < 1) return `in ${diffMins}m`;
+  if (diffHours < 24) return `in ${diffHours}h`;
+
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (expiry.toDateString() === tomorrow.toDateString()) {
+    return `tomorrow at ${formatTimeShort(expiry)}`;
+  }
+
+  return `${expiry.toLocaleDateString('en', { month: 'short', day: 'numeric' })} at ${formatTimeShort(expiry)}`;
+}
+
 export default function ShareScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -102,9 +130,9 @@ export default function ShareScreen() {
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [guidanceSet, setGuidanceSet] = useState<GuidanceSet | null>(null);
-  const [shareToken, setShareToken] = useState<string | null>(null);
+  const [courierAppUrl, setCourierAppUrl] = useState<string | null>(null);
   const [shareLinkId, setShareLinkId] = useState<string | null>(null);
-  const [linkStatus, setLinkStatus] = useState<'ACTIVE' | 'EXPIRED' | 'REVOKED' | null>(null);
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
 
   const [showModal, setShowModal] = useState(false);
   const [selectedAvailability, setSelectedAvailability] = useState<AvailabilityMode>('ANYTIME_TODAY');
@@ -116,11 +144,14 @@ export default function ShareScreen() {
   const [showEndPicker, setShowEndPicker] = useState(false);
   const isIOS = Platform.OS === 'ios';
   const [selectedValidity, setSelectedValidity] = useState<LinkValidityOption>(DEFAULT_VALIDITY_OPTION);
+  const [showValidityPicker, setShowValidityPicker] = useState(false);
 
   const [showWhatsAppNumberModal, setShowWhatsAppNumberModal] = useState(false);
   const [whatsAppNumber, setWhatsAppNumber] = useState('+966');
 
-  const courierAppUrl = shareToken ? buildShareUrl(shareToken) : null;
+  const [showLinkSettingsMenu, setShowLinkSettingsMenu] = useState(false);
+  const linkSettingsRef = useRef<View>(null);
+  const [linkSettingsPosition, setLinkSettingsPosition] = useState({ top: 0, right: 0 });
 
   const loadData = useCallback(async () => {
     if (!guidanceSetId) return;
@@ -135,7 +166,10 @@ export default function ShareScreen() {
           const existingLink = await getShareLinkForGuidance(guidanceSetId);
           if (existingLink && existingLink.status === 'ACTIVE') {
             setShareLinkId(existingLink.id);
-            setLinkStatus('ACTIVE');
+            setCourierAppUrl(buildShareUrl(existingLink.id));
+            setExpiresAt(existingLink.expiresAt);
+          } else {
+            setShowModal(true);
           }
         }
       }
@@ -162,15 +196,10 @@ export default function ShareScreen() {
     router.replace('/(tabs)/dashboard' as any);
   }, [router]);
 
-  const formatTime = (date: Date) => {
-    const h = date.getHours().toString().padStart(2, '0');
-    const m = date.getMinutes().toString().padStart(2, '0');
-    return `${h}:${m}`;
-  };
-
   const openAvailabilityModal = useCallback(() => {
     setSelectedAvailability(guidanceSet?.availabilityMode || 'ANYTIME_TODAY');
     setSelectedValidity(DEFAULT_VALIDITY_OPTION);
+    setShowValidityPicker(false);
     setShowStartPicker(false);
     setShowEndPicker(false);
     setShowModal(true);
@@ -208,9 +237,15 @@ export default function ShareScreen() {
         expiryDurationMinutes: selectedValidity.minutes,
       });
 
-      setShareToken(result.token);
       setShareLinkId(result.shareLinkId);
-      setLinkStatus('ACTIVE');
+      setCourierAppUrl(result.url);
+
+      const expiry = new Date(Date.now() + selectedValidity.minutes * 60 * 1000);
+      setExpiresAt(expiry.toISOString());
+
+      setGuidanceSet((prev) =>
+        prev ? { ...prev, availabilityMode: selectedAvailability } : prev,
+      );
     } catch (err) {
       console.error('Failed to generate share link:', err);
       Alert.alert(t('common.error'), t('share.errorGenerate'));
@@ -253,7 +288,7 @@ export default function ShareScreen() {
     } catch {
       // user cancelled
     }
-  }, [courierAppUrl]);
+  }, [courierAppUrl, t]);
 
   const handleRevoke = useCallback(async () => {
     if (!shareLinkId) return;
@@ -266,9 +301,10 @@ export default function ShareScreen() {
           setRevoking(true);
           try {
             await revokeShareLink(shareLinkId);
-            setShareToken(null);
             setShareLinkId(null);
-            setLinkStatus(null);
+            setCourierAppUrl(null);
+            setExpiresAt(null);
+            setShowModal(true);
           } catch (err) {
             console.error('Failed to revoke share link:', err);
             Alert.alert(t('common.error'), t('share.errorRevoke'));
@@ -280,11 +316,43 @@ export default function ShareScreen() {
     ]);
   }, [shareLinkId, t]);
 
+  const openLinkSettingsMenu = () => {
+    linkSettingsRef.current?.measureInWindow((x, y, width, height) => {
+      setLinkSettingsPosition({ top: y + height + 4, right: Spacing.xl });
+      setShowLinkSettingsMenu(true);
+    });
+  };
+
+  const getAvailabilitySummary = (): string => {
+    if (!guidanceSet) return '';
+    const mode = guidanceSet.availabilityMode;
+    if (mode === 'TIME_WINDOW') {
+      const from = formatTimeShort(startTime);
+      const to = formatTimeShort(endTime);
+      return t('share.availabilityTimeSummary', { from, to });
+    }
+    if (mode === 'NOT_AVAILABLE_TODAY') return t('share.availabilityNotAvailable');
+    return t('share.availabilitySummary');
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.text} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (generating || revoking) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.text} />
+          <Text style={styles.preparingText}>
+            {revoking ? t('share.revoking') : t('share.preparing')}
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -313,9 +381,7 @@ export default function ShareScreen() {
         {/* Title section */}
         <View style={styles.titleSection}>
           <Text style={styles.pageTitle}>{t('share.title')}</Text>
-          <Text style={styles.pageSubtitle}>
-            {t('share.subtitle')}
-          </Text>
+          <Text style={styles.pageSubtitle}>{t('share.subtitle')}</Text>
         </View>
 
         {/* Address banner */}
@@ -329,122 +395,91 @@ export default function ShareScreen() {
           </View>
         ) : null}
 
-        {/* Main card */}
-        <View style={styles.card}>
-          {!courierAppUrl ? (
-            /* No active link state */
-            <View style={styles.noLink}>
-              <View style={styles.noLinkIcon}>
-                <Svg width={32} height={32} viewBox="0 0 24 24" fill="none">
-                  <Path d="M10 13C10.4295 13.5741 10.9774 14.0492 11.6066 14.3929C12.2357 14.7367 12.9315 14.9411 13.6467 14.9923C14.3618 15.0435 15.0796 14.9404 15.7513 14.6898C16.4231 14.4392 17.0331 14.0471 17.54 13.54L20.54 10.54C21.4508 9.59699 21.9548 8.33397 21.9434 7.02299C21.932 5.71201 21.4061 4.45794 20.4791 3.5309C19.5521 2.60386 18.298 2.07802 16.987 2.06663C15.676 2.05523 14.413 2.55921 13.47 3.47L11.75 5.18" stroke="#99a1af" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                  <Path d="M14 11C13.5705 10.4259 13.0226 9.95083 12.3934 9.60707C11.7643 9.26331 11.0685 9.05889 10.3533 9.00768C9.63821 8.95646 8.92041 9.05964 8.24866 9.31023C7.5769 9.56082 6.96689 9.95294 6.46 10.46L3.46 13.46C2.54921 14.403 2.04524 15.666 2.05663 16.977C2.06802 18.288 2.59387 19.5421 3.52091 20.4691C4.44795 21.3961 5.70201 21.922 7.01299 21.9334C8.32398 21.9448 9.58699 21.4408 10.53 20.53L12.24 18.82" stroke="#99a1af" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                </Svg>
+        {courierAppUrl ? (
+          /* ---- Active link: share-focused UI ---- */
+          <View style={styles.card}>
+            {/* Link ready indicator */}
+            <View style={styles.linkReadyRow}>
+              <View style={styles.linkReadyDot} />
+              <Text style={styles.linkReadyText}>{t('share.linkReady')}</Text>
+              <View style={styles.linkReadySpacer} />
+              <View ref={linkSettingsRef} collapsable={false}>
+                <Pressable
+                  style={styles.linkSettingsBtn}
+                  onPress={openLinkSettingsMenu}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.linkSettingsIcon}>⋮</Text>
+                </Pressable>
               </View>
-              <Text style={styles.noLinkTitle}>
-                {shareLinkId ? t('share.tokenUnavailable') : t('share.noActiveLink')}
-              </Text>
-              <Text style={styles.noLinkText}>
-                {shareLinkId
-                  ? t('share.tokenUnavailableHint')
-                  : t('share.noActiveLinkHint')}
-              </Text>
-              <Pressable
-                style={[styles.generateBtn, generating && styles.btnDisabled]}
-                onPress={openAvailabilityModal}
-                disabled={generating}
-              >
-                {generating ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
-                ) : (
-                  <Text style={styles.generateBtnText}>
-                    {shareLinkId ? t('share.regenerate') : t('share.generate')}
+            </View>
+
+            {/* Availability + expiry summary */}
+            <View style={styles.summaryRow}>
+              <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                <Circle cx={12} cy={12} r={10} stroke={Colors.textMuted} strokeWidth={2} />
+                <Path d="M12 6v6l4 2" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" />
+              </Svg>
+              <Text style={styles.summaryText}>{getAvailabilitySummary()}</Text>
+              {expiresAt && (
+                <>
+                  <Text style={styles.summaryDot}>·</Text>
+                  <Text style={styles.summaryText}>
+                    {t('share.expiresAt', { time: formatExpiryDate(expiresAt) })}
                   </Text>
-                )}
+                </>
+              )}
+            </View>
+
+            <Text style={styles.linkHint}>{t('share.linkHint')}</Text>
+
+            {/* Share actions */}
+            <View style={styles.shareActions}>
+              <Pressable style={styles.whatsappBtn} onPress={handleWhatsAppShare}>
+                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                  <Path d="M21 11.5C21.0034 12.8199 20.6951 14.1219 20.1 15.3C19.3944 16.7118 18.3098 17.8992 16.9674 18.7293C15.6251 19.5594 14.0782 19.9994 12.5 20C11.1801 20.0035 9.87812 19.6951 8.7 19.1L3 21L4.9 15.3C4.30493 14.1219 3.99656 12.8199 4 11.5C4.00061 9.92179 4.44061 8.37488 5.27072 7.03258C6.10083 5.69028 7.28825 4.6056 8.7 3.90003C9.87812 3.30496 11.1801 2.99659 12.5 3.00003H13C15.0843 3.11502 17.053 3.99479 18.5291 5.47089C20.0052 6.94699 20.885 8.91568 21 11V11.5Z" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                </Svg>
+                <View style={styles.whatsappBtnContent}>
+                  <Text style={styles.whatsappBtnText}>{t('share.openWhatsApp')}</Text>
+                  <Text style={styles.whatsappBtnSubtext}>{t('share.whatsappSubtitle')}</Text>
+                </View>
+              </Pressable>
+
+              <Pressable
+                style={styles.whatsappNumberBtn}
+                onPress={() => setShowWhatsAppNumberModal(true)}
+              >
+                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                  <Path d="M21 11.5C21.0034 12.8199 20.6951 14.1219 20.1 15.3C19.3944 16.7118 18.3098 17.8992 16.9674 18.7293C15.6251 19.5594 14.0782 19.9994 12.5 20C11.1801 20.0035 9.87812 19.6951 8.7 19.1L3 21L4.9 15.3C4.30493 14.1219 3.99656 12.8199 4 11.5C4.00061 9.92179 4.44061 8.37488 5.27072 7.03258C6.10083 5.69028 7.28825 4.6056 8.7 3.90003C9.87812 3.30496 11.1801 2.99659 12.5 3.00003H13C15.0843 3.11502 17.053 3.99479 18.5291 5.47089C20.0052 6.94699 20.885 8.91568 21 11V11.5Z" stroke="#25D366" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                </Svg>
+                <View style={styles.whatsappBtnContent}>
+                  <Text style={styles.whatsappNumberBtnText}>{t('share.enterCourierNumber')}</Text>
+                  <Text style={styles.whatsappNumberSubtext}>{t('share.numberSubtitle')}</Text>
+                </View>
+              </Pressable>
+
+              <Pressable style={styles.nativeShareBtn} onPress={handleNativeShare}>
+                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                  <Path d="M4 12V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V12" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                  <Path d="M16 6L12 2L8 6" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                  <Path d="M12 2V15" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                </Svg>
+                <Text style={styles.nativeShareBtnText}>{t('share.moreOptions')}</Text>
               </Pressable>
             </View>
-          ) : (
-            /* Active link state */
-            <View style={styles.activeLink}>
-              {/* Status badge */}
-              <View style={styles.activeLinkBadgeRow}>
-                <View style={styles.activeBadge}>
-                  <Text style={styles.activeBadgeText}>{t('share.active')}</Text>
-                </View>
-              </View>
 
-              {/* URL display + copy */}
-              <View style={styles.urlRow}>
-                <TextInput
-                  style={styles.urlInput}
-                  value={courierAppUrl}
-                  editable={false}
-                  selectTextOnFocus
-                />
-                <Pressable
-                  style={[styles.copyBtn, copied && styles.copyBtnCopied]}
-                  onPress={handleCopyLink}
-                >
-                  <Text style={styles.copyBtnText}>{copied ? t('share.copied') : t('share.copy')}</Text>
-                </Pressable>
-              </View>
-
-              <Text style={styles.linkHint}>{t('share.linkHint')}</Text>
-
-              {/* Share actions (mobile-specific) */}
-              <View style={styles.shareActions}>
-                <Pressable style={styles.whatsappBtn} onPress={handleWhatsAppShare}>
-                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                    <Path d="M21 11.5C21.0034 12.8199 20.6951 14.1219 20.1 15.3C19.3944 16.7118 18.3098 17.8992 16.9674 18.7293C15.6251 19.5594 14.0782 19.9994 12.5 20C11.1801 20.0035 9.87812 19.6951 8.7 19.1L3 21L4.9 15.3C4.30493 14.1219 3.99656 12.8199 4 11.5C4.00061 9.92179 4.44061 8.37488 5.27072 7.03258C6.10083 5.69028 7.28825 4.6056 8.7 3.90003C9.87812 3.30496 11.1801 2.99659 12.5 3.00003H13C15.0843 3.11502 17.053 3.99479 18.5291 5.47089C20.0052 6.94699 20.885 8.91568 21 11V11.5Z" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                  </Svg>
-                  <Text style={styles.whatsappBtnText}>{t('share.shareViaWhatsApp')}</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.whatsappNumberBtn}
-                  onPress={() => setShowWhatsAppNumberModal(true)}
-                >
-                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                    <Path d="M21 11.5C21.0034 12.8199 20.6951 14.1219 20.1 15.3C19.3944 16.7118 18.3098 17.8992 16.9674 18.7293C15.6251 19.5594 14.0782 19.9994 12.5 20C11.1801 20.0035 9.87812 19.6951 8.7 19.1L3 21L4.9 15.3C4.30493 14.1219 3.99656 12.8199 4 11.5C4.00061 9.92179 4.44061 8.37488 5.27072 7.03258C6.10083 5.69028 7.28825 4.6056 8.7 3.90003C9.87812 3.30496 11.1801 2.99659 12.5 3.00003H13C15.0843 3.11502 17.053 3.99479 18.5291 5.47089C20.0052 6.94699 20.885 8.91568 21 11V11.5Z" stroke="#25D366" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                  </Svg>
-                  <Text style={styles.whatsappNumberBtnText}>{t('share.sendToNumber')}</Text>
-                </Pressable>
-                <Pressable style={styles.nativeShareBtn} onPress={handleNativeShare}>
-                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                    <Path d="M4 12V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V12" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                    <Path d="M16 6L12 2L8 6" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                    <Path d="M12 2V15" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                  </Svg>
-                  <Text style={styles.nativeShareBtnText}>{t('share.shareNative')}</Text>
-                </Pressable>
-              </View>
-
-              {/* Regenerate / Revoke */}
-              <View style={styles.linkActions}>
-                <Pressable
-                  style={[styles.regenerateBtn, generating && styles.btnDisabled]}
-                  onPress={openAvailabilityModal}
-                  disabled={generating}
-                >
-                  {generating ? (
-                    <ActivityIndicator size="small" color="#4a5565" />
-                  ) : (
-                    <Text style={styles.regenerateBtnText}>{t('share.regenerateBtn')}</Text>
-                  )}
-                </Pressable>
-                <Pressable
-                  style={[styles.revokeBtn, revoking && styles.btnDisabled]}
-                  onPress={handleRevoke}
-                  disabled={revoking}
-                >
-                  {revoking ? (
-                    <ActivityIndicator size="small" color="#dc2626" />
-                  ) : (
-                    <Text style={styles.revokeBtnText}>{t('share.revoke')}</Text>
-                  )}
-                </Pressable>
-              </View>
-            </View>
-          )}
-        </View>
+            {/* Copy link (secondary) */}
+            <Pressable style={styles.copyLinkBtn} onPress={handleCopyLink}>
+              <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                <Path d="M20 9H11C9.89543 9 9 9.89543 9 11V20C9 21.1046 9.89543 22 11 22H20C21.1046 22 22 21.1046 22 20V11C22 9.89543 21.1046 9 20 9Z" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                <Path d="M5 15H4C3.46957 15 2.96086 14.7893 2.58579 14.4142C2.21071 14.0391 2 13.5304 2 13V4C2 3.46957 2.21071 2.96086 2.58579 2.58579C2.96086 2.21071 3.46957 2 4 2H13C13.5304 2 14.0391 2.21071 14.4142 2.58579C14.7893 2.96086 15 3.46957 15 4V5" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+              <Text style={styles.copyLinkText}>
+                {copied ? t('share.copied') : t('share.copyLink')}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
       </ScrollView>
 
       {/* Android-only: time picker dialogs rendered outside modal */}
@@ -478,10 +513,19 @@ export default function ShareScreen() {
         visible={showModal}
         animationType="slide"
         transparent
-        onRequestClose={() => setShowModal(false)}
+        onRequestClose={() => {
+          setShowModal(false);
+          if (!courierAppUrl) router.back();
+        }}
       >
         <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalDismissArea} onPress={() => setShowModal(false)} />
+          <Pressable
+            style={styles.modalDismissArea}
+            onPress={() => {
+              setShowModal(false);
+              if (!courierAppUrl) router.back();
+            }}
+          />
           <View style={[styles.modalContent, { paddingBottom: modalBottomPadding }]}>
             <View style={styles.modalHandle} />
 
@@ -546,7 +590,7 @@ export default function ShareScreen() {
                           <Circle cx={12} cy={12} r={10} stroke="#99a1af" strokeWidth={2} />
                           <Path d="M12 6v6l4 2" stroke="#99a1af" strokeWidth={2} strokeLinecap="round" />
                         </Svg>
-                        <Text style={styles.timeButtonText}>{formatTime(startTime)}</Text>
+                        <Text style={styles.timeButtonText}>{formatTimeShort(startTime)}</Text>
                       </Pressable>
                     )}
                   </View>
@@ -567,81 +611,85 @@ export default function ShareScreen() {
                           <Circle cx={12} cy={12} r={10} stroke="#99a1af" strokeWidth={2} />
                           <Path d="M12 6v6l4 2" stroke="#99a1af" strokeWidth={2} strokeLinecap="round" />
                         </Svg>
-                        <Text style={styles.timeButtonText}>{formatTime(endTime)}</Text>
+                        <Text style={styles.timeButtonText}>{formatTimeShort(endTime)}</Text>
                       </Pressable>
                     )}
                   </View>
                 </View>
               )}
 
-              {/* Link validity picker (mobile-specific) */}
-              <View style={styles.validitySection}>
-                <Text style={styles.validitySectionTitle}>{t('share.linkValidity')}</Text>
-                <Text style={styles.validitySectionSubtitle}>
-                  {t('share.linkValiditySubtitle')}
-                </Text>
-                <View style={styles.validityOptions}>
-                  {LINK_VALIDITY_OPTIONS.map((option) => {
-                    const isSelected = selectedValidity.minutes === option.minutes;
-                    return (
-                      <Pressable
-                        key={option.minutes}
-                        style={[
-                          styles.validityOption,
-                          isSelected && styles.validityOptionSelected,
-                          option.premium && styles.validityOptionPremium,
-                        ]}
-                        onPress={() => {
-                          if (!option.premium) setSelectedValidity(option);
-                        }}
-                        disabled={option.premium}
-                      >
-                        <View style={styles.validityOptionRow}>
-                          <View
-                            style={[
-                              styles.validityRadio,
-                              isSelected && styles.validityRadioSelected,
-                            ]}
-                          >
-                            {isSelected && <View style={styles.validityRadioInner} />}
-                          </View>
-                          <Text
-                            style={[
-                              styles.validityOptionLabel,
-                              option.premium && styles.validityOptionLabelDisabled,
-                            ]}
-                          >
-                            {t(option.labelKey)}
-                          </Text>
-                          {option.premium && (
-                            <View style={styles.comingSoonBadge}>
-                              <Text style={styles.comingSoonText}>{t('share.comingSoon')}</Text>
-                            </View>
-                          )}
-                        </View>
-                      </Pressable>
-                    );
-                  })}
+              {/* Link expiry — collapsed by default */}
+              <View style={styles.expirySection}>
+                <View style={styles.expiryDefaultRow}>
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                    <Circle cx={12} cy={12} r={10} stroke={Colors.textMuted} strokeWidth={2} />
+                    <Path d="M12 6v6l4 2" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" />
+                  </Svg>
+                  <Text style={styles.expiryDefaultText}>{t('share.linkExpiry')}</Text>
+                  <Pressable onPress={() => setShowValidityPicker(!showValidityPicker)}>
+                    <Text style={styles.expiryChangeLink}>{t('share.linkExpiryChange')}</Text>
+                  </Pressable>
                 </View>
+
+                {showValidityPicker && (
+                  <View style={styles.validityOptions}>
+                    {LINK_VALIDITY_OPTIONS.map((option) => {
+                      const isSelected = selectedValidity.minutes === option.minutes;
+                      return (
+                        <Pressable
+                          key={option.minutes}
+                          style={[
+                            styles.validityOption,
+                            isSelected && styles.validityOptionSelected,
+                          ]}
+                          onPress={() => setSelectedValidity(option)}
+                        >
+                          <View style={styles.validityOptionRow}>
+                            <View
+                              style={[
+                                styles.validityRadio,
+                                isSelected && styles.validityRadioSelected,
+                              ]}
+                            >
+                              {isSelected && <View style={styles.validityRadioInner} />}
+                            </View>
+                            <Text style={styles.validityOptionLabel}>
+                              {t(option.labelKey)}
+                            </Text>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                )}
               </View>
             </ScrollView>
 
             {/* Modal actions */}
             <View style={styles.modalActions}>
-              <Pressable style={styles.modalCancelBtn} onPress={() => setShowModal(false)}>
-                <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
+              <Pressable
+                style={styles.modalCancelBtn}
+                onPress={() => {
+                  setShowModal(false);
+                  if (!courierAppUrl) router.back();
+                }}
+              >
+                <Text style={styles.modalCancelText}>
+                  {courierAppUrl ? t('common.cancel') : t('common.back')}
+                </Text>
               </Pressable>
               <Pressable
-                style={[styles.modalConfirmBtn, generating && styles.btnDisabled]}
+                style={[
+                  styles.modalConfirmBtn,
+                  generating && styles.btnDisabled,
+                ]}
                 onPress={handleConfirmAndGenerate}
                 disabled={generating}
               >
                 {generating ? (
                   <ActivityIndicator size="small" color="#ffffff" />
                 ) : (
-                  <Text style={styles.modalConfirmText}>
-                    {shareLinkId ? t('share.updateRegenerate') : t('share.generateLink')}
-                  </Text>
+                  <Text style={styles.modalConfirmText}>{t('share.continue')}</Text>
                 )}
               </Pressable>
             </View>
@@ -688,6 +736,49 @@ export default function ShareScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Link settings dropdown menu */}
+      <Modal
+        visible={showLinkSettingsMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLinkSettingsMenu(false)}
+      >
+        <Pressable style={styles.menuOverlay} onPress={() => setShowLinkSettingsMenu(false)}>
+          <View style={[styles.menuDropdown, { top: linkSettingsPosition.top, right: linkSettingsPosition.right }]}>
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => {
+                setShowLinkSettingsMenu(false);
+                openAvailabilityModal();
+              }}
+            >
+              <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
+                <Path d="M17 1l4 4-4 4" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                <Path d="M3 11V9a4 4 0 014-4h14" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                <Path d="M7 23l-4-4 4-4" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                <Path d="M21 13v2a4 4 0 01-4 4H3" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+              <Text style={styles.menuItemText}>{t('share.regenerateLink')}</Text>
+            </Pressable>
+            <View style={styles.menuDivider} />
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => {
+                setShowLinkSettingsMenu(false);
+                handleRevoke();
+              }}
+              disabled={revoking}
+            >
+              <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
+                <Path d="M3 6H5H21" stroke={Colors.danger} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                <Path d="M8 6V4C8 3.47 8.21 2.96 8.59 2.59C8.96 2.21 9.47 2 10 2H14C14.53 2 15.04 2.21 15.41 2.59C15.79 2.96 16 3.47 16 4V6M19 6V20C19 20.53 18.79 21.04 18.41 21.41C18.04 21.79 17.53 22 17 22H7C6.47 22 5.96 21.79 5.59 21.41C5.21 21.04 5 20.53 5 20V6H19Z" stroke={Colors.danger} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+              <Text style={styles.menuItemTextDanger}>{t('share.revokeLink')}</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -701,6 +792,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: Spacing.md,
+  },
+  preparingText: {
+    fontSize: FontSize.sm,
+    color: Colors.textMuted,
+    marginTop: Spacing.sm,
   },
 
   header: {
@@ -774,103 +871,59 @@ const styles = StyleSheet.create({
     padding: Spacing.xl,
     borderWidth: 1,
     borderColor: Colors.border,
-  },
-
-  noLink: {
-    alignItems: 'center',
-    paddingVertical: Spacing.lg,
-  },
-  noLinkIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: BorderRadius.xl,
-    backgroundColor: Colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.lg,
-  },
-  noLinkTitle: {
-    fontSize: FontSize.lg,
-    fontWeight: '600',
-    color: Colors.text,
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  noLinkText: {
-    fontSize: FontSize.sm,
-    color: Colors.textMuted,
-    textAlign: 'center',
-    marginBottom: Spacing.xl,
-  },
-  generateBtn: {
-    width: '100%',
-    paddingVertical: 13,
-    backgroundColor: Colors.text,
-    borderRadius: BorderRadius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  generateBtnText: {
-    fontSize: FontSize.base,
-    fontWeight: '600',
-    color: '#ffffff',
-  },
-
-  activeLink: {
     gap: Spacing.lg,
   },
-  activeLinkBadgeRow: {
-    alignItems: 'center',
-  },
-  activeBadge: {
-    backgroundColor: '#dcfce7',
-    paddingVertical: 3,
-    paddingHorizontal: 10,
-    borderRadius: BorderRadius.full,
-  },
-  activeBadgeText: {
-    fontSize: FontSize.xs,
-    fontWeight: '700',
-    color: '#16a34a',
-    letterSpacing: 0.5,
-  },
 
-  urlRow: {
+  linkReadyRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.sm,
   },
-  urlInput: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: Spacing.md,
-    backgroundColor: Colors.background,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.lg,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    fontSize: FontSize.xs,
-    color: Colors.textSecondary,
+  linkReadyDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#10B981',
   },
-  copyBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: Spacing.lg,
-    backgroundColor: Colors.text,
-    borderRadius: BorderRadius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  copyBtnCopied: {
-    backgroundColor: Colors.success,
-  },
-  copyBtnText: {
-    fontSize: FontSize.sm,
+  linkReadyText: {
+    fontSize: FontSize.base,
     fontWeight: '600',
-    color: '#ffffff',
+    color: Colors.text,
   },
+  linkReadySpacer: {
+    flex: 1,
+  },
+  linkSettingsBtn: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  linkSettingsIcon: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.textMuted,
+    lineHeight: 22,
+  },
+
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  summaryText: {
+    fontSize: FontSize.xs,
+    color: Colors.textMuted,
+  },
+  summaryDot: {
+    fontSize: FontSize.xs,
+    color: Colors.textMuted,
+  },
+
   linkHint: {
     fontSize: FontSize.sm,
-    color: Colors.textMuted,
-    textAlign: 'center',
+    color: Colors.textSecondary,
   },
 
   shareActions: {
@@ -879,32 +932,44 @@ const styles = StyleSheet.create({
   whatsappBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
+    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: Spacing.lg,
     backgroundColor: '#25D366',
-    borderRadius: BorderRadius.full,
+    borderRadius: BorderRadius.xl,
+  },
+  whatsappBtnContent: {
+    flex: 1,
+    gap: 1,
   },
   whatsappBtnText: {
     fontSize: FontSize.base,
     fontWeight: '600',
     color: '#ffffff',
   },
+  whatsappBtnSubtext: {
+    fontSize: FontSize.xs,
+    color: 'rgba(255,255,255,0.8)',
+  },
   whatsappNumberBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
+    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: Spacing.lg,
     backgroundColor: Colors.surface,
     borderWidth: 1.5,
     borderColor: '#25D366',
-    borderRadius: BorderRadius.full,
+    borderRadius: BorderRadius.xl,
   },
   whatsappNumberBtnText: {
     fontSize: FontSize.base,
     fontWeight: '600',
     color: '#25D366',
+  },
+  whatsappNumberSubtext: {
+    fontSize: FontSize.xs,
+    color: Colors.textMuted,
   },
   nativeShareBtn: {
     flexDirection: 'row',
@@ -915,7 +980,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: BorderRadius.full,
+    borderRadius: BorderRadius.xl,
   },
   nativeShareBtnText: {
     fontSize: FontSize.base,
@@ -923,40 +988,17 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
 
-  linkActions: {
+  copyLinkBtn: {
     flexDirection: 'row',
-    gap: Spacing.md,
-    justifyContent: 'center',
-  },
-  regenerateBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.full,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
+    paddingVertical: Spacing.sm,
   },
-  regenerateBtnText: {
-    fontSize: FontSize.base,
+  copyLinkText: {
+    fontSize: FontSize.sm,
+    color: Colors.textMuted,
     fontWeight: '500',
-    color: Colors.textSecondary,
-  },
-  revokeBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: '#fecaca',
-    borderRadius: BorderRadius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  revokeBtnText: {
-    fontSize: FontSize.base,
-    fontWeight: '500',
-    color: Colors.danger,
   },
 
   btnDisabled: {
@@ -1091,22 +1133,32 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  validitySection: {
+  expirySection: {
     marginBottom: Spacing.xl,
   },
-  validitySectionTitle: {
-    fontSize: FontSize.base,
+  expiryDefaultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    backgroundColor: Colors.background,
+    borderRadius: BorderRadius.lg,
+  },
+  expiryDefaultText: {
+    flex: 1,
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+  },
+  expiryChangeLink: {
+    fontSize: FontSize.sm,
     fontWeight: '600',
     color: Colors.text,
-    marginBottom: 4,
   },
-  validitySectionSubtitle: {
-    fontSize: FontSize.sm,
-    color: Colors.textMuted,
-    marginBottom: Spacing.md,
-  },
+
   validityOptions: {
     gap: Spacing.sm,
+    marginTop: Spacing.md,
   },
   validityOption: {
     paddingVertical: Spacing.md,
@@ -1118,9 +1170,6 @@ const styles = StyleSheet.create({
   validityOptionSelected: {
     borderColor: Colors.text,
     backgroundColor: Colors.background,
-  },
-  validityOptionPremium: {
-    opacity: 0.5,
   },
   validityOptionRow: {
     flexDirection: 'row',
@@ -1149,20 +1198,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: FontSize.base,
     color: Colors.text,
-  },
-  validityOptionLabelDisabled: {
-    color: Colors.textMuted,
-  },
-  comingSoonBadge: {
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-    backgroundColor: '#fef3c7',
-    borderRadius: BorderRadius.sm,
-  },
-  comingSoonText: {
-    fontSize: FontSize.xs,
-    fontWeight: '600',
-    color: '#d97706',
   },
 
   modalActions: {
@@ -1195,6 +1230,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  
   modalConfirmText: {
     fontSize: FontSize.base,
     fontWeight: '600',
@@ -1263,5 +1299,46 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     fontWeight: '600',
     color: '#ffffff',
+  },
+
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+  },
+  menuDropdown: {
+    position: 'absolute',
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingVertical: 4,
+    minWidth: 180,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    gap: Spacing.sm,
+  },
+  menuItemText: {
+    fontSize: FontSize.sm,
+    fontWeight: '500',
+    color: Colors.text,
+  },
+  menuItemTextDanger: {
+    fontSize: FontSize.sm,
+    fontWeight: '500',
+    color: Colors.danger,
+  },
+  menuDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: Colors.border,
+    marginHorizontal: Spacing.md,
   },
 });

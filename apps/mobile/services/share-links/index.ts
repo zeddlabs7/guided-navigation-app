@@ -9,27 +9,22 @@ const COURIER_APP_URL =
   process.env.EXPO_PUBLIC_COURIER_APP_URL ||
   'https://guided-navigation-app-courier.netlify.app';
 
-function generateSecureToken(): string {
-  const bytes = Crypto.getRandomBytes(32);
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+const BASE62_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+const LINK_ID_LENGTH = 16;
+
+function generateLinkId(): string {
+  const bytes = Crypto.getRandomBytes(LINK_ID_LENGTH);
+  return Array.from(bytes, (b) => BASE62_CHARS[b % BASE62_CHARS.length]).join('');
 }
 
-async function hashToken(token: string): Promise<string> {
-  return Crypto.digestStringAsync(
-    Crypto.CryptoDigestAlgorithm.SHA256,
-    token,
-  );
-}
-
-export function buildShareUrl(token: string): string {
-  return `${COURIER_APP_URL}/g/${token}`;
+export function buildShareUrl(linkId: string): string {
+  return `${COURIER_APP_URL}/g/${linkId}`;
 }
 
 export async function createShareLink(
   input: CreateShareLinkInput,
-): Promise<{ shareLinkId: string; token: string; url: string }> {
-  const token = generateSecureToken();
-  const tokenHash = await hashToken(token);
+): Promise<{ shareLinkId: string; url: string }> {
+  const linkId = generateLinkId();
   const expiryMinutes = input.expiryDurationMinutes ?? DEFAULT_LINK_EXPIRY_MINUTES;
 
   const now = new Date();
@@ -37,11 +32,10 @@ export async function createShareLink(
 
   const docRef = firestore()
     .collection(SHARE_LINKS_COLLECTION)
-    .doc(tokenHash);
+    .doc(linkId);
 
   await docRef.set({
     guidanceSetId: input.guidanceSetId,
-    tokenHash,
     status: 'ACTIVE',
     expiresAt: expiresAt.toISOString(),
     expiryDurationMinutes: expiryMinutes,
@@ -52,7 +46,7 @@ export async function createShareLink(
     updatedAt: firestore.FieldValue.serverTimestamp(),
   });
 
-  return { shareLinkId: tokenHash, token, url: buildShareUrl(token) };
+  return { shareLinkId: linkId, url: buildShareUrl(linkId) };
 }
 
 export async function getShareLinkForGuidance(
@@ -67,7 +61,13 @@ export async function getShareLinkForGuidance(
   if (snapshot.empty) return null;
 
   const doc = snapshot.docs[0];
-  return { id: doc.id, ...doc.data() } as ShareLink;
+  const data = doc.data();
+
+  if (data.expiresAt && new Date(data.expiresAt) < new Date()) {
+    return null;
+  }
+
+  return { id: doc.id, ...data } as ShareLink;
 }
 
 export async function revokeShareLink(shareLinkId: string): Promise<void> {
@@ -79,4 +79,26 @@ export async function revokeShareLink(shareLinkId: string): Promise<void> {
       revokedAt: firestore.FieldValue.serverTimestamp(),
       updatedAt: firestore.FieldValue.serverTimestamp(),
     });
+}
+
+export async function revokeAllLinksForGuidance(guidanceSetId: string): Promise<void> {
+  const snapshot = await firestore()
+    .collection(SHARE_LINKS_COLLECTION)
+    .where('guidanceSetId', '==', guidanceSetId)
+    .where('status', '==', 'ACTIVE')
+    .get();
+
+  if (snapshot.empty) return;
+
+  const batch = firestore().batch();
+  const now = firestore.FieldValue.serverTimestamp();
+  snapshot.docs.forEach((doc) => {
+    batch.update(doc.ref, {
+      status: 'REVOKED',
+      revokedAt: now,
+      updatedAt: now,
+    });
+  });
+
+  await batch.commit();
 }

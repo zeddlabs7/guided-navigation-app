@@ -5,45 +5,38 @@ import {
   getDocs,
   setDoc,
   updateDoc,
+  writeBatch,
   query,
   where,
   serverTimestamp,
   increment,
 } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
-import { getFirebaseFirestore, getFirebaseFunctions } from '../firebase/config';
+import { getFirebaseFirestore } from '../firebase/config';
 import type { ShareLink, CreateShareLinkInput, ShareLinkValidationResult, GuidanceSet, GuidanceStep } from '@guidenav/types';
 import { DEFAULT_LINK_EXPIRY_MINUTES } from '@guidenav/types';
 
 const SHARE_LINKS_COLLECTION = 'shareLinks';
 
-async function hashToken(token: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(token);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-}
+const BASE62_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+const LINK_ID_LENGTH = 16;
 
-function generateSecureToken(): string {
-  const array = new Uint8Array(32);
+function generateLinkId(): string {
+  const array = new Uint8Array(LINK_ID_LENGTH);
   crypto.getRandomValues(array);
-  return Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('');
+  return Array.from(array, (b) => BASE62_CHARS[b % BASE62_CHARS.length]).join('');
 }
 
 export async function createShareLink(input: CreateShareLinkInput): Promise<{ shareLinkId: string; token: string }> {
   const db = getFirebaseFirestore();
-  const token = generateSecureToken();
-  const tokenHash = await hashToken(token);
+  const linkId = generateLinkId();
   const expiryMinutes = input.expiryDurationMinutes ?? DEFAULT_LINK_EXPIRY_MINUTES;
 
   const now = new Date();
   const expiresAt = new Date(now.getTime() + expiryMinutes * 60 * 1000);
 
-  const docRef = doc(db, SHARE_LINKS_COLLECTION, tokenHash);
+  const docRef = doc(db, SHARE_LINKS_COLLECTION, linkId);
   await setDoc(docRef, {
     guidanceSetId: input.guidanceSetId,
-    tokenHash,
     status: 'ACTIVE',
     expiresAt: expiresAt.toISOString(),
     expiryDurationMinutes: expiryMinutes,
@@ -54,30 +47,7 @@ export async function createShareLink(input: CreateShareLinkInput): Promise<{ sh
     updatedAt: serverTimestamp(),
   });
 
-  return { shareLinkId: tokenHash, token };
-}
-
-export async function validateShareLinkToken(token: string): Promise<ShareLinkValidationResult> {
-  const db = getFirebaseFirestore();
-  const tokenHash = await hashToken(token);
-
-  const docSnap = await getDoc(doc(db, SHARE_LINKS_COLLECTION, tokenHash));
-
-  if (!docSnap.exists()) {
-    return { valid: false, error: 'NOT_FOUND' };
-  }
-
-  const shareLink = { id: docSnap.id, ...docSnap.data() } as ShareLink;
-
-  if (shareLink.status === 'REVOKED') {
-    return { valid: false, error: 'REVOKED', shareLink };
-  }
-
-  if (new Date(shareLink.expiresAt) < new Date()) {
-    return { valid: false, error: 'EXPIRED', shareLink };
-  }
-
-  return { valid: true, shareLink };
+  return { shareLinkId: linkId, token: linkId };
 }
 
 export async function getShareLinkForGuidance(guidanceSetId: string): Promise<ShareLink | null> {
@@ -94,7 +64,14 @@ export async function getShareLinkForGuidance(guidanceSetId: string): Promise<Sh
     return null;
   }
 
-  return { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as ShareLink;
+  const docSnap = querySnapshot.docs[0];
+  const data = docSnap.data();
+
+  if (data.expiresAt && new Date(data.expiresAt) < new Date()) {
+    return null;
+  }
+
+  return { id: docSnap.id, ...data } as ShareLink;
 }
 
 export async function revokeShareLink(shareLinkId: string): Promise<void> {
@@ -105,6 +82,30 @@ export async function revokeShareLink(shareLinkId: string): Promise<void> {
     revokedAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+}
+
+export async function revokeAllLinksForGuidance(guidanceSetId: string): Promise<void> {
+  const db = getFirebaseFirestore();
+  const q = query(
+    collection(db, SHARE_LINKS_COLLECTION),
+    where('guidanceSetId', '==', guidanceSetId),
+    where('status', '==', 'ACTIVE')
+  );
+
+  const querySnapshot = await getDocs(q);
+  if (querySnapshot.empty) return;
+
+  const batch = writeBatch(db);
+  const now = serverTimestamp();
+  querySnapshot.docs.forEach((docSnap) => {
+    batch.update(docSnap.ref, {
+      status: 'REVOKED',
+      revokedAt: now,
+      updatedAt: now,
+    });
+  });
+
+  await batch.commit();
 }
 
 export async function incrementAccessCount(shareLinkId: string): Promise<void> {
@@ -149,18 +150,4 @@ export async function loadGuidanceData(token: string): Promise<LoadGuidanceDataR
     body: JSON.stringify({ token }),
   });
   return resp.json();
-}
-
-/** @deprecated Use validateToken + loadGuidanceData instead */
-export type LoadGuidanceByTokenResult = LoadGuidanceDataResult;
-
-/** @deprecated Use validateToken + loadGuidanceData instead */
-export async function loadGuidanceByToken(token: string): Promise<LoadGuidanceByTokenResult> {
-  const functions = getFirebaseFunctions();
-  const fn = httpsCallable<{ token: string }, LoadGuidanceByTokenResult>(
-    functions,
-    'loadGuidanceByToken',
-  );
-  const result = await fn({ token });
-  return result.data;
 }

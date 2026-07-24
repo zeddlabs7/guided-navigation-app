@@ -5,7 +5,6 @@ export type ShareLinkStatus = 'ACTIVE' | 'REVOKED' | 'EXPIRED';
 export interface ShareLink {
   id: string;
   guidanceSetId: string;
-  tokenHash: string;
   status: ShareLinkStatus;
   expiresAt: Timestamp;
   expiryDurationMinutes: number;
