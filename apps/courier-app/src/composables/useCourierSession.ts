@@ -2,6 +2,8 @@ import { ref, computed } from 'vue';
 import type { GuidanceSet, GuidanceStep, ShareLink, Language } from '@guidenav/types';
 import { loadGuidanceData, translateTexts } from '@guidenav/services/courier-api';
 
+const SUPPORTED_LANGUAGES: Language[] = ['en', 'ar', 'hi', 'ur', 'bn'];
+
 const shareLink = ref<ShareLink | null>(null);
 const guidanceSet = ref<GuidanceSet | null>(null);
 const allSteps = ref<GuidanceStep[]>([]);
@@ -73,6 +75,32 @@ export function useCourierSession() {
 
   function setLanguage(lang: Language) {
     currentLanguage.value = lang;
+    try { localStorage.setItem('arriveo_lang', lang); } catch {}
+  }
+
+  function getSavedLanguage(): Language | null {
+    try {
+      const saved = localStorage.getItem('arriveo_lang');
+      if (saved && SUPPORTED_LANGUAGES.includes(saved as Language)) {
+        return saved as Language;
+      }
+    } catch {}
+    return null;
+  }
+
+  function detectLanguage(): Language | null {
+    const saved = getSavedLanguage();
+    if (saved) return saved;
+
+    try {
+      const browserLang = navigator.language?.toLowerCase() ?? '';
+      for (const lang of SUPPORTED_LANGUAGES) {
+        if (browserLang === lang || browserLang.startsWith(lang + '-')) {
+          return lang;
+        }
+      }
+    } catch {}
+    return null;
   }
 
   function getAvailabilityText(): Record<Language, string> {
@@ -274,6 +302,25 @@ export function useCourierSession() {
     return locationCheckStep?.image?.publicUrl ?? null;
   }
 
+  function saveLastStep(stepIndex: number) {
+    const gsId = guidanceSet.value?.id;
+    if (!gsId) return;
+    try { localStorage.setItem(`arriveo_step_${gsId}`, String(stepIndex)); } catch {}
+  }
+
+  function getLastStep(): number {
+    const gsId = guidanceSet.value?.id;
+    if (!gsId) return 0;
+    try {
+      const saved = localStorage.getItem(`arriveo_step_${gsId}`);
+      if (saved !== null) {
+        const idx = parseInt(saved, 10);
+        if (!isNaN(idx) && idx >= 0 && idx < steps.value.length) return idx;
+      }
+    } catch {}
+    return 0;
+  }
+
   return {
     token,
     shareLink,
@@ -313,5 +360,9 @@ export function useCourierSession() {
     getDestinationCoordinates,
     getDestinationAddress,
     getLocationCheckImageUrl,
+    detectLanguage,
+    getSavedLanguage,
+    saveLastStep,
+    getLastStep,
   };
 }

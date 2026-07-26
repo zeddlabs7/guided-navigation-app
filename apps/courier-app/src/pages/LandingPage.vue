@@ -2,13 +2,14 @@
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useCourierSession } from '@/composables/useCourierSession';
+import { useTranslation } from '@/composables/useTranslation';
 import type { Language } from '@guidenav/types';
 import AddressDetailsSection from '@/components/AddressDetailsSection.vue';
-import StepListSection from '@/components/StepListSection.vue';
 
 const router = useRouter();
 const route = useRoute();
 const token = route.params.token as string;
+const { t } = useTranslation();
 
 const {
   guidanceSet,
@@ -21,6 +22,7 @@ const {
   getAvailabilityText,
   setLanguage,
   translateUserContent,
+  getLastStep,
 } = useCourierSession();
 
 const languageOptions: { code: Language; label: string }[] = [
@@ -59,8 +61,6 @@ onMounted(() => {
   }
 });
 
-const scrollContainer = ref<HTMLDivElement | null>(null);
-
 const availabilityText = computed(() => {
   const texts = getAvailabilityText();
   return texts[currentLanguage.value];
@@ -74,26 +74,12 @@ const availabilityVariant = computed(() => {
 
 const destinationCoords = computed(() => getDestinationCoordinates());
 
-const hasSteps = computed(() => steps.value.length > 0);
-
 const destinationAddress = computed(() => getDestinationAddress());
 
 const locationCheckImageUrl = computed(() => getLocationCheckImageUrl());
 
-function scrollToSection(id: string) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const prefersReducedMotion =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  el.scrollIntoView({
-    behavior: prefersReducedMotion ? 'auto' : 'smooth',
-    block: 'start',
-  });
-}
-
-function handleSelectStep(index: number) {
-  router.push(`/g/${token}/step/${index}`);
+function handleViewAllSteps() {
+  router.push(`/g/${token}/step/${getLastStep()}`);
 }
 </script>
 
@@ -119,6 +105,7 @@ function handleSelectStep(index: number) {
             alt="Arriveo"
             class="brand-logo"
           />
+          <span class="brand-tagline">{{ t('trustStatement') }}</span>
         </div>
         <div class="language-picker">
           <button class="language-picker-btn" type="button" @click="showLanguageMenu = !showLanguageMenu">
@@ -143,21 +130,15 @@ function handleSelectStep(index: number) {
       </header>
     </div>
 
-    <div class="landing-scroll" ref="scrollContainer">
+    <div class="landing-scroll">
       <AddressDetailsSection
         :guidance-set="guidanceSet"
         :is-rtl="isRtl"
         :destination="destinationCoords"
         :destination-address="destinationAddress"
         :location-check-image-url="locationCheckImageUrl"
-        :has-steps="hasSteps"
-        :on-view-steps="() => scrollToSection('landing-section-2')"
-      />
-      <StepListSection
         :steps="steps"
-        :is-rtl="isRtl"
-        :on-select-step="handleSelectStep"
-        :on-scroll-prev="() => scrollToSection('landing-section-1')"
+        :on-view-all-steps="handleViewAllSteps"
       />
     </div>
   </div>
@@ -224,13 +205,26 @@ function handleSelectStep(index: number) {
 .brand {
   display: flex;
   align-items: center;
-  flex-shrink: 0;
+  gap: 10px;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .brand-logo {
-  height: 28px;
+  height: 38px;
   width: auto;
   object-fit: contain;
+  flex-shrink: 0;
+}
+
+.brand-tagline {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .language-picker {
@@ -257,7 +251,11 @@ function handleSelectStep(index: number) {
 
 @media (max-width: 380px) {
   .brand-logo {
-    height: 24px;
+    height: 32px;
+  }
+
+  .brand-tagline {
+    display: none;
   }
 }
 
@@ -308,15 +306,8 @@ function handleSelectStep(index: number) {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  scroll-snap-type: y mandatory;
-  scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .landing-scroll {
-    scroll-behavior: auto;
-  }
+  background: linear-gradient(180deg, var(--color-background) 0%, #ffffff 40%, #eff6ff 100%);
 }
 </style>

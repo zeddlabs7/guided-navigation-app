@@ -3,7 +3,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import ArrowOverlay from '@guidenav/ui/components/ArrowOverlay.vue';
 import MarkerOverlay from '@guidenav/ui/components/MarkerOverlay.vue';
-import { STEP_TYPE_LABELS, type Language } from '@guidenav/types';
+import type { Language } from '@guidenav/types';
 import { useCourierSession } from '@/composables/useCourierSession';
 import { useTranslation } from '@/composables/useTranslation';
 import FeedbackModal from '@/components/FeedbackModal.vue';
@@ -27,6 +27,7 @@ const {
   getAvailabilityText,
   setLanguage,
   translateUserContent,
+  saveLastStep,
 } = useCourierSession();
 
 const showFeedbackModal = ref(false);
@@ -52,12 +53,6 @@ const nextStepImageUrl = computed(() => {
 const availabilityText = computed(() => {
   const texts = getAvailabilityText();
   return texts[currentLanguage.value];
-});
-
-const stepTypeLabel = computed(() => {
-  if (!currentStep.value) return '';
-  const labels = STEP_TYPE_LABELS[currentStep.value.stepType];
-  return labels[currentLanguage.value];
 });
 
 const stepTitle = computed(() => {
@@ -117,6 +112,8 @@ onBeforeUnmount(() => {
 watch(() => route.params.index, () => {
   imageLoaded.value = false;
   imageError.value = false;
+
+  saveLastStep(currentIndex.value);
 
   if (nextStepImageUrl.value) {
     const img = new Image();
@@ -256,12 +253,6 @@ function handleImageError() {
           <span>{{ t('noImage') }}</span>
         </div>
 
-        <!-- Step Type Badge -->
-        <div class="step-type-badge">
-          <span class="badge-dot"></span>
-          <span class="badge-text">{{ stepTypeLabel }}</span>
-        </div>
-
         <!-- Annotation Count -->
         <div v-if="overlayCount > 0" class="annotation-count">
           <span class="annotation-dot"></span>
@@ -286,10 +277,10 @@ function handleImageError() {
         </div>
       </div>
 
-      <!-- Step Info -->
+      <!-- Step Info — Point 9: instruction is the hero -->
       <div class="step-info">
-        <h2 class="step-title">{{ stepTitle }}</h2>
         <p class="step-instruction">{{ stepInstruction }}</p>
+        <span v-if="stepTitle" class="step-title-subtle">{{ stepTitle }}</span>
         
         <div class="step-divider"></div>
         
@@ -547,38 +538,6 @@ function handleImageError() {
   color: var(--color-text-secondary);
 }
 
-/* Step Type Badge */
-.step-type-badge {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background-color: rgba(255, 255, 255, 0.95);
-  border-radius: var(--radius-full);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-[dir="rtl"] .step-type-badge {
-  left: auto;
-  right: 12px;
-}
-
-.badge-dot {
-  width: 6px;
-  height: 6px;
-  background-color: var(--color-primary);
-  border-radius: 50%;
-}
-
-.badge-text {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text);
-}
-
 /* Annotation Count */
 .annotation-count {
   position: absolute;
@@ -661,19 +620,22 @@ function handleImageError() {
   flex-shrink: 0;
 }
 
-.step-title {
+.step-instruction {
   font-size: 1.375rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-text);
-  margin: 0 0 var(--spacing-sm) 0;
-  line-height: 1.3;
+  margin: 0;
+  line-height: 1.35;
 }
 
-.step-instruction {
-  font-size: var(--font-size-base);
-  color: var(--color-text-secondary);
-  margin: 0;
-  line-height: 1.5;
+.step-title-subtle {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .step-divider {

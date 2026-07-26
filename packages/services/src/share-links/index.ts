@@ -1,7 +1,6 @@
 import {
   collection,
   doc,
-  getDoc,
   getDocs,
   setDoc,
   updateDoc,
@@ -12,7 +11,7 @@ import {
   increment,
 } from 'firebase/firestore';
 import { getFirebaseFirestore } from '../firebase/config';
-import type { ShareLink, CreateShareLinkInput, ShareLinkValidationResult, GuidanceSet, GuidanceStep } from '@guidenav/types';
+import type { ShareLink, CreateShareLinkInput, GuidanceSet, GuidanceStep } from '@guidenav/types';
 import { DEFAULT_LINK_EXPIRY_MINUTES } from '@guidenav/types';
 
 const SHARE_LINKS_COLLECTION = 'shareLinks';

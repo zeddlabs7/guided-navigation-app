@@ -1,6 +1,8 @@
 import type { Language } from '@guidenav/types';
 
 type TranslationKey =
+  // Header / branding
+  | 'trustStatement'
   // AddressDetailsSection
   | 'villa'
   | 'apartment'
@@ -9,8 +11,15 @@ type TranslationKey =
   | 'destination'
   | 'noAddressDetails'
   | 'locationPhoto'
+  | 'openGoogleMaps'
+  | 'viewLocationPhoto'
   | 'getDirections'
   | 'arrivalSteps'
+  | 'startArrivalGuide'
+  | 'viewAllSteps'
+  | 'stepOf'
+  | 'destinationLabel'
+  | 'addressDetailsLabel'
   // StepListSection
   | 'guide'
   | 'deliverySteps'
@@ -81,6 +90,9 @@ type TranslationKey =
   | 'loading';
 
 const translations: Record<TranslationKey, Record<Language, string>> = {
+  // Header / branding
+  trustStatement: { en: 'Delivery guidance from your recipient', ar: 'إرشادات التوصيل من المستلم', hi: 'प्राप्तकर्ता से डिलीवरी मार्गदर्शन', ur: 'وصول کنندہ کی طرف سے ڈیلیوری رہنمائی', bn: 'প্রাপকের কাছ থেকে ডেলিভারি গাইডেন্স' },
+
   // AddressDetailsSection
   villa: { en: 'Villa', ar: 'فيلا', hi: 'विला', ur: 'ولا', bn: 'ভিলা' },
   apartment: { en: 'Apartment', ar: 'شقة', hi: 'अपार्टमेंट', ur: 'اپارٹمنٹ', bn: 'অ্যাপার্টমেন্ট' },
@@ -89,15 +101,22 @@ const translations: Record<TranslationKey, Record<Language, string>> = {
   destination: { en: 'Destination', ar: 'الوجهة', hi: 'गंतव्य', ur: 'منزل مقصود', bn: 'গন্তব্য' },
   noAddressDetails: { en: 'No additional address details provided', ar: 'لا توجد تفاصيل إضافية للعنوان', hi: 'कोई अतिरिक्त पता विवरण नहीं', ur: 'کوئی اضافی پتے کی تفصیلات نہیں', bn: 'কোনো অতিরিক্ত ঠিকানার বিবরণ নেই' },
   locationPhoto: { en: 'Location photo', ar: 'صورة الموقع', hi: 'स्थान की फोटो', ur: 'مقام کی تصویر', bn: 'অবস্থানের ছবি' },
+  openGoogleMaps: { en: 'Open Google Maps', ar: 'افتح خرائط جوجل', hi: 'Google Maps खोलें', ur: 'Google Maps کھولیں', bn: 'Google Maps খুলুন' },
+  viewLocationPhoto: { en: 'View Location Photo', ar: 'عرض صورة الموقع', hi: 'स्थान की फोटो देखें', ur: 'مقام کی تصویر دیکھیں', bn: 'অবস্থানের ছবি দেখুন' },
   getDirections: { en: 'Get Directions', ar: 'احصل على الاتجاهات', hi: 'दिशा-निर्देश प्राप्त करें', ur: 'سمت حاصل کریں', bn: 'দিকনির্দেশ পান' },
   arrivalSteps: { en: 'Arrival Steps', ar: 'خطوات الوصول', hi: 'आगमन चरण', ur: 'پہنچنے کے مراحل', bn: 'আগমনের ধাপ' },
+  startArrivalGuide: { en: 'Start Arrival Guide', ar: 'ابدأ دليل الوصول', hi: 'आगमन गाइड शुरू करें', ur: 'پہنچنے کی گائیڈ شروع کریں', bn: 'আগমনের গাইড শুরু করুন' },
+  viewAllSteps: { en: 'View All Steps', ar: 'عرض جميع الخطوات', hi: 'सभी चरण देखें', ur: 'تمام مراحل دیکھیں', bn: 'সকল ধাপ দেখুন' },
+  stepOf: { en: 'Step {current} of {total}', ar: 'الخطوة {current} من {total}', hi: 'चरण {current} / {total}', ur: 'مرحلہ {current} از {total}', bn: 'ধাপ {current} / {total}' },
+  destinationLabel: { en: 'Destination', ar: 'الوجهة', hi: 'गंतव्य', ur: 'منزل مقصود', bn: 'গন্তব্য' },
+  addressDetailsLabel: { en: 'Address Details', ar: 'تفاصيل العنوان', hi: 'पता विवरण', ur: 'پتے کی تفصیلات', bn: 'ঠিকানার বিবরণ' },
 
   // StepListSection
   guide: { en: 'Guide', ar: 'الدليل', hi: 'गाइड', ur: 'گائیڈ', bn: 'গাইড' },
   deliverySteps: { en: 'Delivery steps', ar: 'خطوات التوصيل', hi: 'डिलीवरी चरण', ur: 'ڈیلیوری کے مراحل', bn: 'ডেলিভারি ধাপ' },
   tapStepHint: { en: 'Tap a step to view detailed instructions', ar: 'اضغط على خطوة لعرض التعليمات التفصيلية', hi: 'विस्तृत निर्देश देखने के लिए एक चरण पर टैप करें', ur: 'تفصیلی ہدایات دیکھنے کے لیے ایک مرحلے پر ٹیپ کریں', bn: 'বিস্তারিত নির্দেশনা দেখতে একটি ধাপে ট্যাপ করুন' },
   noAdditionalSteps: { en: 'No additional steps', ar: 'لا توجد خطوات إضافية', hi: 'कोई अतिरिक्त चरण नहीं', ur: 'کوئی اضافی مراحل نہیں', bn: 'কোনো অতিরিক্ত ধাপ নেই' },
-  backToTop: { en: 'Back to Top', ar: 'العودة للأعلى', hi: 'ऊपर वापस जाएं', ur: 'اوپر واپس جائیں', bn: 'উপরে ফিরে যান' },
+  backToTop: { en: 'Return to destination summary', ar: 'العودة إلى ملخص الوجهة', hi: 'गंतव्य सारांश पर लौटें', ur: 'منزل مقصود کے خلاصے پر واپس جائیں', bn: 'গন্তব্য সারাংশে ফিরে যান' },
   noInstructions: { en: 'No instructions', ar: 'لا توجد تعليمات', hi: 'कोई निर्देश नहीं', ur: 'کوئی ہدایات نہیں', bn: 'কোনো নির্দেশনা নেই' },
 
   // GuidedPlaybackPage
