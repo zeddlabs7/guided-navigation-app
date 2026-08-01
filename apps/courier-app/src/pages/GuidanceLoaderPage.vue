@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { validateToken } from '@guidenav/services/courier-api';
 import { useCourierSession } from '@/composables/useCourierSession';
@@ -15,11 +15,7 @@ const {
   setToken,
   setTokenValid,
   loadDataInBackground,
-  setLanguage,
-  translateUserContent,
   detectLanguage,
-  isDataReady,
-  dataLoadError,
 } = useCourierSession();
 
 const TRUST_STATEMENTS: Record<Language, string> = {
@@ -50,41 +46,7 @@ onMounted(async () => {
 
     setTokenValid(true);
     loadDataInBackground(token);
-
-    const detectedLang = detectLanguage();
-
-    if (!detectedLang) {
-      router.replace(`/g/${token}/welcome`);
-      return;
-    }
-
-    setLanguage(detectedLang);
-
-    if (!isDataReady.value) {
-      await new Promise<void>((resolve) => {
-        const unwatch = watch(
-          [isDataReady, dataLoadError],
-          ([ready, err]) => {
-            if (ready || err) {
-              unwatch();
-              resolve();
-            }
-          },
-          { immediate: true }
-        );
-      });
-    }
-
-    if (dataLoadError.value) {
-      router.replace(`/g/${token}/error?type=${dataLoadError.value}`);
-      return;
-    }
-
-    if (detectedLang !== 'en') {
-      await translateUserContent();
-    }
-
-    router.replace(`/g/${token}/landing`);
+    router.replace(`/g/${token}/welcome`);
   } catch (err) {
     console.error('Failed to validate token:', err);
     setError('Failed to load guidance');

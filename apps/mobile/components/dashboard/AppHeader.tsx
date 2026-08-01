@@ -96,6 +96,17 @@ export function AppHeader({ currentLanguage: _legacyLang, onLanguageToggle: _leg
             onPress={() => setMenuOpen(false)}
           />
           <View style={styles.dropdown}>
+            <TouchableOpacity
+              style={styles.dropdownItem}
+              onPress={() => {
+                setMenuOpen(false);
+                router.push('/settings');
+              }}
+            >
+              <Text style={styles.settingsIcon}>⚙</Text>
+              <Text style={styles.settingsText}>{t('settings.title')}</Text>
+            </TouchableOpacity>
+            <View style={styles.dropdownDivider} />
             <TouchableOpacity style={styles.dropdownItem} onPress={handleLogout}>
               <Text style={styles.logoutIcon}>↗</Text>
               <Text style={styles.logoutText}>{t('dashboard.logOut')}</Text>
@@ -235,6 +246,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
+  },
+  settingsIcon: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginRight: Spacing.sm,
+  },
+  settingsText: {
+    fontSize: FontSize.sm,
+    fontWeight: '500',
+    color: Colors.text,
+  },
+  dropdownDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: Colors.border,
+    marginHorizontal: Spacing.md,
   },
   logoutIcon: {
     fontSize: 13,

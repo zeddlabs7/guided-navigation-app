@@ -1,5 +1,6 @@
+import firestore from '@react-native-firebase/firestore';
 import { getFirebaseFirestore } from '../firebase/config';
-import type { User } from '@guidenav/types';
+import type { User, UpdateUserInput } from '@guidenav/types';
 
 const USERS_COLLECTION = 'users';
 
@@ -20,6 +21,9 @@ export async function getOrCreateUser(
     email: null,
     phoneNumber,
     languagePreference: 'en' as const,
+    defaultAvailabilityMode: 'ANYTIME_TODAY' as const,
+    defaultAvailabilityStartTime: null,
+    defaultAvailabilityEndTime: null,
     isActive: true,
     createdAt: now,
     updatedAt: now,
@@ -31,4 +35,24 @@ export async function getOrCreateUser(
     id: userId,
     ...userData,
   };
+}
+
+export async function getUser(userId: string): Promise<User | null> {
+  const db = getFirebaseFirestore();
+  const snap = await db.collection(USERS_COLLECTION).doc(userId).get();
+  if (!snap.exists) return null;
+  return { id: snap.id, ...snap.data() } as User;
+}
+
+export async function updateUser(
+  userId: string,
+  input: UpdateUserInput,
+): Promise<void> {
+  await firestore()
+    .collection(USERS_COLLECTION)
+    .doc(userId)
+    .update({
+      ...input,
+      updatedAt: firestore.FieldValue.serverTimestamp(),
+    });
 }

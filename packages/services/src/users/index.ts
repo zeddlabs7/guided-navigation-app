@@ -23,6 +23,9 @@ export async function createUser(userId: string, data: CreateUserInput): Promise
   const userData = {
     ...data,
     isActive: true,
+    defaultAvailabilityMode: 'ANYTIME_TODAY' as const,
+    defaultAvailabilityStartTime: null,
+    defaultAvailabilityEndTime: null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
@@ -33,6 +36,9 @@ export async function createUser(userId: string, data: CreateUserInput): Promise
     id: userId,
     ...data,
     isActive: true,
+    defaultAvailabilityMode: 'ANYTIME_TODAY' as const,
+    defaultAvailabilityStartTime: null,
+    defaultAvailabilityEndTime: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

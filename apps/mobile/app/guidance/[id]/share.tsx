@@ -10,20 +10,19 @@ import {
   TextInput,
   Share,
   Alert,
-  Platform,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
-import type { AvailabilityMode, GuidanceSet } from '@guidenav/types';
+import type { GuidanceSet } from '@guidenav/types';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
-import { getBottomInset } from '@/components/ui/ScreenFooter';
 import { openWhatsAppShare, openWhatsAppShareToNumber } from '@/lib/share-whatsapp';
 import { getGuidanceSet, updateGuidanceSet } from '@/services/guidance';
+import { getUser } from '@/services/users';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   createShareLink,
   getShareLinkForGuidance,
@@ -35,58 +34,6 @@ import {
   DEFAULT_VALIDITY_OPTION,
   type LinkValidityOption,
 } from '@/constants/linkValidity';
-
-const AVAILABILITY_OPTIONS: {
-  value: AvailabilityMode;
-  labelKey: string;
-  descriptionKey: string;
-  icon: 'check' | 'clock' | 'x';
-}[] = [
-  {
-    value: 'ANYTIME_TODAY',
-    labelKey: 'share.availToday',
-    descriptionKey: 'share.availTodayDesc',
-    icon: 'check',
-  },
-  {
-    value: 'TIME_WINDOW',
-    labelKey: 'share.availSpecificTimes',
-    descriptionKey: 'share.availSpecificTimesDesc',
-    icon: 'clock',
-  },
-  {
-    value: 'NOT_AVAILABLE_TODAY',
-    labelKey: 'share.availNotAvailable',
-    descriptionKey: 'share.availNotAvailableDesc',
-    icon: 'x',
-  },
-];
-
-function AvailabilityIcon({ icon, selected }: { icon: 'check' | 'clock' | 'x'; selected: boolean }) {
-  const color = selected ? '#ffffff' : '#99a1af';
-  if (icon === 'check') {
-    return (
-      <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-        <Path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-        <Path d="M22 4L12 14.01l-3-3" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      </Svg>
-    );
-  }
-  if (icon === 'clock') {
-    return (
-      <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-        <Circle cx={12} cy={12} r={10} stroke={color} strokeWidth={2} />
-        <Path d="M12 6v6l4 2" stroke={color} strokeWidth={2} strokeLinecap="round" />
-      </Svg>
-    );
-  }
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={10} stroke={color} strokeWidth={2} />
-      <Path d="M15 9l-6 6M9 9l6 6" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
-}
 
 function formatTimeShort(date: Date) {
   const h = date.getHours().toString().padStart(2, '0');
@@ -116,12 +63,24 @@ function formatExpiryDate(expiresAt: string): string {
   return `${expiry.toLocaleDateString('en', { month: 'short', day: 'numeric' })} at ${formatTimeShort(expiry)}`;
 }
 
+function getAvailabilitySummaryText(
+  mode: string | undefined,
+  startTime: string | null | undefined,
+  endTime: string | null | undefined,
+  t: (key: string, opts?: Record<string, string>) => string,
+): string {
+  if (mode === 'TIME_WINDOW' && startTime && endTime) {
+    return t('share.availabilityTimeSummary', { from: startTime, to: endTime });
+  }
+  if (mode === 'NOT_AVAILABLE_TODAY') return t('share.availabilityNotAvailable');
+  return t('share.availabilitySummary');
+}
+
 export default function ShareScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { id: guidanceSetId } = useLocalSearchParams<{ id: string }>();
-  const insets = useSafeAreaInsets();
-  const modalBottomPadding = Math.max(getBottomInset(insets), Spacing.lg);
+  const { firebaseUser } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -134,15 +93,7 @@ export default function ShareScreen() {
   const [shareLinkId, setShareLinkId] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
 
-  const [showModal, setShowModal] = useState(false);
-  const [selectedAvailability, setSelectedAvailability] = useState<AvailabilityMode>('ANYTIME_TODAY');
-  const defaultStart = new Date(); defaultStart.setHours(9, 0, 0, 0);
-  const defaultEnd = new Date(); defaultEnd.setHours(17, 0, 0, 0);
-  const [startTime, setStartTime] = useState<Date>(defaultStart);
-  const [endTime, setEndTime] = useState<Date>(defaultEnd);
-  const [showStartPicker, setShowStartPicker] = useState(false);
-  const [showEndPicker, setShowEndPicker] = useState(false);
-  const isIOS = Platform.OS === 'ios';
+  const [availabilitySummary, setAvailabilitySummary] = useState('');
   const [selectedValidity, setSelectedValidity] = useState<LinkValidityOption>(DEFAULT_VALIDITY_OPTION);
   const [showValidityPicker, setShowValidityPicker] = useState(false);
 
@@ -154,23 +105,40 @@ export default function ShareScreen() {
   const [linkSettingsPosition, setLinkSettingsPosition] = useState({ top: 0, right: 0 });
 
   const loadData = useCallback(async () => {
-    if (!guidanceSetId) return;
+    if (!guidanceSetId || !firebaseUser) return;
     setLoading(true);
     try {
       const gs = await getGuidanceSet(guidanceSetId);
-      if (gs) {
-        setGuidanceSet(gs);
-        setSelectedAvailability(gs.availabilityMode || 'ANYTIME_TODAY');
+      if (!gs) return;
+      setGuidanceSet(gs);
 
-        if (gs.status === 'PUBLISHED') {
-          const existingLink = await getShareLinkForGuidance(guidanceSetId);
-          if (existingLink && existingLink.status === 'ACTIVE') {
-            setShareLinkId(existingLink.id);
-            setCourierAppUrl(buildShareUrl(existingLink.id));
-            setExpiresAt(existingLink.expiresAt);
-          } else {
-            setShowModal(true);
-          }
+      const user = await getUser(firebaseUser.uid);
+      const mode = user?.defaultAvailabilityMode || 'ANYTIME_TODAY';
+      const startHHmm = user?.defaultAvailabilityStartTime || null;
+      const endHHmm = user?.defaultAvailabilityEndTime || null;
+
+      setAvailabilitySummary(getAvailabilitySummaryText(mode, startHHmm, endHHmm, t));
+
+      const updateData: Record<string, any> = { availabilityMode: mode };
+      if (mode === 'TIME_WINDOW' && startHHmm && endHHmm) {
+        const today = new Date();
+        const [sh, sm] = startHHmm.split(':').map(Number);
+        const [eh, em] = endHHmm.split(':').map(Number);
+        const startDate = new Date(today); startDate.setHours(sh, sm, 0, 0);
+        const endDate = new Date(today); endDate.setHours(eh, em, 0, 0);
+        updateData.availabilityStartTs = startDate.toISOString();
+        updateData.availabilityEndTs = endDate.toISOString();
+      }
+      await updateGuidanceSet(guidanceSetId, updateData);
+
+      if (gs.status === 'PUBLISHED') {
+        const existingLink = await getShareLinkForGuidance(guidanceSetId);
+        if (existingLink && existingLink.status === 'ACTIVE') {
+          setShareLinkId(existingLink.id);
+          setCourierAppUrl(buildShareUrl(existingLink.id));
+          setExpiresAt(existingLink.expiresAt);
+        } else {
+          await generateLink(guidanceSetId, selectedValidity);
         }
       }
     } catch (err) {
@@ -178,7 +146,7 @@ export default function ShareScreen() {
     } finally {
       setLoading(false);
     }
-  }, [guidanceSetId]);
+  }, [guidanceSetId, firebaseUser, t]);
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
@@ -188,6 +156,28 @@ export default function ShareScreen() {
     };
   }, []);
 
+  async function generateLink(gsId: string, validity: LinkValidityOption) {
+    setGenerating(true);
+    try {
+      if (shareLinkId) {
+        await revokeShareLink(shareLinkId);
+      }
+      const result = await createShareLink({
+        guidanceSetId: gsId,
+        expiryDurationMinutes: validity.minutes,
+      });
+      setShareLinkId(result.shareLinkId);
+      setCourierAppUrl(result.url);
+      const expiry = new Date(Date.now() + validity.minutes * 60 * 1000);
+      setExpiresAt(expiry.toISOString());
+    } catch (err) {
+      console.error('Failed to generate share link:', err);
+      Alert.alert(t('common.error'), t('share.errorGenerate'));
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   const handleBack = useCallback(() => {
     router.back();
   }, [router]);
@@ -195,64 +185,6 @@ export default function ShareScreen() {
   const handleGoToDashboard = useCallback(() => {
     router.replace('/(tabs)/dashboard' as any);
   }, [router]);
-
-  const openAvailabilityModal = useCallback(() => {
-    setSelectedAvailability(guidanceSet?.availabilityMode || 'ANYTIME_TODAY');
-    setSelectedValidity(DEFAULT_VALIDITY_OPTION);
-    setShowValidityPicker(false);
-    setShowStartPicker(false);
-    setShowEndPicker(false);
-    setShowModal(true);
-  }, [guidanceSet]);
-
-  const handleConfirmAndGenerate = useCallback(async () => {
-    if (!guidanceSetId) return;
-    setGenerating(true);
-    setShowModal(false);
-
-    try {
-      const updateData: Record<string, any> = {
-        availabilityMode: selectedAvailability,
-      };
-
-      if (selectedAvailability === 'TIME_WINDOW') {
-        const today = new Date();
-        const startDate = new Date(today);
-        startDate.setHours(startTime.getHours(), startTime.getMinutes(), 0, 0);
-        const endDate = new Date(today);
-        endDate.setHours(endTime.getHours(), endTime.getMinutes(), 0, 0);
-
-        updateData.availabilityStartTs = startDate.toISOString();
-        updateData.availabilityEndTs = endDate.toISOString();
-      }
-
-      await updateGuidanceSet(guidanceSetId, updateData);
-
-      if (shareLinkId) {
-        await revokeShareLink(shareLinkId);
-      }
-
-      const result = await createShareLink({
-        guidanceSetId,
-        expiryDurationMinutes: selectedValidity.minutes,
-      });
-
-      setShareLinkId(result.shareLinkId);
-      setCourierAppUrl(result.url);
-
-      const expiry = new Date(Date.now() + selectedValidity.minutes * 60 * 1000);
-      setExpiresAt(expiry.toISOString());
-
-      setGuidanceSet((prev) =>
-        prev ? { ...prev, availabilityMode: selectedAvailability } : prev,
-      );
-    } catch (err) {
-      console.error('Failed to generate share link:', err);
-      Alert.alert(t('common.error'), t('share.errorGenerate'));
-    } finally {
-      setGenerating(false);
-    }
-  }, [guidanceSetId, selectedAvailability, startTime, endTime, shareLinkId, selectedValidity, t]);
 
   const handleCopyLink = useCallback(async () => {
     if (!courierAppUrl) return;
@@ -304,7 +236,6 @@ export default function ShareScreen() {
             setShareLinkId(null);
             setCourierAppUrl(null);
             setExpiresAt(null);
-            setShowModal(true);
           } catch (err) {
             console.error('Failed to revoke share link:', err);
             Alert.alert(t('common.error'), t('share.errorRevoke'));
@@ -316,23 +247,16 @@ export default function ShareScreen() {
     ]);
   }, [shareLinkId, t]);
 
+  const handleRegenerateLink = useCallback(async () => {
+    if (!guidanceSetId) return;
+    await generateLink(guidanceSetId, selectedValidity);
+  }, [guidanceSetId, selectedValidity, shareLinkId]);
+
   const openLinkSettingsMenu = () => {
     linkSettingsRef.current?.measureInWindow((x, y, width, height) => {
       setLinkSettingsPosition({ top: y + height + 4, right: Spacing.xl });
       setShowLinkSettingsMenu(true);
     });
-  };
-
-  const getAvailabilitySummary = (): string => {
-    if (!guidanceSet) return '';
-    const mode = guidanceSet.availabilityMode;
-    if (mode === 'TIME_WINDOW') {
-      const from = formatTimeShort(startTime);
-      const to = formatTimeShort(endTime);
-      return t('share.availabilityTimeSummary', { from, to });
-    }
-    if (mode === 'NOT_AVAILABLE_TODAY') return t('share.availabilityNotAvailable');
-    return t('share.availabilitySummary');
   };
 
   if (loading) {
@@ -395,8 +319,31 @@ export default function ShareScreen() {
           </View>
         ) : null}
 
+        {/* Availability summary row */}
+        <View style={styles.availabilityRow}>
+          <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+            <Circle cx={12} cy={12} r={10} stroke={Colors.textMuted} strokeWidth={2} />
+            <Path d="M12 6v6l4 2" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" />
+          </Svg>
+          <Text style={styles.availabilityText}>{availabilitySummary}</Text>
+          <Pressable onPress={() => router.push('/settings')}>
+            <Text style={styles.availabilityChangeLink}>{t('share.linkExpiryChange')}</Text>
+          </Pressable>
+        </View>
+
+        {!courierAppUrl && !loading && !generating ? (
+          <View style={styles.revokedCard}>
+            <Text style={styles.revokedText}>{t('share.linkRevoked')}</Text>
+            <Pressable
+              style={styles.generateBtn}
+              onPress={() => guidanceSetId && generateLink(guidanceSetId, selectedValidity)}
+            >
+              <Text style={styles.generateBtnText}>{t('share.generateNewLink')}</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         {courierAppUrl ? (
-          /* ---- Active link: share-focused UI ---- */
           <View style={styles.card}>
             {/* Link ready indicator */}
             <View style={styles.linkReadyRow}>
@@ -414,22 +361,18 @@ export default function ShareScreen() {
               </View>
             </View>
 
-            {/* Availability + expiry summary */}
-            <View style={styles.summaryRow}>
-              <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-                <Circle cx={12} cy={12} r={10} stroke={Colors.textMuted} strokeWidth={2} />
-                <Path d="M12 6v6l4 2" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" />
-              </Svg>
-              <Text style={styles.summaryText}>{getAvailabilitySummary()}</Text>
-              {expiresAt && (
-                <>
-                  <Text style={styles.summaryDot}>·</Text>
-                  <Text style={styles.summaryText}>
-                    {t('share.expiresAt', { time: formatExpiryDate(expiresAt) })}
-                  </Text>
-                </>
-              )}
-            </View>
+            {/* Expiry summary */}
+            {expiresAt && (
+              <View style={styles.summaryRow}>
+                <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                  <Circle cx={12} cy={12} r={10} stroke={Colors.textMuted} strokeWidth={2} />
+                  <Path d="M12 6v6l4 2" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" />
+                </Svg>
+                <Text style={styles.summaryText}>
+                  {t('share.expiresAt', { time: formatExpiryDate(expiresAt) })}
+                </Text>
+              </View>
+            )}
 
             <Text style={styles.linkHint}>{t('share.linkHint')}</Text>
 
@@ -481,221 +424,6 @@ export default function ShareScreen() {
           </View>
         ) : null}
       </ScrollView>
-
-      {/* Android-only: time picker dialogs rendered outside modal */}
-      {!isIOS && showStartPicker && (
-        <DateTimePicker
-          value={startTime}
-          mode="time"
-          is24Hour
-          display="default"
-          onChange={(_e, date) => {
-            setShowStartPicker(false);
-            if (date) setStartTime(date);
-          }}
-        />
-      )}
-      {!isIOS && showEndPicker && (
-        <DateTimePicker
-          value={endTime}
-          mode="time"
-          is24Hour
-          display="default"
-          onChange={(_e, date) => {
-            setShowEndPicker(false);
-            if (date) setEndTime(date);
-          }}
-        />
-      )}
-
-      {/* Availability + Validity Modal */}
-      <Modal
-        visible={showModal}
-        animationType="slide"
-        transparent
-        onRequestClose={() => {
-          setShowModal(false);
-          if (!courierAppUrl) router.back();
-        }}
-      >
-        <View style={styles.modalOverlay}>
-          <Pressable
-            style={styles.modalDismissArea}
-            onPress={() => {
-              setShowModal(false);
-              if (!courierAppUrl) router.back();
-            }}
-          />
-          <View style={[styles.modalContent, { paddingBottom: modalBottomPadding }]}>
-            <View style={styles.modalHandle} />
-
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('share.setAvailability')}</Text>
-              <Text style={styles.modalSubtitle}>{t('share.availabilitySubtitle')}</Text>
-            </View>
-
-            <ScrollView
-              style={styles.modalScroll}
-              showsVerticalScrollIndicator={false}
-              bounces
-              keyboardShouldPersistTaps="handled"
-              nestedScrollEnabled
-            >
-              {/* Availability options */}
-              <View style={styles.availabilityOptions}>
-                {AVAILABILITY_OPTIONS.map((option) => {
-                  const isSelected = selectedAvailability === option.value;
-                  return (
-                    <Pressable
-                      key={option.value}
-                      style={[
-                        styles.availabilityOption,
-                        isSelected && styles.availabilityOptionSelected,
-                      ]}
-                      onPress={() => setSelectedAvailability(option.value)}
-                    >
-                      <View
-                        style={[
-                          styles.availabilityIconCircle,
-                          isSelected && styles.availabilityIconCircleSelected,
-                        ]}
-                      >
-                        <AvailabilityIcon icon={option.icon} selected={isSelected} />
-                      </View>
-                      <View style={styles.availabilityText}>
-                        <Text style={styles.availabilityLabel}>{t(option.labelKey)}</Text>
-                        <Text style={styles.availabilityDescription}>{t(option.descriptionKey)}</Text>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              {/* Time window inputs */}
-              {selectedAvailability === 'TIME_WINDOW' && (
-                <View style={styles.timeWindow}>
-                  <View style={styles.timeRow}>
-                    <Text style={styles.timeLabel}>{t('share.from')}</Text>
-                    {isIOS ? (
-                      <DateTimePicker
-                        value={startTime}
-                        mode="time"
-                        is24Hour
-                        display="compact"
-                        onChange={(_e, date) => { if (date) setStartTime(date); }}
-                      />
-                    ) : (
-                      <Pressable style={styles.timeButton} onPress={() => setShowStartPicker(true)}>
-                        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                          <Circle cx={12} cy={12} r={10} stroke="#99a1af" strokeWidth={2} />
-                          <Path d="M12 6v6l4 2" stroke="#99a1af" strokeWidth={2} strokeLinecap="round" />
-                        </Svg>
-                        <Text style={styles.timeButtonText}>{formatTimeShort(startTime)}</Text>
-                      </Pressable>
-                    )}
-                  </View>
-                  <View style={styles.timeRowDivider} />
-                  <View style={styles.timeRow}>
-                    <Text style={styles.timeLabel}>{t('share.to')}</Text>
-                    {isIOS ? (
-                      <DateTimePicker
-                        value={endTime}
-                        mode="time"
-                        is24Hour
-                        display="compact"
-                        onChange={(_e, date) => { if (date) setEndTime(date); }}
-                      />
-                    ) : (
-                      <Pressable style={styles.timeButton} onPress={() => setShowEndPicker(true)}>
-                        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                          <Circle cx={12} cy={12} r={10} stroke="#99a1af" strokeWidth={2} />
-                          <Path d="M12 6v6l4 2" stroke="#99a1af" strokeWidth={2} strokeLinecap="round" />
-                        </Svg>
-                        <Text style={styles.timeButtonText}>{formatTimeShort(endTime)}</Text>
-                      </Pressable>
-                    )}
-                  </View>
-                </View>
-              )}
-
-              {/* Link expiry — collapsed by default */}
-              <View style={styles.expirySection}>
-                <View style={styles.expiryDefaultRow}>
-                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-                    <Circle cx={12} cy={12} r={10} stroke={Colors.textMuted} strokeWidth={2} />
-                    <Path d="M12 6v6l4 2" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" />
-                  </Svg>
-                  <Text style={styles.expiryDefaultText}>{t('share.linkExpiry')}</Text>
-                  <Pressable onPress={() => setShowValidityPicker(!showValidityPicker)}>
-                    <Text style={styles.expiryChangeLink}>{t('share.linkExpiryChange')}</Text>
-                  </Pressable>
-                </View>
-
-                {showValidityPicker && (
-                  <View style={styles.validityOptions}>
-                    {LINK_VALIDITY_OPTIONS.map((option) => {
-                      const isSelected = selectedValidity.minutes === option.minutes;
-                      return (
-                        <Pressable
-                          key={option.minutes}
-                          style={[
-                            styles.validityOption,
-                            isSelected && styles.validityOptionSelected,
-                          ]}
-                          onPress={() => setSelectedValidity(option)}
-                        >
-                          <View style={styles.validityOptionRow}>
-                            <View
-                              style={[
-                                styles.validityRadio,
-                                isSelected && styles.validityRadioSelected,
-                              ]}
-                            >
-                              {isSelected && <View style={styles.validityRadioInner} />}
-                            </View>
-                            <Text style={styles.validityOptionLabel}>
-                              {t(option.labelKey)}
-                            </Text>
-                          </View>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                )}
-              </View>
-            </ScrollView>
-
-            {/* Modal actions */}
-            <View style={styles.modalActions}>
-              <Pressable
-                style={styles.modalCancelBtn}
-                onPress={() => {
-                  setShowModal(false);
-                  if (!courierAppUrl) router.back();
-                }}
-              >
-                <Text style={styles.modalCancelText}>
-                  {courierAppUrl ? t('common.cancel') : t('common.back')}
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[
-                  styles.modalConfirmBtn,
-                  generating && styles.btnDisabled,
-                ]}
-                onPress={handleConfirmAndGenerate}
-                disabled={generating}
-              >
-                {generating ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
-                ) : (
-                  <Text style={styles.modalConfirmText}>{t('share.continue')}</Text>
-                )}
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* WhatsApp Number Modal */}
       <Modal
@@ -750,7 +478,7 @@ export default function ShareScreen() {
               style={styles.menuItem}
               onPress={() => {
                 setShowLinkSettingsMenu(false);
-                openAvailabilityModal();
+                handleRegenerateLink();
               }}
             >
               <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
@@ -856,13 +584,65 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: BorderRadius.lg,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   addressBannerText: {
     fontSize: FontSize.sm,
     fontWeight: '500',
     color: Colors.text,
     flex: 1,
+  },
+
+  availabilityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.lg,
+    marginBottom: Spacing.lg,
+  },
+  availabilityText: {
+    flex: 1,
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+  },
+  availabilityChangeLink: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+
+  revokedCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.xxl,
+    padding: Spacing.xl,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    gap: Spacing.lg,
+  },
+  revokedText: {
+    fontSize: FontSize.sm,
+    color: Colors.textMuted,
+    textAlign: 'center',
+  },
+  generateBtn: {
+    paddingVertical: 13,
+    paddingHorizontal: Spacing.xxl,
+    backgroundColor: Colors.text,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  generateBtnText: {
+    fontSize: FontSize.base,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 
   card: {
@@ -916,10 +696,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     color: Colors.textMuted,
   },
-  summaryDot: {
-    fontSize: FontSize.xs,
-    color: Colors.textMuted,
-  },
 
   linkHint: {
     fontSize: FontSize.sm,
@@ -949,7 +725,7 @@ const styles = StyleSheet.create({
   },
   whatsappBtnSubtext: {
     fontSize: FontSize.xs,
-    color: 'rgba(255,255,255,0.8)',
+    color: '#ffffff',
   },
   whatsappNumberBtn: {
     flexDirection: 'row',
@@ -999,242 +775,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.textMuted,
     fontWeight: '500',
-  },
-
-  btnDisabled: {
-    opacity: 0.5,
-  },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  modalDismissArea: {
-    flex: 1,
-  },
-  modalContent: {
-    backgroundColor: Colors.surface,
-    borderTopLeftRadius: BorderRadius.xxl,
-    borderTopRightRadius: BorderRadius.xxl,
-    maxHeight: '85%',
-    paddingHorizontal: Spacing.xl,
-  },
-  modalHandle: {
-    width: 36,
-    height: 4,
-    backgroundColor: Colors.border,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: Spacing.md,
-    marginBottom: Spacing.lg,
-  },
-  modalHeader: {
-    alignItems: 'center',
-    marginBottom: Spacing.xl,
-  },
-  modalTitle: {
-    fontSize: FontSize.xl,
-    fontWeight: '600',
-    color: Colors.text,
-    letterSpacing: -0.3,
-    marginBottom: 4,
-  },
-  modalSubtitle: {
-    fontSize: FontSize.sm,
-    color: Colors.textMuted,
-    textAlign: 'center',
-  },
-  modalScroll: {
-    flexGrow: 0,
-  },
-
-  availabilityOptions: {
-    gap: Spacing.md,
-    marginBottom: Spacing.xl,
-  },
-  availabilityOption: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.md,
-    padding: Spacing.lg,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.xl,
-  },
-  availabilityOptionSelected: {
-    borderColor: Colors.text,
-    backgroundColor: Colors.background,
-  },
-  availabilityIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  availabilityIconCircleSelected: {
-    backgroundColor: Colors.text,
-    borderColor: Colors.text,
-  },
-  availabilityText: {
-    flex: 1,
-    gap: 2,
-  },
-  availabilityLabel: {
-    fontSize: FontSize.base,
-    fontWeight: '500',
-    color: Colors.text,
-  },
-  availabilityDescription: {
-    fontSize: FontSize.sm,
-    color: Colors.textMuted,
-  },
-
-  timeWindow: {
-    paddingVertical: 4,
-    paddingHorizontal: Spacing.lg,
-    backgroundColor: Colors.background,
-    borderRadius: BorderRadius.lg,
-    marginBottom: Spacing.lg,
-  },
-  timeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: Spacing.md,
-  },
-  timeRowDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: Colors.border,
-  },
-  timeLabel: {
-    fontSize: FontSize.base,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  timeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: 14,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.lg,
-  },
-  timeButtonText: {
-    fontSize: FontSize.lg,
-    fontWeight: '600',
-    color: Colors.text,
-    letterSpacing: 0.5,
-  },
-
-  expirySection: {
-    marginBottom: Spacing.xl,
-  },
-  expiryDefaultRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    backgroundColor: Colors.background,
-    borderRadius: BorderRadius.lg,
-  },
-  expiryDefaultText: {
-    flex: 1,
-    fontSize: FontSize.sm,
-    color: Colors.textSecondary,
-  },
-  expiryChangeLink: {
-    fontSize: FontSize.sm,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-
-  validityOptions: {
-    gap: Spacing.sm,
-    marginTop: Spacing.md,
-  },
-  validityOption: {
-    paddingVertical: Spacing.md,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.lg,
-  },
-  validityOptionSelected: {
-    borderColor: Colors.text,
-    backgroundColor: Colors.background,
-  },
-  validityOptionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  validityRadio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  validityRadioSelected: {
-    borderColor: Colors.text,
-  },
-  validityRadioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.text,
-  },
-  validityOptionLabel: {
-    flex: 1,
-    fontSize: FontSize.base,
-    color: Colors.text,
-  },
-
-  modalActions: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    paddingTop: Spacing.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.border,
-  },
-  modalCancelBtn: {
-    flex: 1,
-    paddingVertical: 13,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalCancelText: {
-    fontSize: FontSize.base,
-    fontWeight: '500',
-    color: Colors.textSecondary,
-  },
-  modalConfirmBtn: {
-    flex: 2,
-    paddingVertical: 13,
-    backgroundColor: Colors.text,
-    borderRadius: BorderRadius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  
-  modalConfirmText: {
-    fontSize: FontSize.base,
-    fontWeight: '600',
-    color: '#ffffff',
   },
 
   waNumModalOverlay: {

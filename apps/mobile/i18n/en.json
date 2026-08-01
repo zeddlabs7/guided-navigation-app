@@ -56,7 +56,13 @@
     "english": "English",
     "arabic": "العربية",
     "signOut": "Sign Out",
-    "signOutConfirm": "Are you sure you want to sign out?"
+    "signOutConfirm": "Are you sure you want to sign out?",
+    "availability": "Delivery Availability",
+    "availabilityDescription": "This applies to all links you share with couriers.",
+    "availabilitySaved": "Availability saved",
+    "availabilityAnytime": "Available today",
+    "availabilityTimeWindow": "Available {{from}} – {{to}}",
+    "availabilityNotAvailable": "Not available today"
   },
   "notFound": {
     "code": "404",
@@ -218,7 +224,9 @@
     "availabilitySummary": "Available today",
     "availabilityTimeSummary": "Available {{from}} – {{to}}",
     "availabilityNotAvailable": "Not available today",
-    "preparing": "Preparing your link..."
+    "preparing": "Preparing your link...",
+    "linkRevoked": "The previous link has been revoked.",
+    "generateNewLink": "Generate New Link"
   },
   "linkValidity": {
     "6hours": "6 hours",

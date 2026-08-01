@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, nextTick, onMounted, onBeforeUnmount } from 'vue';
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import {
   getMetadataFieldConfigs,
   type Coordinates,
@@ -11,7 +11,6 @@ import {
 import { openMapsNative } from '@/utils/contact';
 import { useTranslation } from '@/composables/useTranslation';
 import { useCourierSession } from '@/composables/useCourierSession';
-import InlineStepViewer from './InlineStepViewer.vue';
 
 const { t } = useTranslation();
 const { currentLanguage } = useCourierSession();
@@ -71,8 +70,8 @@ const destinationSummary = computed(() => {
   return parts.join(', ');
 });
 
-const addressDetailsSummary = computed(() => {
-  const parts: string[] = [];
+const addressDetailLines = computed(() => {
+  const lines: { label: string; value: string }[] = [];
   const lang = currentLanguage.value;
   for (const field of ADDRESS_DETAIL_FIELDS) {
     const config = allVisibleFields.value.find(c => c.field === field);
@@ -80,10 +79,20 @@ const addressDetailsSummary = computed(() => {
       const value = getFieldValue(field);
       if (field === 'unitType') continue;
       const label = config.label[lang] || config.label.en;
-      parts.push(`${label} ${value}`);
+      lines.push({ label, value });
     }
   }
-  return parts.join(', ');
+  return lines;
+});
+
+const stepThumbnails = computed(() => {
+  const urls: string[] = [];
+  for (const step of props.steps) {
+    const url = step.image?.publicUrl;
+    if (url) urls.push(url);
+    if (urls.length >= 4) break;
+  }
+  return urls;
 });
 
 function handleOpenMaps() {
@@ -114,34 +123,11 @@ onBeforeUnmount(() => {
   document.body.style.overflow = '';
 });
 
-// Expandable arrival guide
-const isGuideExpanded = ref(false);
-const guideRef = ref<HTMLElement | null>(null);
-
-function toggleGuide() {
-  isGuideExpanded.value = !isGuideExpanded.value;
-  if (isGuideExpanded.value) {
-    nextTick(() => {
-      guideRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }
-}
-
 onMounted(() => {
-  // Preload location check image (warms browser cache)
   if (props.locationCheckImageUrl) {
     const lcImg = new Image();
     lcImg.onload = () => { locationImagePreloaded.value = true; };
     lcImg.src = props.locationCheckImageUrl;
-  }
-
-  // Preload all step images
-  for (const step of props.steps) {
-    const url = step.image?.publicUrl;
-    if (url) {
-      const img = new Image();
-      img.src = url;
-    }
   }
 });
 </script>
@@ -149,24 +135,29 @@ onMounted(() => {
 <template>
   <section class="address-section">
     <div class="address-content">
-      <!-- Consolidated address cards (destination identity) -->
+      <!-- Address cards -->
       <div class="address-cards">
         <div v-if="destinationSummary" class="address-card">
           <span class="address-card-label">{{ t('destinationLabel') }}</span>
           <span class="address-card-value">{{ destinationSummary }}</span>
         </div>
 
-        <div v-if="addressDetailsSummary" class="address-card">
+        <div v-if="addressDetailLines.length > 0" class="address-card">
           <span class="address-card-label">{{ t('addressDetailsLabel') }}</span>
-          <span class="address-card-value">{{ addressDetailsSummary }}</span>
+          <div class="address-lines">
+            <div v-for="(line, i) in addressDetailLines" :key="i" class="address-line">
+              <span class="address-line-label">{{ line.label }}</span>
+              <span class="address-line-value">{{ line.value }}</span>
+            </div>
+          </div>
         </div>
 
-        <p v-if="!destinationSummary && !addressDetailsSummary" class="no-metadata">
+        <p v-if="!destinationSummary && addressDetailLines.length === 0" class="no-metadata">
           {{ t('noAddressDetails') }}
         </p>
       </div>
 
-      <!-- Action buttons: full-width stacked -->
+      <!-- Action buttons with thumbnails -->
       <div class="action-buttons">
         <button
           v-if="destination"
@@ -174,9 +165,11 @@ onMounted(() => {
           type="button"
           @click="handleOpenMaps"
         >
-          <svg class="action-btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="currentColor"/>
-          </svg>
+          <div class="action-btn-thumb">
+            <svg class="action-btn-thumb-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="currentColor"/>
+            </svg>
+          </div>
           <span class="action-btn-label">{{ t('openGoogleMaps') }}</span>
           <svg class="action-btn-external" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -189,11 +182,14 @@ onMounted(() => {
           type="button"
           @click="openImageViewer"
         >
-          <svg class="action-btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
-            <path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <div class="action-btn-thumb">
+            <img
+              :src="locationCheckImageUrl"
+              alt=""
+              class="action-btn-thumb-img"
+              loading="lazy"
+            />
+          </div>
           <span class="action-btn-label">{{ t('viewLocationPhoto') }}</span>
           <svg class="action-btn-external" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -201,14 +197,14 @@ onMounted(() => {
         </button>
       </div>
 
-      <!-- Expandable arrival guide -->
-      <div v-if="steps.length > 0" ref="guideRef" class="arrival-guide">
-        <button
-          class="guide-toggle"
-          type="button"
-          @click="toggleGuide"
-          :aria-expanded="isGuideExpanded"
-        >
+      <!-- Arrival guide button with step thumbnails -->
+      <button
+        v-if="steps.length > 0"
+        class="guide-toggle"
+        type="button"
+        @click="props.onViewAllSteps"
+      >
+        <div class="guide-toggle-top">
           <span class="guide-toggle-icon" aria-hidden="true">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -217,21 +213,24 @@ onMounted(() => {
             </svg>
           </span>
           <span class="guide-toggle-text">{{ t('startArrivalGuide') }}</span>
-          <span class="guide-toggle-chevron" :class="{ 'guide-toggle-chevron--open': isGuideExpanded }" aria-hidden="true">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </span>
-        </button>
-
-        <div v-show="isGuideExpanded" class="guide-body">
-          <InlineStepViewer
-            :steps="steps"
-            :is-rtl="isRtl"
-            :on-view-all-steps="props.onViewAllSteps"
-          />
+          <span class="guide-toggle-count">{{ steps.length }} {{ t('step').toLowerCase() + (steps.length !== 1 ? 's' : '') }}</span>
+          <svg class="guide-toggle-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </div>
-      </div>
+        <div v-if="stepThumbnails.length > 0" class="guide-thumbs">
+          <div
+            v-for="(url, i) in stepThumbnails"
+            :key="i"
+            class="guide-thumb"
+          >
+            <img :src="url" alt="" class="guide-thumb-img" loading="lazy" />
+          </div>
+          <div v-if="steps.length > stepThumbnails.length" class="guide-thumb guide-thumb--more">
+            +{{ steps.length - stepThumbnails.length }}
+          </div>
+        </div>
+      </button>
     </div>
 
     <!-- Full-screen image viewer -->
@@ -279,7 +278,86 @@ onMounted(() => {
   margin: 0 auto;
 }
 
-/* Full-width stacked action buttons */
+/* Address cards */
+.address-cards {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1.5dvh, 12px);
+}
+
+.address-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: clamp(12px, 2dvh, 16px);
+  background-color: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.address-card-label {
+  font-size: clamp(10px, 1.8dvh, 12px);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+
+.address-card-value {
+  font-size: clamp(15px, 2.8dvh, 17px);
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.address-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.address-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.address-line:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.address-line-label {
+  font-size: clamp(12px, 2dvh, 14px);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.address-line-value {
+  font-size: clamp(15px, 2.8dvh, 17px);
+  font-weight: 600;
+  color: var(--color-text);
+  text-align: end;
+  word-break: break-word;
+}
+
+.no-metadata {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin: 0;
+  font-style: italic;
+}
+
+/* Action buttons with thumbnails */
 .action-buttons {
   display: flex;
   flex-direction: column;
@@ -291,7 +369,7 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: clamp(14px, 2.5dvh, 18px) clamp(14px, 2.5dvh, 18px);
+  padding: clamp(10px, 2dvh, 14px) clamp(12px, 2dvh, 16px);
   border-radius: var(--radius-lg);
   border: none;
   cursor: pointer;
@@ -305,7 +383,7 @@ onMounted(() => {
 }
 
 .action-btn--maps {
-  background-color: var(--color-primary);;
+  background-color: var(--color-primary);
   color: white;
   box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
 }
@@ -321,10 +399,30 @@ onMounted(() => {
   border-color: var(--color-primary);
 }
 
-.action-btn-icon {
+.action-btn-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
   flex-shrink: 0;
-  width: 22px;
-  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.action-btn--photo .action-btn-thumb {
+  background-color: #f1f5f9;
+}
+
+.action-btn-thumb-icon {
+  flex-shrink: 0;
+}
+
+.action-btn-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .action-btn-label {
@@ -339,68 +437,32 @@ onMounted(() => {
   opacity: 0.6;
 }
 
-/* Consolidated address cards */
-.address-cards {
+/* Arrival guide button */
+.guide-toggle {
   display: flex;
   flex-direction: column;
-  gap: clamp(8px, 1.5dvh, 12px);
-}
-
-.address-card {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  gap: 12px;
+  width: 100%;
   padding: clamp(12px, 2dvh, 16px);
-  background-color: white;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
-}
-
-.address-card-label {
-  font-size: clamp(10px, 1.8dvh, 12px);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-text-muted);
-  line-height: 1.2;
-}
-
-.address-card-value {
-  font-size: clamp(15px, 2.8dvh, 17px);
-  font-weight: 600;
-  color: var(--color-text);
-  line-height: 1.35;
-  word-break: break-word;
-}
-
-.no-metadata {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-  margin: 0;
-  font-style: italic;
-}
-
-/* Expandable arrival guide */
-.arrival-guide {
   border: 2px solid var(--color-primary);
   border-radius: var(--radius-lg);
   background-color: white;
-  overflow: hidden;
+  cursor: pointer;
+  text-align: start;
+  font-family: inherit;
   box-shadow: 0 2px 12px rgba(22, 163, 74, 0.10);
+  transition: transform 0.1s ease;
 }
 
-.guide-toggle {
+.guide-toggle:active {
+  transform: scale(0.98);
+}
+
+.guide-toggle-top {
   display: flex;
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: clamp(12px, 2dvh, 16px);
-  border: none;
-  background: none;
-  cursor: pointer;
-  text-align: start;
-  font-family: inherit;
 }
 
 .guide-toggle-icon {
@@ -422,22 +484,52 @@ onMounted(() => {
   color: var(--color-text);
 }
 
-.guide-toggle-chevron {
+.guide-toggle-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.guide-toggle-arrow {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+[dir="rtl"] .guide-toggle-arrow {
+  transform: scaleX(-1);
+}
+
+/* Step thumbnail strip */
+.guide-thumbs {
+  display: flex;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.guide-thumb {
+  width: 56px;
+  height: 42px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background-color: #f1f5f9;
+}
+
+.guide-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.guide-thumb--more {
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--color-text-muted);
-  flex-shrink: 0;
-  transition: transform 0.25s ease;
-}
-
-.guide-toggle-chevron--open {
-  transform: rotate(180deg);
-}
-
-.guide-body {
-  padding: 0 clamp(12px, 2dvh, 16px) clamp(12px, 2dvh, 16px);
-  border-top: 1px solid var(--color-border);
+  background-color: #e2e8f0;
 }
 
 /* Full-screen image viewer */
