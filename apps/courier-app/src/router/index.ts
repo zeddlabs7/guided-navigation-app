@@ -4,11 +4,6 @@ import type { RouteRecordRaw } from 'vue-router';
 const routes: RouteRecordRaw[] = [
   {
     path: '/g/:token',
-    name: 'GuidanceLoader',
-    component: () => import('@/pages/GuidanceLoaderPage.vue'),
-  },
-  {
-    path: '/g/:token/welcome',
     name: 'Welcome',
     component: () => import('@/pages/WelcomePage.vue'),
   },

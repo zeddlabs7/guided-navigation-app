@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { validateToken } from '@guidenav/services/courier-api';
 import { useCourierSession } from '@/composables/useCourierSession';
 import type { Language } from '@guidenav/types';
 
@@ -9,27 +10,20 @@ const route = useRoute();
 const token = route.params.token as string;
 
 const {
-  isTokenValid,
+  setLoading,
+  setError,
+  setToken,
+  setTokenValid,
+  loadDataInBackground,
   isDataReady,
   dataLoadError,
   setLanguage,
   translateUserContent,
 } = useCourierSession();
 
-const waitingForData = ref(false);
-const isNavigating = ref(false);
-
-onMounted(() => {
-  if (!isTokenValid.value) {
-    router.replace(`/g/${token}`);
-  }
-});
-
-watch(dataLoadError, (err) => {
-  if (err) {
-    router.replace(`/g/${token}/error?type=${err}`);
-  }
-});
+const isValidating = ref(true);
+const tokenValid = ref(false);
+const validationFailed = ref(false);
 
 const languages: { code: Language; label: string; rtl: boolean }[] = [
   { code: 'en', label: 'English', rtl: false },
@@ -38,6 +32,14 @@ const languages: { code: Language; label: string; rtl: boolean }[] = [
   { code: 'ur', label: 'اردو', rtl: true },
   { code: 'bn', label: 'বাংলা', rtl: false },
 ];
+
+const trustStatements: Record<Language, string> = {
+  en: 'Delivery guidance from your recipient',
+  ar: 'إرشادات التوصيل من المستلم',
+  hi: 'प्राप्तकर्ता से डिलीवरी मार्गदर्शन',
+  ur: 'وصول کنندہ کی طرف سے ڈیلیوری رہنمائی',
+  bn: 'প্রাপকের কাছ থেকে ডেলিভারি গাইডেন্স',
+};
 
 const instructionTexts: Record<Language, string> = {
   en: 'Choose your language to enter',
@@ -48,14 +50,14 @@ const instructionTexts: Record<Language, string> = {
 };
 
 const selectedLanguage = ref<Language | null>(null);
+const isNavigating = ref(false);
 const cycleIndex = ref(0);
 let cycleTimer: ReturnType<typeof setInterval> | null = null;
 
 const currentCycleLanguage = computed(() => languages[cycleIndex.value].code);
 const currentCycleRtl = computed(() => languages[cycleIndex.value].rtl);
-
+const trustText = computed(() => trustStatements[currentCycleLanguage.value]);
 const instructionText = computed(() => instructionTexts[currentCycleLanguage.value]);
-const instructionRtl = computed(() => currentCycleRtl.value);
 
 function startCycling() {
   cycleTimer = setInterval(() => {
@@ -70,8 +72,46 @@ function stopCycling() {
   }
 }
 
+watch(dataLoadError, (err) => {
+  if (err) {
+    router.replace(`/g/${token}/error?type=${err}`);
+  }
+});
+
+onMounted(async () => {
+  setToken(token);
+  setLoading(true);
+  startCycling();
+
+  try {
+    const result = await validateToken(token);
+
+    if (!result.valid) {
+      const errorType = result.error || 'NOT_FOUND';
+      router.replace(`/g/${token}/error?type=${errorType}`);
+      return;
+    }
+
+    setTokenValid(true);
+    tokenValid.value = true;
+    loadDataInBackground(token);
+  } catch (err) {
+    console.error('Failed to validate token:', err);
+    setError('Failed to load guidance');
+    validationFailed.value = true;
+    router.replace(`/g/${token}/error?type=LOAD_FAILED`);
+  } finally {
+    isValidating.value = false;
+    setLoading(false);
+  }
+});
+
+onUnmounted(() => {
+  stopCycling();
+});
+
 async function selectLanguage(lang: Language) {
-  if (isNavigating.value) return;
+  if (isNavigating.value || isValidating.value) return;
 
   selectedLanguage.value = lang;
   setLanguage(lang);
@@ -79,12 +119,10 @@ async function selectLanguage(lang: Language) {
   isNavigating.value = true;
 
   if (!isDataReady.value) {
-    waitingForData.value = true;
     await new Promise<void>((resolve) => {
       const unwatch = watch(isDataReady, (ready) => {
         if (ready) {
           unwatch();
-          waitingForData.value = false;
           resolve();
         }
       }, { immediate: true });
@@ -96,33 +134,37 @@ async function selectLanguage(lang: Language) {
   }
   router.push(`/g/${token}/landing`);
 }
-
-onMounted(() => {
-  startCycling();
-});
-
-onUnmounted(() => {
-  stopCycling();
-});
 </script>
 
 <template>
-  <div v-if="isTokenValid" class="welcome-page">
+  <div class="welcome-page">
     <div class="welcome-content">
       <div class="logo-section">
         <img
-          :src="instructionRtl ? '/logo-ar.png' : '/logo-eng.png'"
+          :src="currentCycleRtl ? '/logo-ar.png' : '/logo-eng.png'"
           alt="Arriveo"
           class="logo"
         />
       </div>
 
+      <div class="trust-section">
+        <Transition name="fade" mode="out-in">
+          <p
+            :key="'trust-' + currentCycleLanguage"
+            class="trust-text"
+            :dir="currentCycleRtl ? 'rtl' : 'ltr'"
+          >
+            {{ trustText }}
+          </p>
+        </Transition>
+      </div>
+
       <div class="instruction-section">
         <Transition name="fade" mode="out-in">
           <p
-            :key="instructionText"
+            :key="'instr-' + currentCycleLanguage"
             class="instruction-text"
-            :dir="instructionRtl ? 'rtl' : 'ltr'"
+            :dir="currentCycleRtl ? 'rtl' : 'ltr'"
           >
             {{ instructionText }}
           </p>
@@ -140,7 +182,7 @@ onUnmounted(() => {
               loading: selectedLanguage === lang.code && isNavigating,
             }"
             :dir="lang.rtl ? 'rtl' : 'ltr'"
-            :disabled="isNavigating"
+            :disabled="isNavigating || isValidating"
             @click="selectLanguage(lang.code)"
           >
             <span v-if="selectedLanguage === lang.code && isNavigating" class="spinner" />
@@ -169,7 +211,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 40px;
+  gap: 28px;
 }
 
 .logo-section {
@@ -181,6 +223,22 @@ onUnmounted(() => {
   height: 48px;
   width: auto;
   object-fit: contain;
+}
+
+.trust-section {
+  text-align: center;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trust-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.4;
 }
 
 .instruction-section {
