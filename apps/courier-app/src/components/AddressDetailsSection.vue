@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
+import { computed, ref, shallowRef, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import {
   getMetadataFieldConfigs,
   type Coordinates,
@@ -85,6 +85,51 @@ const addressDetailLines = computed(() => {
   return lines;
 });
 
+const miniMapContainer = ref<HTMLDivElement | null>(null);
+const miniMapInstance = shallowRef<unknown>(null);
+const miniMapReady = ref(false);
+
+async function initMiniMap() {
+  await nextTick();
+  if (!miniMapContainer.value || !props.destination) return;
+
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) return;
+
+  try {
+    const { Loader } = await import('@googlemaps/js-api-loader');
+    const loader = new Loader({ apiKey, version: 'weekly', libraries: ['marker'] });
+    const google = await loader.load();
+    const destLatLng = { lat: props.destination.latitude, lng: props.destination.longitude };
+
+    miniMapInstance.value = new google.maps.Map(miniMapContainer.value, {
+      center: destLatLng,
+      zoom: 15,
+      disableDefaultUI: true,
+      gestureHandling: 'none',
+      clickableIcons: false,
+      mapId: 'MINI_MAP_ID',
+      keyboardShortcuts: false,
+    });
+
+    const { AdvancedMarkerElement, PinElement } = (await google.maps.importLibrary('marker')) as any;
+    const pin = new PinElement({ background: '#ef4444', borderColor: '#b91c1c', glyphColor: '#ffffff', scale: 0.8 });
+    new AdvancedMarkerElement({ position: destLatLng, map: miniMapInstance.value, content: pin });
+
+    miniMapReady.value = true;
+  } catch {
+    // Silently fail — the placeholder icon will show
+  }
+}
+
+watch(() => props.destination, (val) => {
+  if (val && !miniMapInstance.value) void initMiniMap();
+});
+
+onMounted(() => {
+  if (props.destination) void initMiniMap();
+});
+
 const stepThumbnails = computed(() => {
   const urls: string[] = [];
   for (const step of props.steps) {
@@ -165,10 +210,13 @@ onMounted(() => {
           type="button"
           @click="handleOpenMaps"
         >
-          <div class="action-btn-thumb">
-            <svg class="action-btn-thumb-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="currentColor"/>
-            </svg>
+          <div class="action-btn-thumb action-btn-thumb--map">
+            <div ref="miniMapContainer" class="mini-map-canvas"></div>
+            <div v-if="!miniMapReady" class="mini-map-placeholder">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="currentColor"/>
+              </svg>
+            </div>
           </div>
           <span class="action-btn-label">{{ t('openGoogleMaps') }}</span>
           <svg class="action-btn-external" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -415,8 +463,25 @@ onMounted(() => {
   background-color: #f1f5f9;
 }
 
-.action-btn-thumb-icon {
-  flex-shrink: 0;
+.action-btn-thumb--map {
+  position: relative;
+  background-color: var(--color-primary-light);
+}
+
+.mini-map-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.mini-map-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
 }
 
 .action-btn-thumb-img {
