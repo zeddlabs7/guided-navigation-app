@@ -261,7 +261,7 @@ onMounted(() => {
             </svg>
           </span>
           <span class="guide-toggle-text">{{ t('startArrivalGuide') }}</span>
-          <span class="guide-toggle-count">{{ steps.length }} {{ t('step').toLowerCase() + (steps.length !== 1 ? 's' : '') }}</span>
+          <span class="guide-toggle-count">{{ t(steps.length === 1 ? 'stepCount' : 'stepsCount').replace('{count}', String(steps.length)) }}</span>
           <svg class="guide-toggle-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
@@ -365,14 +365,13 @@ onMounted(() => {
 .address-lines {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
 }
 
 .address-line {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
+  flex-direction: column;
+  gap: 1px;
   padding: 6px 0;
   border-bottom: 1px solid #f1f5f9;
 }
@@ -383,18 +382,15 @@ onMounted(() => {
 }
 
 .address-line-label {
-  font-size: clamp(12px, 2dvh, 14px);
+  font-size: clamp(11px, 1.8dvh, 12px);
   font-weight: 500;
   color: var(--color-text-muted);
-  white-space: nowrap;
-  flex-shrink: 0;
 }
 
 .address-line-value {
   font-size: clamp(15px, 2.8dvh, 17px);
   font-weight: 600;
   color: var(--color-text);
-  text-align: end;
   word-break: break-word;
 }
 
@@ -431,9 +427,14 @@ onMounted(() => {
 }
 
 .action-btn--maps {
-  background-color: var(--color-primary);
-  color: white;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+  background-color: white;
+  color: var(--color-text);
+  border: 2px solid var(--color-border);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+}
+
+.action-btn--maps:active {
+  border-color: var(--color-primary);
 }
 
 .action-btn--photo {
@@ -481,7 +482,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--color-primary);
 }
 
 .action-btn-thumb-img {

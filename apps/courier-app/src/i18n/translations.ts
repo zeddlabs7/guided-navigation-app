@@ -83,6 +83,8 @@ type TranslationKey =
   | 'errorDefaultTitle'
   | 'errorDefaultMessage'
   | 'errorDefaultStatus'
+  | 'stepCount'
+  | 'stepsCount'
   // Welcome page
   | 'selectLanguage'
   | 'clickToSeeDetails'
@@ -177,6 +179,9 @@ const translations: Record<TranslationKey, Record<Language, string>> = {
   errorDefaultTitle: { en: 'Something went wrong.', ar: 'حدث خطأ ما.', hi: 'कुछ गलत हो गया।', ur: 'کچھ غلط ہو گیا۔', bn: 'কিছু ভুল হয়েছে।' },
   errorDefaultMessage: { en: 'We could not load the guidance. Please try again or contact the sender.', ar: 'لم نتمكن من تحميل الإرشاد. يرجى المحاولة مرة أخرى أو الاتصال بالمرسل.', hi: 'हम मार्गदर्शन लोड नहीं कर सके। कृपया पुनः प्रयास करें या प्रेषक से संपर्क करें।', ur: 'ہم رہنمائی لوڈ نہیں کر سکے۔ براہ کرم دوبارہ کوشش کریں یا بھیجنے والے سے رابطہ کریں۔', bn: 'আমরা গাইডেন্স লোড করতে পারিনি। অনুগ্রহ করে আবার চেষ্টা করুন বা প্রেরকের সাথে যোগাযোগ করুন।' },
   errorDefaultStatus: { en: 'Link status: Error', ar: 'حالة الرابط: خطأ', hi: 'लिंक स्थिति: त्रुटि', ur: 'لنک کی حالت: خرابی', bn: 'লিঙ্কের অবস্থা: ত্রুটি' },
+
+  stepCount: { en: '{count} step', ar: 'خطوة واحدة', hi: '{count} चरण', ur: '{count} مرحلہ', bn: '{count} ধাপ' },
+  stepsCount: { en: '{count} steps', ar: '{count} خطوات', hi: '{count} चरण', ur: '{count} مراحل', bn: '{count} ধাপ' },
 
   // Welcome
   selectLanguage: { en: 'Select Language', ar: 'اختر اللغة', hi: 'भाषा चुनें', ur: 'زبان منتخب کریں', bn: 'ভাষা নির্বাচন করুন' },
