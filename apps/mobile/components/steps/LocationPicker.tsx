@@ -115,7 +115,7 @@ export function LocationPicker({
   value,
   onChange,
   disabled = false,
-  label = 'Drop-off Location',
+  label = 'Address Location',
   placeholder = 'Search for the delivery address...',
   defaultCenter = DEFAULT_CENTER,
 }: LocationPickerProps) {

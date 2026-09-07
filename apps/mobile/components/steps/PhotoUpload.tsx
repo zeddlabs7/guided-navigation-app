@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import ImageCropPicker from 'react-native-image-crop-picker';
+import * as ExpoImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
 
 interface PhotoUploadProps {
@@ -77,10 +78,18 @@ export function PhotoUpload({
 
   const launchGallery = useCallback(async () => {
     try {
-      const image = await ImageCropPicker.openPicker({
+      const result = await ExpoImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 1,
+        allowsEditing: false,
+      });
+
+      if (result.canceled || !result.assets?.[0]?.uri) return;
+
+      const image = await ImageCropPicker.openCropper({
+        path: result.assets[0].uri,
         width: CROP_WIDTH,
         height: CROP_HEIGHT,
-        cropping: true,
         cropperToolbarTitle: t('steps.cropPhoto'),
         cropperChooseText: t('common.done'),
         cropperCancelText: t('common.cancel'),

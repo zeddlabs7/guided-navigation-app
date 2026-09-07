@@ -123,6 +123,7 @@
     "stepsDescription2": "صور مع أسهم وعلامات لتوجيه الطريق",
     "stepsDescription3": "تعليمات لمواقف السيارات والبوابات ونقاط الدخول",
     "stepsDescription4": "علامات تبرز المعالم المهمة",
+    "stepsDescription5": "خطوة الموقع مع صورة مطلوبة للنشر",
     "addFirstStep": "إضافة أول خطوة"
   },
   "edit": {
@@ -134,9 +135,11 @@
     "stepsDescription2": "صور مع أسهم وعلامات لتوجيه الطريق",
     "stepsDescription3": "تعليمات لمواقف السيارات والبوابات ونقاط الدخول",
     "stepsDescription4": "علامات تبرز المعالم المهمة",
+    "stepsDescription5": "خطوة الموقع مع صورة مطلوبة للنشر",
     "addFirstStep": "إضافة أول خطوة",
     "addStep": "إضافة خطوة",
     "deleteAddress": "حذف العنوان",
+    "editInfo": "تعديل",
     "saveDraft": "حفظ كمسودة",
     "previewPublish": "معاينة ونشر",
     "saving": "جارٍ الحفظ...",
@@ -161,6 +164,8 @@
     "publishing": "جارٍ النشر...",
     "shareLink": "رابط المشاركة",
     "publishToShare": "انشر لإنشاء رابط مشاركة.",
+    "locationRequired": "خطوة الموقع مطلوبة",
+    "locationRequiredMessage": "يرجى إضافة خطوة التحقق من الموقع مع صورة قبل النشر. هذا يساعد السائقين في العثور على موقعك بدقة.",
     "republish": "إعادة النشر",
     "republishing": "جارٍ إعادة النشر...",
     "unpublish": "إلغاء النشر",
@@ -256,7 +261,7 @@
     "privacyBanner": "قد تحتوي الصور على معلومات شخصية. شاركها فقط مع سائقين موثوقين."
   },
   "location": {
-    "title": "موقع التسليم",
+    "title": "موقع العنوان",
     "searchPlaceholder": "ابحث عن عنوان التوصيل...",
     "apiKeyMissing": "مفتاح Google Maps API غير مُعد",
     "apiKeyHint": "عيّن EXPO_PUBLIC_GOOGLE_MAPS_API_KEY في .env",
@@ -266,8 +271,8 @@
     "locationError": "تعذر الحصول على موقعك. يرجى تفعيل خدمات الموقع."
   },
   "overlay": {
-    "editOverlays": "تعديل التراكبات",
-    "addOverlays": "إضافة تراكبات",
+    "editOverlays": "تعديل الأسهم والعلامات",
+    "addOverlays": "إضافة أسهم وعلامات",
     "tapToPlaceArrow": "اضغط لوضع السهم",
     "tapToPlaceMarker": "اضغط لوضع العلامة",
     "chooseArrowType": "اختر نوع السهم",
@@ -275,7 +280,7 @@
     "right": "يمين",
     "up": "أعلى",
     "down": "أسفل",
-    "forward": "أمام",
+    "forward": "مستقيم",
     "editNote": "تعديل الملاحظة",
     "addNote": "إضافة ملاحظة",
     "replaceArrow": "استبدال",

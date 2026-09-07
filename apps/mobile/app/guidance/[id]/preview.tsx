@@ -218,6 +218,10 @@ export default function PreviewScreen() {
     router.back();
   }, [router]);
 
+  const handleGoHome = useCallback(() => {
+    router.replace('/(tabs)/dashboard');
+  }, [router]);
+
   const handleAddSteps = useCallback(() => {
     router.push(`/guidance/${guidanceSetId}/edit` as any);
   }, [router, guidanceSetId]);
@@ -401,12 +405,20 @@ export default function PreviewScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={handleBack}>
-          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-            <Path d="M19 12H5M5 12L12 19M5 12L12 5" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-          </Svg>
-          <Text style={styles.backButtonText}>{t('preview.back')}</Text>
-        </Pressable>
+        <View style={styles.headerNav}>
+          <Pressable style={styles.backButton} onPress={handleBack}>
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+              <Path d="M19 12H5M5 12L12 19M5 12L12 5" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            </Svg>
+            <Text style={styles.backButtonText}>{t('preview.back')}</Text>
+          </Pressable>
+          <Pressable style={styles.homeButton} onPress={handleGoHome} hitSlop={8}>
+            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+              <Path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              <Path d="M9 22V12H15V22" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            </Svg>
+          </Pressable>
+        </View>
 
         <Text style={styles.headerTitle}>{t('preview.title')}</Text>
 
@@ -642,6 +654,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.border,
   },
+  headerNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -657,6 +674,13 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     fontWeight: '500',
     color: Colors.textSecondary,
+  },
+  homeButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: BorderRadius.md,
   },
   headerTitle: {
     flex: 1,

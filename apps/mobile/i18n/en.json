@@ -129,6 +129,7 @@
     "stepsDescription2": "Photos with arrows and markers to point the way",
     "stepsDescription3": "Instructions for parking, gates, and entry points",
     "stepsDescription4": "Markers highlighting important landmarks",
+    "stepsDescription5": "Location step with photo is required to publish",
     "addFirstStep": "Add First Step"
   },
   "edit": {
@@ -140,9 +141,11 @@
     "stepsDescription2": "Photos with arrows and markers to point the way",
     "stepsDescription3": "Instructions for parking, gates, and entry points",
     "stepsDescription4": "Markers highlighting important landmarks",
+    "stepsDescription5": "Location step with photo is required to publish",
     "addFirstStep": "Add First Step",
     "addStep": "Add Step",
     "deleteAddress": "Delete Address",
+    "editInfo": "Edit",
     "saveDraft": "Save Draft",
     "previewPublish": "Preview & Publish",
     "saving": "Saving...",
@@ -167,6 +170,8 @@
     "publishing": "Publishing...",
     "shareLink": "Share Link",
     "publishToShare": "Publish to generate a share link.",
+    "locationRequired": "Location Step Required",
+    "locationRequiredMessage": "Please add a Location Check step with a photo before publishing. This helps couriers find your exact location.",
     "republish": "Republish",
     "republishing": "Republishing...",
     "unpublish": "Unpublish",
@@ -263,7 +268,7 @@
     "privacyBanner": "Photos may contain personal information. Only share with trusted couriers."
   },
   "location": {
-    "title": "Drop-off Location",
+    "title": "Address Location",
     "searchPlaceholder": "Search for the delivery address...",
     "apiKeyMissing": "Google Maps API key is not configured",
     "apiKeyHint": "SET EXPO_PUBLIC_GOOGLE_MAPS_API_KEY in .env",
@@ -273,8 +278,8 @@
     "locationError": "Unable to get your location. Please enable location services."
   },
   "overlay": {
-    "editOverlays": "Edit Overlays",
-    "addOverlays": "Add Overlays",
+    "editOverlays": "Edit Arrows & Signs",
+    "addOverlays": "Add Arrows & Signs",
     "tapToPlaceArrow": "Tap to place arrow",
     "tapToPlaceMarker": "Tap to place marker",
     "chooseArrowType": "Choose arrow type",
@@ -282,7 +287,7 @@
     "right": "Right",
     "up": "Up",
     "down": "Down",
-    "forward": "Forward",
+    "forward": "Straight",
     "editNote": "Edit Note",
     "addNote": "Add Note",
     "replaceArrow": "Replace",

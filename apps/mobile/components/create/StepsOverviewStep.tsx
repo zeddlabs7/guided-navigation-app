@@ -95,6 +95,12 @@ export function StepsOverviewStep({
               </Text>
             </View>
             <View style={styles.exampleRow}>
+              <Text style={styles.exampleIcon}>📌</Text>
+              <Text style={styles.exampleText}>
+                {t('create.stepsDescription5')}
+              </Text>
+            </View>
+            <View style={styles.exampleRow}>
               <Text style={styles.exampleIcon}>📍</Text>
               <Text style={styles.exampleText}>
                 {t('create.stepsDescription4')}

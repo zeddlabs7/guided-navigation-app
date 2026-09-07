@@ -7,6 +7,8 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -264,8 +266,18 @@ export default function EditGuidanceScreen() {
   }, [guidanceSetId, title, titleArabic, addressType, steps, buildMetadataPayload]);
 
   const handlePreviewAndPublish = useCallback(() => {
+    const hasLocationStep = steps.some(
+      (s) => s.stepType === 'LOCATION_CHECK' && !!s.imageUrl,
+    );
+    if (!hasLocationStep) {
+      Alert.alert(
+        t('preview.locationRequired'),
+        t('preview.locationRequiredMessage'),
+      );
+      return;
+    }
     router.push(`/guidance/${guidanceSetId}/preview` as any);
-  }, [router, guidanceSetId]);
+  }, [router, guidanceSetId, steps, t]);
 
   const handleAddStep = useCallback(() => {
     const params = new URLSearchParams();
@@ -442,12 +454,39 @@ export default function EditGuidanceScreen() {
         >
           {/* Address summary */}
           {addressType && (
-            <View style={styles.addressSummary}>
-              <View style={styles.addressSummaryType}>
-                <Text style={styles.addressSummaryIcon}>
-                  {ADDRESS_TYPE_ICONS[addressType]}
-                </Text>
-                <Text style={styles.addressSummaryLabel}>{typeLabel}</Text>
+            <Pressable
+              style={({ pressed }) => [
+                styles.addressSummary,
+                pressed && styles.addressSummaryPressed,
+              ]}
+              onPress={() => setCurrentStep('title')}
+            >
+              <View style={styles.addressSummaryRow}>
+                <View style={styles.addressSummaryType}>
+                  <Text style={styles.addressSummaryIcon}>
+                    {ADDRESS_TYPE_ICONS[addressType]}
+                  </Text>
+                  <Text style={styles.addressSummaryLabel}>{typeLabel}</Text>
+                </View>
+                <View style={styles.addressSummaryEditBtn}>
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13"
+                      stroke={Colors.primary}
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <Path
+                      d="M18.5 2.50001C18.8978 2.10219 19.4374 1.87869 20 1.87869C20.5626 1.87869 21.1022 2.10219 21.5 2.50001C21.8978 2.89784 22.1213 3.4374 22.1213 4.00001C22.1213 4.56262 21.8978 5.10219 21.5 5.50001L12 15L8 16L9 12L18.5 2.50001Z"
+                      stroke={Colors.primary}
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                  <Text style={styles.addressSummaryEditText}>{t('edit.editInfo')}</Text>
+                </View>
               </View>
               {visibleMeta.length > 0 && (
                 <View style={styles.addressSummaryDetails}>
@@ -458,7 +497,7 @@ export default function EditGuidanceScreen() {
                   ))}
                 </View>
               )}
-            </View>
+            </Pressable>
           )}
 
           {/* Steps header */}
@@ -490,6 +529,12 @@ export default function EditGuidanceScreen() {
                   <Text style={styles.exampleEmoji}>📋</Text>
                   <Text style={styles.exampleText}>
                     {t('edit.stepsDescription3')}
+                  </Text>
+                </View>
+                <View style={styles.exampleRow}>
+                  <Text style={styles.exampleEmoji}>📌</Text>
+                  <Text style={styles.exampleText}>
+                    {t('edit.stepsDescription5')}
                   </Text>
                 </View>
                 <View style={styles.exampleRow}>
@@ -667,7 +712,10 @@ export default function EditGuidanceScreen() {
             style={styles.headerButton}
             hitSlop={8}
           >
-            <Text style={styles.headerHomeIcon}>⌂</Text>
+            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+              <Path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              <Path d="M9 22V12H15V22" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            </Svg>
           </Pressable>
         </View>
 
@@ -718,7 +766,12 @@ export default function EditGuidanceScreen() {
       />
 
       {/* Step content */}
-      <View style={styles.stepContent}>{renderStep()}</View>
+      <KeyboardAvoidingView
+        style={styles.stepContent}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        {renderStep()}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -809,10 +862,6 @@ const styles = StyleSheet.create({
   headerBackIcon: {
     fontSize: 20,
     color: Colors.textSecondary,
-  },
-  headerHomeIcon: {
-    fontSize: 20,
-    color: Colors.textMuted,
   },
   headerInfo: {
     flex: 1,
@@ -906,10 +955,30 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
     gap: 6,
   },
+  addressSummaryPressed: {
+    backgroundColor: Colors.surface,
+    borderColor: Colors.primary,
+  },
+  addressSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   addressSummaryType: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flex: 1,
+  },
+  addressSummaryEditBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  addressSummaryEditText: {
+    fontSize: FontSize.xs,
+    fontWeight: '600',
+    color: Colors.primary,
   },
   addressSummaryIcon: {
     fontSize: 18,

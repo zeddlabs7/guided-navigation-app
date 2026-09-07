@@ -2,7 +2,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import type { StepType, Overlay } from '@guidenav/types';
 import { STEP_TYPE_LABELS } from '@guidenav/types';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
-import { STEP_TYPE_COLORS } from '@/components/steps';
+import { STEP_TYPE_COLORS } from '@/components/steps/StepTypeDropdown';
 import { StepThumbnail } from './StepThumbnail';
 import Svg, { Path, Circle } from 'react-native-svg';
 
