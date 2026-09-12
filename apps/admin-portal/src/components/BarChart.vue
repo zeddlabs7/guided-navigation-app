@@ -28,7 +28,7 @@ const props = withDefaults(defineProps<{
   loading?: boolean;
 }>(), {
   label: 'Value',
-  color: '#2c3e50',
+  color: '#5B21B6',
 });
 
 const chartData = computed(() => ({
@@ -83,7 +83,7 @@ const chartOptions = {
         display: false,
       },
       ticks: {
-        color: '#4a5565',
+        color: '#4C4578',
         font: {
           size: 12,
         },

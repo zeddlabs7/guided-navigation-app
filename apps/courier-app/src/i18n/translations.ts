@@ -138,7 +138,7 @@ const translations: Record<TranslationKey, Record<Language, string>> = {
   finalStepReached: { en: 'Final step reached', ar: 'الخطوة الأخيرة', hi: 'अंतिम चरण पूरा', ur: 'آخری مرحلہ مکمل', bn: 'চূড়ান্ত ধাপে পৌঁছেছেন' },
   deliveryConfirmed: { en: 'Delivery Confirmed!', ar: 'تم تأكيد التوصيل!', hi: 'डिलीवरी की पुष्टि!', ur: 'ڈیلیوری کی تصدیق!', bn: 'ডেলিভারি নিশ্চিত!' },
   reachedDropOff: { en: 'You have reached the drop-off point.', ar: 'لقد وصلت إلى نقطة التسليم.', hi: 'आप डिलीवरी पॉइंट पर पहुंच गए हैं।', ur: 'آپ ڈیلیوری پوائنٹ پر پہنچ گئے ہیں۔', bn: 'আপনি ডেলিভারি পয়েন্টে পৌঁছেছেন।' },
-  thankYou: { en: 'Thank you for using Arriveo.', ar: 'شكرًا لك على استخدام Arriveo.', hi: 'Arriveo का उपयोग करने के लिए धन्यवाद।', ur: 'Arriveo استعمال کرنے کا شکریہ۔', bn: 'Arriveo ব্যবহার করার জন্য ধন্যবাদ।' },
+  thankYou: { en: 'Thank you for using Yadul.', ar: 'شكرًا لك على استخدام Yadul.', hi: 'Yadul का उपयोग करने के लिए धन्यवाद।', ur: 'Yadul استعمال کرنے کا شکریہ۔', bn: 'Yadul ব্যবহার করার জন্য ধন্যবাদ।' },
   confirmBelow: { en: 'Please confirm your delivery below.', ar: 'يرجى تأكيد التوصيل أدناه.', hi: 'कृपया नीचे अपनी डिलीवरी की पुष्टि करें।', ur: 'براہ کرم نیچے اپنی ڈیلیوری کی تصدیق کریں۔', bn: 'অনুগ্রহ করে নিচে আপনার ডেলিভারি নিশ্চিত করুন।' },
   confirming: { en: 'Confirming...', ar: 'جاري التأكيد...', hi: 'पुष्टि हो रही है...', ur: 'تصدیق ہو رہی ہے...', bn: 'নিশ্চিত হচ্ছে...' },
   confirmDelivery: { en: 'Confirm Delivery', ar: 'تأكيد التوصيل', hi: 'डिलीवरी की पुष्टि करें', ur: 'ڈیلیوری کی تصدیق کریں', bn: 'ডেলিভারি নিশ্চিত করুন' },
@@ -188,7 +188,7 @@ const translations: Record<TranslationKey, Record<Language, string>> = {
   clickToSeeDetails: { en: 'Click to see location details', ar: 'انقر لرؤية تفاصيل الموقع', hi: 'स्थान विवरण देखने के लिए क्लिक करें', ur: 'مقام کی تفصیلات دیکھنے کے لیے کلک کریں', bn: 'অবস্থানের বিবরণ দেখতে ক্লিক করুন' },
 
   // Misc
-  loading: { en: 'Loading Arriveo...', ar: '...جاري التحميل', hi: 'Arriveo लोड हो रहा है...', ur: '...Arriveo لوڈ ہو رہا ہے', bn: 'Arriveo লোড হচ্ছে...' },
+  loading: { en: 'Loading Yadul...', ar: '...جاري التحميل', hi: 'Yadul लोड हो रहा है...', ur: '...Yadul لوڈ ہو رہا ہے', bn: 'Yadul লোড হচ্ছে...' },
 };
 
 export type { TranslationKey };

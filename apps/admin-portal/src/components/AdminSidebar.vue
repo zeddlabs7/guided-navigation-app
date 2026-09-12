@@ -26,7 +26,7 @@ const navigate = (path: string) => {
   <aside class="sidebar">
     <div class="sidebar-header">
       <div class="logo">
-        <img src="/logo-eng.png" alt="Arriveo Admin" class="logo-img" />
+        <img src="/logo-eng.png" alt="Yadul Admin" class="logo-img" />
       </div>
     </div>
     

@@ -34,10 +34,10 @@ export default defineConfig({
       },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'Arriveo',
-        short_name: 'Arriveo',
+        name: 'Yadul',
+        short_name: 'Yadul',
         description: 'Create visual delivery guidance for couriers',
-        theme_color: '#2c3e50',
+        theme_color: '#5B21B6',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',

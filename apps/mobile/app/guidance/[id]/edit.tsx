@@ -14,7 +14,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
-import { ScreenFooter, useFooterScrollPadding } from '@/components/ui/ScreenFooter';
+import { ScreenFooter } from '@/components/ui/ScreenFooter';
 import { HomeButton } from '@/components/ui/HomeButton';
 import { requiresMetadata as checkRequiresMetadata } from '@guidenav/types';
 import { ADDRESS_TYPE_LABELS, getMetadataFieldConfigs } from '@guidenav/types';
@@ -104,8 +104,10 @@ export default function EditGuidanceScreen() {
   const [landmarkDescription, setLandmarkDescription] = useState('');
   const [landmarkDescriptionArabic, setLandmarkDescriptionArabic] = useState('');
 
+  const [addressExpanded, setAddressExpanded] = useState(false);
+
   const displayTitle = title.trim() || t('edit.untitledAddress');
-  const footerScrollPadding = useFooterScrollPadding(60);
+
 
   const loadData = useCallback(async () => {
     if (!guidanceSetId) return;
@@ -628,18 +630,19 @@ export default function EditGuidanceScreen() {
       <View style={styles.flex}>
         <ScrollView
           style={styles.flex}
-          contentContainerStyle={[styles.stepsScrollContent, { paddingBottom: footerScrollPadding }]}
+          contentContainerStyle={{
+            paddingTop: Spacing.xl,
+            paddingHorizontal: Spacing.xl,
+            paddingBottom: Spacing.xxxl,
+          }}
           showsVerticalScrollIndicator={false}
         >
-          {/* Address summary card */}
+          {/* Section label */}
+          <Text style={styles.sectionLabel}>{t('edit.addressSummaryLabel')}</Text>
+
+          {/* Address summary card with progressive disclosure */}
           {addressType && (
-            <Pressable
-              style={({ pressed }) => [
-                styles.addressCard,
-                pressed && styles.addressCardPressed,
-              ]}
-              onPress={() => setCurrentStep('title')}
-            >
+            <View style={styles.addressCard}>
               {/* Card header: icon + type label + edit */}
               <View style={styles.addressCardHeader}>
                 <View style={styles.addressCardTypeRow}>
@@ -696,8 +699,8 @@ export default function EditGuidanceScreen() {
                 </View>
               )}
 
-              {/* Metadata grid */}
-              {visibleMeta.length > 0 && (
+              {/* Expanded metadata */}
+              {addressExpanded && visibleMeta.length > 0 && (
                 <View style={styles.addressCardMetaGrid}>
                   {visibleMeta.map((fc) => (
                     <View key={fc.field} style={styles.addressCardMetaItem}>
@@ -711,132 +714,190 @@ export default function EditGuidanceScreen() {
                   ))}
                 </View>
               )}
-            </Pressable>
+
+              {/* View address details toggle */}
+              {visibleMeta.length > 0 && (
+                <Pressable
+                  style={styles.viewDetailsRow}
+                  onPress={() => setAddressExpanded((prev) => !prev)}
+                  hitSlop={4}
+                >
+                  <Text style={styles.viewDetailsText}>
+                    {addressExpanded ? t('edit.hideAddressDetails') : t('edit.viewAddressDetails')}
+                  </Text>
+                  <Svg
+                    width={14}
+                    height={14}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    style={addressExpanded ? { transform: [{ rotate: '180deg' }] } : undefined}
+                  >
+                    <Path
+                      d="M6 9L12 15L18 9"
+                      stroke={Colors.primary}
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                </Pressable>
+              )}
+            </View>
           )}
 
-          {/* Steps header */}
-          <View style={styles.stepsHeader}>
-            <Text style={styles.stepsTitle}>{t('edit.stepsSection')}</Text>
-            <View style={styles.stepsCountBadge}>
-              <Text style={styles.stepsCountText}>{steps.length}</Text>
-            </View>
-          </View>
+          {/* Guidance section */}
+          <Text style={styles.sectionLabel}>{t('edit.guidanceLabel')}</Text>
 
-          {/* Empty state or step list */}
           {steps.length === 0 ? (
+            /* Zero-step empty state */
             <View style={styles.emptyState}>
-              <Pressable
-                style={styles.addStepButton}
-                onPress={handleAddStep}
-                disabled={saving}
-              >
-                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                  <Path
-                    d="M12 5V19M5 12H19"
-                    stroke={Colors.textSecondary}
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </Svg>
-                <Text style={styles.addStepButtonText}>{t('edit.addFirstStep')}</Text>
-              </Pressable>
               <Text style={styles.emptyTitle}>
-                {t('edit.emptyTitle')}
+                {t('edit.guidanceTitle')}
               </Text>
               <Text style={styles.emptySubtitle}>
-                {t('edit.emptySubtitle')}
+                {t('edit.guidanceDescription')}
               </Text>
-              <View style={styles.examplesList}>
-                <Text style={styles.exampleText}>📷  {t('edit.emptyBullet1')}</Text>
-                <Text style={styles.exampleText}>↗️  {t('edit.emptyBullet2')}</Text>
-                <Text style={styles.exampleText}>📝  {t('edit.emptyBullet3')}</Text>
-                <Text style={styles.exampleText}>🚗  {t('edit.emptyBullet4')}</Text>
+
+              {/* Workflow strip — informational, not interactive */}
+              <View style={styles.workflowStrip}>
+                <View style={styles.workflowItem}>
+                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"
+                      stroke={Colors.primary}
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <Path
+                      d="M12 17a4 4 0 100-8 4 4 0 000 8z"
+                      stroke={Colors.primary}
+                      strokeWidth={2}
+                    />
+                  </Svg>
+                  <Text style={styles.workflowLabel}>{t('edit.workflowPhoto')}</Text>
+                </View>
+
+                <Text style={styles.workflowArrow}>→</Text>
+
+                <View style={styles.workflowItem}>
+                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M3 11l19-9-9 19-2-8-8-2z"
+                      stroke={Colors.primary}
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                  <Text style={styles.workflowLabel}>{t('edit.workflowMark')}</Text>
+                </View>
+
+                <Text style={styles.workflowArrow}>→</Text>
+
+                <View style={styles.workflowItem}>
+                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"
+                      stroke={Colors.primary}
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <Path
+                      d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+                      stroke={Colors.primary}
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                  <Text style={styles.workflowLabel}>{t('edit.workflowInstruct')}</Text>
+                </View>
               </View>
-              <Text style={styles.emptyHint}>
-                {t('edit.emptyHint')}
+
+              <Text style={styles.emptyOptional}>
+                {t('edit.stepsOptional')}
               </Text>
             </View>
           ) : (
-            <View style={styles.stepsList}>
-              {steps.map((step, index) => (
-                <StepCard
-                  key={step.id}
-                  stepNumber={index + 1}
-                  stepType={step.stepType}
-                  instructions={step.instructions}
-                  imageUrl={step.imageUrl}
-                  overlays={step.overlays}
-                  isFirst={index === 0}
-                  isLast={index === steps.length - 1}
-                  onMoveUp={() => handleMoveUp(index)}
-                  onMoveDown={() => handleMoveDown(index)}
-                  onEdit={() => handleEditStep(step.id)}
-                  onDelete={() => handleDeleteStep(index)}
-                />
-              ))}
+            /* Steps exist state */
+            <View>
+              <View style={styles.stepsHeader}>
+                <Text style={styles.stepsTitle}>{t('edit.guidanceStepsLabel')}</Text>
+                <View style={styles.stepsCountBadge}>
+                  <Text style={styles.stepsCountText}>{steps.length}</Text>
+                </View>
+              </View>
+              <View style={styles.stepsList}>
+                {steps.map((step, index) => (
+                  <StepCard
+                    key={step.id}
+                    stepNumber={index + 1}
+                    stepType={step.stepType}
+                    instructions={step.instructions}
+                    imageUrl={step.imageUrl}
+                    overlays={step.overlays}
+                    isFirst={index === 0}
+                    isLast={index === steps.length - 1}
+                    onMoveUp={() => handleMoveUp(index)}
+                    onMoveDown={() => handleMoveDown(index)}
+                    onEdit={() => handleEditStep(step.id)}
+                    onDelete={() => handleDeleteStep(index)}
+                  />
+                ))}
+              </View>
             </View>
           )}
 
-          {/* Add step button (shown only when steps exist) */}
-          {steps.length > 0 && (
-            <Pressable
-              style={styles.addStepButton}
-              onPress={handleAddStep}
-              disabled={saving}
-            >
-              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M12 5V19M5 12H19"
-                  stroke={Colors.textSecondary}
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
-              <Text style={styles.addStepButtonText}>{t('edit.addStep')}</Text>
-            </Pressable>
-          )}
-
-          {/* Divider */}
-          <View style={styles.divider} />
-
-          {/* Delete address */}
+          {/* Delete address — destructive text link */}
           <Pressable
-            style={styles.deleteButton}
+            style={styles.deleteTextLink}
             onPress={handleDeleteGuidance}
             disabled={saving}
+            hitSlop={8}
           >
-            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-              <Path
-                d="M3 6H5H21M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z"
-                stroke={Colors.danger}
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </Svg>
-            <Text style={styles.deleteButtonText}>{t('edit.deleteAddress')}</Text>
+            <Text style={styles.deleteTextLinkLabel}>{t('edit.deleteAddress')}</Text>
           </Pressable>
         </ScrollView>
 
         <ScreenFooter style={styles.footer}>
+          {/* Add Guidance Step — full width */}
           <Pressable
-            style={[styles.footerBtnSecondary, saving && styles.footerBtnDisabled]}
-            onPress={handleSave}
+            style={[styles.footerAddStepBtn, saving && styles.footerBtnDisabled]}
+            onPress={handleAddStep}
             disabled={saving}
           >
-            <Text style={styles.footerBtnSecondaryText}>
-              {saving ? t('edit.saving') : t('edit.saveDraft')}
-            </Text>
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M12 5V19M5 12H19"
+                stroke={Colors.primary}
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+            <Text style={styles.footerAddStepText}>{t('edit.addGuidanceStep')}</Text>
           </Pressable>
-          <Pressable
-            style={[styles.footerBtnPrimary, saving && styles.footerBtnDisabled]}
-            onPress={handlePreviewAndPublish}
-            disabled={saving}
-          >
-            <Text style={styles.footerBtnPrimaryText}>{t('edit.previewPublish')}</Text>
-          </Pressable>
+          {/* Save Draft + Preview & Publish row */}
+          <View style={styles.footerRow}>
+            <Pressable
+              style={[styles.footerBtnSecondary, saving && styles.footerBtnDisabled]}
+              onPress={handleSave}
+              disabled={saving}
+            >
+              <Text style={styles.footerBtnSecondaryText}>
+                {saving ? t('edit.saving') : t('edit.saveDraft')}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.footerBtnPrimary, saving && styles.footerBtnDisabled]}
+              onPress={handlePreviewAndPublish}
+              disabled={saving}
+            >
+              <Text style={styles.footerBtnPrimaryText}>{t('edit.previewPublish')}</Text>
+            </Pressable>
+          </View>
         </ScreenFooter>
       </View>
     );
@@ -1154,13 +1215,22 @@ const styles = StyleSheet.create({
   },
 
   stepsScrollContent: {
-    padding: Spacing.xl,
+    paddingTop: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
+  },
+  sectionLabel: {
+    fontSize: FontSize.xs,
+    fontWeight: '600',
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: Spacing.sm,
   },
   addressCard: {
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
     gap: Spacing.md,
     ...Platform.select({
       ios: {
@@ -1173,9 +1243,6 @@ const styles = StyleSheet.create({
         elevation: 3,
       },
     }),
-  },
-  addressCardPressed: {
-    backgroundColor: '#FAFAFA',
   },
   addressCardHeader: {
     flexDirection: 'row',
@@ -1273,6 +1340,17 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: Colors.text,
   },
+  viewDetailsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingTop: 2,
+  },
+  viewDetailsText: {
+    fontSize: FontSize.sm,
+    fontWeight: '500',
+    color: Colors.primary,
+  },
   stepsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1300,90 +1378,90 @@ const styles = StyleSheet.create({
   },
 
   emptyState: {
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   emptyTitle: {
-    fontSize: FontSize.base,
+    fontSize: FontSize.lg,
     fontWeight: '600',
     color: Colors.text,
-    textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   emptySubtitle: {
     fontSize: FontSize.sm,
     color: Colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: Spacing.md,
-  },
-  emptyHint: {
-    fontSize: FontSize.sm,
-    color: Colors.primary,
-    fontWeight: '500',
-    textAlign: 'center',
-    marginBottom: Spacing.lg,
     lineHeight: 20,
+    marginBottom: Spacing.lg,
   },
-  examplesList: {
+  workflowStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.md,
+    backgroundColor: Colors.primaryBg,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing.md + 2,
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.lg,
+  },
+  workflowItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.sm,
-    marginBottom: Spacing.md,
   },
-  exampleText: {
+  workflowLabel: {
     fontSize: FontSize.sm,
-    color: Colors.textSecondary,
-    lineHeight: 22,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  workflowArrow: {
+    fontSize: FontSize.base,
+    color: Colors.textMuted,
+  },
+  emptyOptional: {
+    fontSize: FontSize.sm,
+    color: Colors.textMuted,
+    lineHeight: 20,
   },
 
   stepsList: {
     gap: Spacing.md,
+    marginBottom: Spacing.md,
   },
 
-  addStepButton: {
-    flexDirection: 'row',
+  deleteTextLink: {
     alignItems: 'center',
-    alignSelf: 'stretch',
-    justifyContent: 'center',
-    gap: 8,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    borderStyle: 'dashed',
-    borderRadius: BorderRadius.lg,
-    paddingVertical: 14,
-    marginVertical: Spacing.md,
-    backgroundColor: Colors.surface,
+    paddingVertical: Spacing.lg,
+    marginTop: Spacing.md,
   },
-  addStepButtonText: {
-    fontSize: FontSize.base,
-    fontWeight: '500',
-    color: Colors.textSecondary,
-  },
-
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: Colors.border,
-    marginVertical: Spacing.md,
-  },
-
-  deleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#fef2f2',
-    borderWidth: 1,
-    borderColor: '#fecaca',
-    borderRadius: BorderRadius.lg,
-    paddingVertical: 14,
-  },
-  deleteButtonText: {
-    fontSize: FontSize.base,
+  deleteTextLinkLabel: {
+    fontSize: FontSize.sm,
     fontWeight: '500',
     color: Colors.danger,
   },
 
   footer: {
+    gap: Spacing.sm,
+  },
+  footerAddStepBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 13,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.primaryBg,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  footerAddStepText: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  footerRow: {
     flexDirection: 'row',
     gap: Spacing.sm,
   },

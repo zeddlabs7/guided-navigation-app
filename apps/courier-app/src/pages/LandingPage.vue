@@ -97,7 +97,7 @@ function handleViewAllSteps() {
         :class="`availability-banner--${availabilityVariant}`"
         role="status"
       >
-        <svg class="availability-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg class="availability-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           <path d="M22 4L12 14.01l-3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
@@ -108,7 +108,7 @@ function handleViewAllSteps() {
         <div class="brand">
           <img
             :src="isRtl ? '/logo-ar.png' : '/logo-eng.png'"
-            alt="Arriveo"
+            alt="Yadul"
             class="brand-logo"
           />
           <span class="brand-tagline">{{ t('trustStatement') }}</span>
@@ -171,10 +171,10 @@ function handleViewAllSteps() {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: calc(env(safe-area-inset-top) + 6px) 12px 6px;
-  font-size: 12px;
-  font-weight: 600;
+  gap: 9px;
+  padding: calc(env(safe-area-inset-top) + 9px) 18px 9px;
+  font-size: 18px;
+  font-weight: 700;
   letter-spacing: 0.01em;
   line-height: 1.3;
   text-align: center;

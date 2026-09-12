@@ -356,7 +356,7 @@ function handleMenu(id: string) {
 .error-state__retry {
   margin-top: 16px;
   padding: 10px 20px;
-  background-color: var(--color-primary);
+  background-color: var(--color-button);
   color: white;
   border: none;
   border-radius: var(--radius-lg);

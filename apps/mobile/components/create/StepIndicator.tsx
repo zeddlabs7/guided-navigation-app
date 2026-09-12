@@ -17,7 +17,7 @@ const COLORS = {
   default: Colors.background,
   defaultText: Colors.textMuted,
   active: Colors.text,
-  completed: Colors.success,
+  completed: Colors.text,
   white: '#ffffff',
 };
 
@@ -43,7 +43,8 @@ export function StepIndicator({ steps, currentStep, onStepPress }: StepIndicator
               <Text
                 style={[
                   styles.dotText,
-                  (isActive || isCompleted) && styles.dotTextWhite,
+                  isActive && styles.dotTextActive,
+                  isCompleted && styles.dotTextWhite,
                 ]}
               >
                 {index + 1}
@@ -122,7 +123,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dotActive: {
-    backgroundColor: COLORS.active,
+    backgroundColor: COLORS.white,
+    borderWidth: 2,
+    borderColor: COLORS.active,
   },
   dotCompleted: {
     backgroundColor: COLORS.completed,
@@ -131,6 +134,10 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     fontWeight: '600',
     color: COLORS.defaultText,
+  },
+  dotTextActive: {
+    color: COLORS.active,
+    fontWeight: '700',
   },
   dotTextWhite: {
     color: COLORS.white,

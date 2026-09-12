@@ -137,7 +137,7 @@ function getDirectionLabel(direction?: ArrowDirection): string {
   background: none;
   border: none;
   border-radius: 8px;
-  color: #4a5565;
+  color: #4C4578;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -157,12 +157,12 @@ function getDirectionLabel(direction?: ArrowDirection): string {
 }
 
 .overlay-toolbar__btn--done {
-  color: #2c3e50;
+  color: #5B21B6;
 }
 
 .overlay-toolbar__btn--done:hover {
   background-color: #eff6ff;
-  color: #1a252f;
+  color: #4C1D95;
 }
 
 .overlay-toolbar__btn--direction {

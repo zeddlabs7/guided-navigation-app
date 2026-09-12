@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Pressable,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,6 +28,8 @@ import Svg, { Path } from 'react-native-svg';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { StepTypeDropdown, STEP_TYPE_COLORS, PhotoEditorWithUpload, LocationPicker } from '@/components/steps';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useStepCreationOnboarding } from '@/hooks/useStepCreationOnboarding';
+import { StepCreationCoachMarks } from '@/components/onboarding/StepCreationCoachMarks';
 
 export default function StepBuilderScreen() {
   const { t } = useTranslation();
@@ -80,6 +83,77 @@ export default function StepBuilderScreen() {
   const locationSectionY = useRef(0);
   const instructionsSectionY = useRef(0);
 
+  // Coach marks / onboarding
+  const {
+    currentPhase: onboardingPhase,
+    isActive: onboardingActive,
+    advance: advanceOnboarding,
+    dismiss: dismissOnboarding,
+    replay: replayOnboarding,
+  } = useStepCreationOnboarding(isEditMode);
+
+  const scrollOffsetRef = useRef(0);
+  const headerHeightRef = useRef(0);
+
+  // Layout-Y positions relative to scroll content for each coachable section
+  const sectionLayoutY = useRef<Record<string, { y: number; height: number }>>({});
+
+  // Save button is outside scroll — use measureInWindow for it only
+  const saveBtnRef = useRef<View>(null);
+  const [saveBtnScreenY, setSaveBtnScreenY] = useState<number | null>(null);
+
+  const recordSectionLayout = useCallback(
+    (key: string, y: number, height: number) => {
+      sectionLayoutY.current[key] = { y, height };
+    },
+    [],
+  );
+
+  /** Convert a scroll-content-relative Y into an absolute screen Y. */
+  const getScreenRect = useCallback(
+    (key: string): { screenY: number; height: number } | null => {
+      const info = sectionLayoutY.current[key];
+      if (!info) return null;
+      const screenY = info.y - scrollOffsetRef.current + headerHeightRef.current;
+      return { screenY, height: info.height };
+    },
+    [],
+  );
+
+  const currentTargetRect = useMemo(() => {
+    if (!onboardingActive) return null;
+    if (onboardingPhase === 'save') {
+      if (saveBtnScreenY != null) return { screenY: saveBtnScreenY, height: 48 };
+      return null;
+    }
+    const keyMap: Record<string, string> = {
+      photo: 'photo',
+      mark: 'photo', // overlay tools live inside the photo section
+      instruct: 'instruct',
+    };
+    const key = keyMap[onboardingPhase];
+    return key ? getScreenRect(key) : null;
+  }, [onboardingPhase, onboardingActive, getScreenRect, saveBtnScreenY]);
+
+  /** Style applied to the currently-highlighted section */
+  const highlightStyle = useMemo(
+    () => ({
+      borderWidth: 2,
+      borderColor: Colors.primaryLight,
+      borderRadius: BorderRadius.xl,
+      ...Platform.select({
+        ios: {
+          shadowColor: Colors.primaryLight,
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.5,
+          shadowRadius: 8,
+        },
+        android: { elevation: 6 },
+      }),
+    }),
+    [],
+  );
+
   const defaultStepType = useMemo((): StepType => {
     if (!addressType) return 'LOCATION_CHECK';
     const options = getStepTypesForAddressType(addressType);
@@ -91,6 +165,24 @@ export default function StepBuilderScreen() {
 
   const selectedTypeColors = STEP_TYPE_COLORS[selectedStepType] || STEP_TYPE_COLORS.OTHER;
   const selectedTypeLabel = (STEP_TYPE_LABELS[selectedStepType] as any)?.[language] || STEP_TYPE_LABELS[selectedStepType]?.en || selectedStepType;
+
+  // Auto-advance onboarding when photo is added
+  useEffect(() => {
+    if (onboardingPhase === 'photo' && imageUri) {
+      advanceOnboarding();
+    }
+  }, [imageUri, onboardingPhase, advanceOnboarding]);
+
+  // Measure save button position (it's outside the scroll view)
+  useEffect(() => {
+    if (onboardingPhase !== 'save' || !onboardingActive) return;
+    const timer = setTimeout(() => {
+      saveBtnRef.current?.measureInWindow((_x, y, _w, _h) => {
+        if (y > 0) setSaveBtnScreenY(y);
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [onboardingPhase, onboardingActive]);
 
   // Load address type if not provided
   useEffect(() => {
@@ -356,7 +448,10 @@ export default function StepBuilderScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
-      <View style={styles.header}>
+      <View
+        style={styles.header}
+        onLayout={(e) => { headerHeightRef.current = e.nativeEvent.layout.y + e.nativeEvent.layout.height; }}
+      >
         <Pressable onPress={handleBack} style={styles.headerButton} hitSlop={8}>
           <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
             <Path d="M15 18L9 12L15 6" stroke={Colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
@@ -386,6 +481,13 @@ export default function StepBuilderScreen() {
           </View>
         </View>
         <Pressable
+          style={styles.helpButton}
+          onPress={replayOnboarding}
+          hitSlop={8}
+        >
+          <Text style={styles.helpButtonText}>?</Text>
+        </Pressable>
+        <Pressable
           style={[
             styles.saveButton,
             (saving || uploading) && styles.saveButtonDisabled,
@@ -407,6 +509,8 @@ export default function StepBuilderScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         showsVerticalScrollIndicator={false}
+        onScroll={(e) => { scrollOffsetRef.current = e.nativeEvent.contentOffset.y; }}
+        scrollEventThrottle={16}
       >
         {error && (
           <View style={styles.errorBanner}>
@@ -456,7 +560,16 @@ export default function StepBuilderScreen() {
         )}
 
         {/* Photo Upload + Overlay Editor */}
-        <View style={styles.section}>
+        <View
+          style={[
+            styles.section,
+            (onboardingPhase === 'photo' || onboardingPhase === 'mark') && onboardingActive && highlightStyle,
+          ]}
+          onLayout={(e) => {
+            const { y, height } = e.nativeEvent.layout;
+            recordSectionLayout('photo', y, height);
+          }}
+        >
           <PhotoEditorWithUpload
             imageUri={imageUri}
             overlays={overlays}
@@ -474,8 +587,15 @@ export default function StepBuilderScreen() {
 
         {/* Instructions */}
         <View
-          style={styles.section}
-          onLayout={(e) => { instructionsSectionY.current = e.nativeEvent.layout.y; }}
+          style={[
+            styles.section,
+            onboardingPhase === 'instruct' && onboardingActive && highlightStyle,
+          ]}
+          onLayout={(e) => {
+            const { y, height } = e.nativeEvent.layout;
+            instructionsSectionY.current = y;
+            recordSectionLayout('instruct', y, height);
+          }}
         >
           <View style={styles.fieldWrapper}>
             <Text style={selectedStepType === 'LOCATION_CHECK' ? styles.fieldLabelOptional : styles.fieldLabel}>
@@ -536,19 +656,33 @@ export default function StepBuilderScreen() {
       </KeyboardAwareScrollView>
 
       <ScreenFooter>
-        <Pressable
-          style={[
-            styles.footerSaveButton,
-            (saving || uploading) && styles.footerSaveButtonDisabled,
-          ]}
-          onPress={handleSaveStep}
-          disabled={saving || uploading || loading}
+        <View
+          ref={saveBtnRef}
+          style={onboardingPhase === 'save' && onboardingActive ? highlightStyle : undefined}
         >
-          <Text style={styles.footerSaveButtonText}>
-            {saving ? t('steps.saving') : t('steps.saveStep')}
-          </Text>
-        </Pressable>
+          <Pressable
+            style={[
+              styles.footerSaveButton,
+              (saving || uploading) && styles.footerSaveButtonDisabled,
+            ]}
+            onPress={handleSaveStep}
+            disabled={saving || uploading || loading}
+          >
+            <Text style={styles.footerSaveButtonText}>
+              {saving ? t('steps.saving') : t('steps.saveStep')}
+            </Text>
+          </Pressable>
+        </View>
       </ScreenFooter>
+
+      {/* Coach marks overlay */}
+      <StepCreationCoachMarks
+        currentPhase={onboardingPhase}
+        isActive={onboardingActive}
+        targetRect={currentTargetRect}
+        onAdvance={advanceOnboarding}
+        onDismiss={dismissOnboarding}
+      />
     </SafeAreaView>
   );
 }
@@ -608,6 +742,20 @@ const styles = StyleSheet.create({
   headerBadgeText: {
     fontSize: FontSize.xs,
     fontWeight: '600',
+  },
+  helpButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  helpButtonText: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    color: Colors.textMuted,
   },
   saveButton: {
     backgroundColor: Colors.surface,

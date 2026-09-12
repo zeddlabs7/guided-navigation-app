@@ -70,7 +70,10 @@
     "noCallLeavePhoto": "No call · Leave shipment & send photo",
     "noCallLeavePhotoDesc": "Courier leaves the shipment and sends a delivery photo",
     "contactCallSummary": "Call on arrival",
-    "contactNoCallSummary": "No call · Leave & send photo"
+    "contactNoCallSummary": "No call · Leave & send photo",
+    "contactSaveError": "Could not update your contact preference. Please try again.",
+    "availabilitySaveError": "Could not update your availability. Please try again.",
+    "saved": "Saved"
   },
   "notFound": {
     "code": "404",
@@ -177,7 +180,8 @@
     "stepsDescription5": "Location step with photo is required to publish",
     "addFirstStep": "Add First Step",
     "addStep": "Add Step",
-    "deleteAddress": "Delete Address",
+    "addGuidanceStep": "Add Guidance Step",
+    "deleteAddress": "Delete address",
     "editInfo": "Edit",
     "saveDraft": "Save Draft",
     "previewPublish": "Preview & Publish",
@@ -191,6 +195,17 @@
     "deleteAddressMessage": "Are you sure you want to delete this address and all its steps? This cannot be undone.",
     "errorDelete": "Failed to delete. Please try again.",
     "errorSave": "Failed to save. Please try again.",
+    "addressSummaryLabel": "Address Summary",
+    "viewAddressDetails": "View address details",
+    "hideAddressDetails": "Hide address details",
+    "guidanceLabel": "Guidance",
+    "guidanceTitle": "Help couriers find your door",
+    "guidanceDescription": "Add photo guidance to help couriers navigate from the entrance to your exact location.",
+    "guidanceStepsLabel": "Guidance Steps",
+    "stepsOptional": "Guidance is optional. You can publish now and add guidance steps later.",
+    "workflowPhoto": "Photo",
+    "workflowMark": "Mark",
+    "workflowInstruct": "Instruct",
     "emptyTitle": "Guide couriers to your door",
     "emptySubtitle": "Add photo-based steps so delivery drivers can find you easily",
     "emptyBullet1": "Take photos along the route to your location",
@@ -273,7 +288,9 @@
     "availabilityNotAvailable": "Not available today",
     "preparing": "Preparing your link...",
     "linkRevoked": "The previous link has been revoked.",
-    "generateNewLink": "Generate New Link"
+    "generateNewLink": "Generate New Link",
+    "chooseAvailability": "Choose availability",
+    "communicationPreference": "How would you like the courier to communicate with you?"
   },
   "linkValidity": {
     "6hours": "6 hours",
@@ -349,6 +366,18 @@
     "tutorialRotateDesc": "Use two fingers to rotate arrows to point in any direction.",
     "tutorialNoteTitle": "Add Note",
     "tutorialNoteDesc": "Tap a marker to add a helpful note for the courier."
+  },
+  "onboarding": {
+    "photoTitle": "Start with a photo",
+    "photoDesc": "Take or choose a photo showing the route or landmark the courier should follow.",
+    "markTitle": "Highlight the way",
+    "markDesc": "Add an arrow or marker to show the courier exactly where to go.",
+    "instructTitle": "Add a short instruction",
+    "instructDesc": "Tell the courier what to do at this point.\nExample: \"Turn left after the security gate.\"",
+    "saveTitle": "Save this step",
+    "saveDesc": "You can add another guidance step afterwards.",
+    "gotIt": "Got it",
+    "howToAddGuidance": "How to add guidance"
   },
   "whatsapp": {
     "notAvailable": "WhatsApp not available",

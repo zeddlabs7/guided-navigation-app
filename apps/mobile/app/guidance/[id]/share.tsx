@@ -335,7 +335,8 @@ export default function ShareScreen() {
           </View>
         ) : null}
 
-        {/* Availability summary row */}
+        {/* Availability section */}
+        <Text style={styles.sectionLabel}>{t('share.chooseAvailability')}</Text>
         <View style={[styles.availabilityRow, { marginBottom: Spacing.sm }]}>
           <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
             <Circle cx={12} cy={12} r={10} stroke={Colors.textMuted} strokeWidth={2} />
@@ -347,7 +348,8 @@ export default function ShareScreen() {
           </Pressable>
         </View>
 
-        {/* Contact preference summary row */}
+        {/* Contact preference section */}
+        <Text style={styles.sectionLabel}>{t('share.communicationPreference')}</Text>
         <View style={styles.availabilityRow}>
           <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
             {contactPreferenceSummary === t('settings.contactNoCallSummary') ? (
@@ -599,7 +601,7 @@ const styles = StyleSheet.create({
   },
 
   titleSection: {
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   pageTitle: {
     fontSize: FontSize.xxl,
@@ -631,6 +633,16 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: Colors.text,
     flex: 1,
+  },
+
+  sectionLabel: {
+    fontSize: FontSize.xs,
+    fontWeight: '600',
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: Spacing.xs,
+    marginTop: Spacing.sm,
   },
 
   availabilityRow: {

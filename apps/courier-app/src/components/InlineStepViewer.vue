@@ -493,7 +493,7 @@ function handleContactRecipient() {
 
 .step-nav-btn--next {
   flex: 1;
-  background-color: var(--color-primary);
+  background-color: var(--color-button);
   color: white;
 }
 
@@ -573,7 +573,7 @@ function handleContactRecipient() {
 }
 
 .complete-btn--confirm {
-  background-color: var(--color-primary);
+  background-color: var(--color-button);
   color: white;
 }
 

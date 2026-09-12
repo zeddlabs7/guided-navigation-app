@@ -39,7 +39,7 @@ const footerLinks = {
       <div class="footer__main">
         <div class="footer__brand">
           <div class="footer__logo">
-            <img src="/logo-eng.png" alt="Arriveo" class="footer__logo-img" />
+            <img src="/logo-eng.png" alt="Yadul" class="footer__logo-img" />
           </div>
           <p class="footer__tagline">
             Visual delivery guidance that helps couriers find your exact location every time.
@@ -95,7 +95,7 @@ const footerLinks = {
 
       <div class="footer__bottom">
         <p class="footer__copyright">
-          &copy; {{ new Date().getFullYear() }} Arriveo. All rights reserved.
+          &copy; {{ new Date().getFullYear() }} Yadul. All rights reserved.
         </p>
 
         <div class="footer__lang">

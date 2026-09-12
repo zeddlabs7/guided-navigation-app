@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.button,
   },
   retryText: {
     fontSize: FontSize.base,

@@ -498,7 +498,7 @@ function handleShareLink() {
 
 .error-state__retry {
   padding: 12px 24px;
-  background-color: var(--color-primary);
+  background-color: var(--color-button);
   border: none;
   border-radius: var(--radius-lg);
   font-size: var(--font-size-base);
@@ -587,7 +587,7 @@ function handleShareLink() {
 .steps-empty__btn {
   margin-top: 12px;
   padding: 8px 16px;
-  background-color: var(--color-primary);
+  background-color: var(--color-button);
   border: none;
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
@@ -776,7 +776,7 @@ function handleShareLink() {
 }
 
 .footer-btn--primary {
-  background-color: var(--color-primary);
+  background-color: var(--color-button);
   border: none;
   color: white;
 }

@@ -395,25 +395,25 @@ watch(() => props.readonly, (isReadonly) => {
   border-radius: 10px;
   font-size: 12px;
   font-weight: 500;
-  color: #4a5565;
+  color: #4C4578;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .overlay-editor__add-btn:hover {
-  border-color: #2c3e50;
-  color: #2c3e50;
+  border-color: #5B21B6;
+  color: #5B21B6;
 }
 
 .overlay-editor__add-btn--active {
-  background-color: #2c3e50;
-  border-color: #2c3e50;
+  background-color: #5B21B6;
+  border-color: #5B21B6;
   color: white;
 }
 
 .overlay-editor__add-btn--active:hover {
-  background-color: #1a252f;
-  border-color: #1a252f;
+  background-color: #4C1D95;
+  border-color: #4C1D95;
   color: white;
 }
 
@@ -476,7 +476,7 @@ watch(() => props.readonly, (isReadonly) => {
 
 .overlay-editor__arrow-picker-close:hover {
   background-color: #f3f4f6;
-  color: #4a5565;
+  color: #4C4578;
 }
 
 .overlay-editor__arrow-picker-grid {

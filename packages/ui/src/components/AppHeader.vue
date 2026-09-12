@@ -56,7 +56,7 @@ onUnmounted(() => {
     <button class="app-header__logo" @click="emit('logo-click')" aria-label="Home">
       <img 
         :src="currentLanguage === 'ar' ? '/logo-ar.png' : '/logo-eng.png'" 
-        alt="Arriveo" 
+        alt="Yadul" 
         class="app-header__logo-img" 
       />
     </button>
@@ -182,7 +182,7 @@ onUnmounted(() => {
   gap: 6px;
   height: 36px;
   padding: 0 16px;
-  background-color: var(--color-primary);
+  background-color: var(--color-button);
   border: none;
   border-radius: var(--radius-lg);
   font-size: var(--font-size-base);
@@ -193,7 +193,7 @@ onUnmounted(() => {
 }
 
 .app-header__new-btn:hover {
-  background-color: var(--color-primary-dark);
+  background-color: var(--color-button-hover);
 }
 
 .app-header__new-btn svg {

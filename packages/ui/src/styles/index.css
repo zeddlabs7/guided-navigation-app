@@ -1,27 +1,32 @@
 :root {
-  /* Primary - Arriveo brand #2c3e50 */
-  --color-primary: #2c3e50;
-  --color-primary-dark: #1a252f;
-  --color-primary-light: #eef1f4;
-  --color-primary-bg: #eef1f4;
+  /* Brand accent — Yadul violet (links, focus rings, badges, accents) */
+  --color-primary: #5B21B6;
+  --color-primary-dark: #4C1D95;
+  --color-primary-light: #EDE9FE;
+  --color-primary-bg: #F5F3FF;
+
+  /* Buttons — black primary, outlined secondary, purple accent */
+  --color-button: #1E1B4B;
+  --color-button-hover: #2D2A5E;
+  --color-button-active: #111032;
 
   /* Secondary */
   --color-secondary: #e5e7eb;
   --color-secondary-dark: #d1d5db;
 
-  /* Text */
-  --color-text: #1a252f;
-  --color-text-secondary: #4a5565;
-  --color-text-muted: #99a1af;
-  --color-text-light: #d1d5dc;
+  /* Text — purple-tinted neutrals */
+  --color-text: #1E1B4B;
+  --color-text-secondary: #4C4578;
+  --color-text-muted: #8B83B0;
+  --color-text-light: #C4BFD6;
 
   /* Background - matches Figma */
   --color-background: #f9fafb;
   --color-surface: #ffffff;
 
-  /* Border - matches Figma */
-  --color-border: #e5e7eb;
-  --color-border-light: #f3f4f6;
+  /* Border — subtle purple undertone */
+  --color-border: #DDD8EB;
+  --color-border-light: #EEEAF5;
 
   /* Status - matches Figma */
   --color-success: #008236;
@@ -35,8 +40,8 @@
   --color-danger: #dc2626;
   --color-danger-bg: #fee2e2;
   
-  --color-info: #2c3e50;
-  --color-info-bg: #eef1f4;
+  --color-info: #5B21B6;
+  --color-info-bg: #F5F3FF;
 
   /* Step type colors - from Figma */
   --color-step-parking: #99a1af;
@@ -94,7 +99,7 @@
   /* Shadows - matches Figma */
   --shadow-sm: 0px 1px 2px 0px rgba(0, 0, 0, 0.1);
   --shadow-md: 0px 1px 3px 0px rgba(0, 0, 0, 0.1), 0px 1px 2px 0px rgba(0, 0, 0, 0.1);
-  --shadow-button: 0px 1px 3px 0px rgba(44, 62, 80, 0.3), 0px 1px 2px 0px rgba(44, 62, 80, 0.2);
+  --shadow-button: 0px 1px 3px 0px rgba(30, 27, 75, 0.3), 0px 1px 2px 0px rgba(30, 27, 75, 0.2);
 }
 
 *,

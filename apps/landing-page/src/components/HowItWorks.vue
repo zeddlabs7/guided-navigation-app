@@ -66,7 +66,7 @@ const steps = [
         <div class="how-it-works__demo-card">
           <div class="how-it-works__demo-header">
             <span class="how-it-works__demo-badge">Live Demo</span>
-            <h3 class="how-it-works__demo-title">See Arriveo in Action</h3>
+            <h3 class="how-it-works__demo-title">See Yadul in Action</h3>
           </div>
           <div class="how-it-works__demo-preview">
             <div class="how-it-works__demo-phones">
@@ -239,7 +239,7 @@ const steps = [
 }
 
 .how-it-works__demo-card {
-  background: linear-gradient(135deg, var(--color-primary) 0%, #1a252f 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, #4C1D95 100%);
   border-radius: var(--radius-xl);
   padding: var(--spacing-2xl);
   overflow: hidden;
@@ -384,7 +384,7 @@ const steps = [
 }
 
 .how-it-works__demo-nav-btn--primary {
-  background: var(--color-primary);
+  background: var(--color-button);
   color: white;
 }
 

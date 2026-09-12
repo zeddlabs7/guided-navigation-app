@@ -109,7 +109,7 @@ export const sendWhatsAppOTP = functions.https.onCall(async (data: SendData) => 
                 type: 'body',
                 parameters: [
                   { type: 'text', parameter_name: 'code', text: code },
-                  { type: 'text', parameter_name: 'text', text: 'Arriveo' },
+                  { type: 'text', parameter_name: 'text', text: 'Yadul' },
                 ],
               },
             ],

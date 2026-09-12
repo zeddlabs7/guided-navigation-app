@@ -142,10 +142,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e5e7eb',
     borderRadius: 12,
-    color: '#1a252f',
+    color: '#4C1D95',
   },
   inputFocused: {
-    borderColor: '#2c3e50',
+    borderColor: '#5B21B6',
   },
   actions: {
     flexDirection: 'row',
@@ -165,14 +165,14 @@ const styles = StyleSheet.create({
   cancelBtnText: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#4a5565',
+    color: '#4C4578',
   },
   saveBtn: {
     flex: 1,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 10,
-    backgroundColor: '#2c3e50',
+    backgroundColor: '#5B21B6',
     alignItems: 'center',
   },
   saveBtnDisabled: {

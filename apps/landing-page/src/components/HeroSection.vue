@@ -8,7 +8,7 @@ const isMenuOpen = ref(false);
   <header class="hero">
     <nav class="hero__nav landing-container">
       <div class="hero__logo">
-        <img src="/logo-eng.png" alt="Arriveo" class="hero__logo-img" />
+        <img src="/logo-eng.png" alt="Yadul" class="hero__logo-img" />
       </div>
       
       <button class="hero__menu-toggle" @click="isMenuOpen = !isMenuOpen" aria-label="Toggle menu">
@@ -153,7 +153,7 @@ const isMenuOpen = ref(false);
 }
 
 .hero__nav-cta {
-  background: var(--color-primary);
+  background: var(--color-button);
   color: white !important;
   padding: var(--spacing-sm) var(--spacing-lg);
   border-radius: var(--radius-md);
@@ -161,7 +161,7 @@ const isMenuOpen = ref(false);
 }
 
 .hero__nav-cta:hover {
-  background: var(--color-primary-dark);
+  background: var(--color-button-hover);
   transform: translateY(-1px);
 }
 
@@ -217,13 +217,13 @@ const isMenuOpen = ref(false);
 }
 
 .hero__btn--primary {
-  background: var(--color-primary);
+  background: var(--color-button);
   color: white;
   box-shadow: var(--shadow-button);
 }
 
 .hero__btn--primary:hover {
-  background: var(--color-primary-dark);
+  background: var(--color-button-hover);
   transform: translateY(-2px);
   text-decoration: none;
 }

@@ -4,7 +4,7 @@ const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'Arriveo',
+  name: 'Yadul',
   slug: 'arriveo',
   version: '1.0.0',
   orientation: 'portrait',
@@ -33,7 +33,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       UIBackgroundModes: ['remote-notification'],
       LSApplicationQueriesSchemes: ['whatsapp'],
       NSLocationWhenInUseUsageDescription:
-        'Allow Arriveo to access your location to pin your delivery address on the map.',
+        'Allow Yadul to access your location to pin your delivery address on the map.',
     },
     entitlements: {
       'aps-environment': 'production',
@@ -83,15 +83,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-image-picker',
       {
-        cameraPermission: 'Allow Arriveo to access your camera to take guidance photos.',
-        photosPermission: 'Allow Arriveo to access your photos to add guidance images.',
+        cameraPermission: 'Allow Yadul to access your camera to take guidance photos.',
+        photosPermission: 'Allow Yadul to access your photos to add guidance images.',
       },
     ],
     [
       'expo-location',
       {
         locationWhenInUsePermission:
-          'Allow Arriveo to access your location to pin your delivery address on the map.',
+          'Allow Yadul to access your location to pin your delivery address on the map.',
       },
     ],
   ],

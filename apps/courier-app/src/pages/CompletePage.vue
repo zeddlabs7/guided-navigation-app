@@ -247,7 +247,7 @@ function handleHome() {
   height: 32px;
   border-radius: var(--radius-md);
   border: none;
-  background-color: var(--color-primary);
+  background-color: var(--color-button);
   color: white;
   display: flex;
   align-items: center;

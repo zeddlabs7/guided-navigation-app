@@ -56,6 +56,6 @@ withDefaults(defineProps<Props>(), {
 
 .g-badge--info {
   background-color: var(--color-info-bg, #eff6ff);
-  color: var(--color-info, #2c3e50);
+  color: var(--color-info, #5B21B6);
 }
 </style>

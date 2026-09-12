@@ -382,7 +382,7 @@ function handleImageError() {
   height: 32px;
   border-radius: var(--radius-md);
   border: none;
-  background-color: var(--color-primary);
+  background-color: var(--color-button);
   color: white;
   display: flex;
   align-items: center;
@@ -763,7 +763,7 @@ function handleImageError() {
 
 .nav-button--next {
   flex: 1;
-  background-color: var(--color-primary);
+  background-color: var(--color-button);
   color: white;
 }
 

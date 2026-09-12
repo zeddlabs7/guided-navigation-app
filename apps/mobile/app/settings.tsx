@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -147,58 +147,59 @@ export default function SettingsScreen() {
 
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
 
-  const [loadingAvailability, setLoadingAvailability] = useState(true);
+  const [loadingSettings, setLoadingSettings] = useState(true);
+
+  // Availability state (single-tap with auto-save)
   const [selectedAvailability, setSelectedAvailability] = useState<AvailabilityMode>('ANYTIME_TODAY');
   const [startTime, setStartTime] = useState<Date>(() => { const d = new Date(); d.setHours(9, 0, 0, 0); return d; });
   const [endTime, setEndTime] = useState<Date>(() => { const d = new Date(); d.setHours(17, 0, 0, 0); return d; });
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
+  const [savingAvailabilityValue, setSavingAvailabilityValue] = useState<AvailabilityMode | null>(null);
+  const [savingTime, setSavingTime] = useState(false);
+  const [availabilitySuccess, setAvailabilitySuccess] = useState(false);
+  const [availabilityExpanded, setAvailabilityExpanded] = useState(false);
 
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const savedMode = useRef<AvailabilityMode>('ANYTIME_TODAY');
-  const savedStart = useRef<Date>(new Date());
-  const savedEnd = useRef<Date>(new Date());
-
-  // Contact preference state (Edit/Save flow)
+  // Contact preference state (single-tap toggle with optimistic update)
   const [selectedContact, setSelectedContact] = useState<CourierContactPreference>('CALL_ON_ARRIVAL');
-  const [editingContact, setEditingContact] = useState(false);
-  const [savingContact, setSavingContact] = useState(false);
-  const savedContact = useRef<CourierContactPreference>('CALL_ON_ARRIVAL');
+  const [savingContactValue, setSavingContactValue] = useState<CourierContactPreference | null>(null);
+  const [contactSuccess, setContactSuccess] = useState(false);
+  const [contactExpanded, setContactExpanded] = useState(false);
 
   const scrollViewRef = useRef<ScrollView>(null);
 
   useFocusEffect(
     useCallback(() => {
       if (!firebaseUser) return;
-      setLoadingAvailability(true);
+      setLoadingSettings(true);
       getUser(firebaseUser.uid).then((user) => {
         if (!user) {
-          setLoadingAvailability(false);
+          setLoadingSettings(false);
           return;
         }
-        const mode = user.defaultAvailabilityMode || 'ANYTIME_TODAY';
-        const start = parseHHmm(user.defaultAvailabilityStartTime);
-        const end = parseHHmm(user.defaultAvailabilityEndTime);
-        setSelectedAvailability(mode);
-        setStartTime(start);
-        setEndTime(end);
-        savedMode.current = mode;
-        savedStart.current = start;
-        savedEnd.current = end;
-        setEditing(false);
-
-        const contact = user.courierContactPreference || 'CALL_ON_ARRIVAL';
-        setSelectedContact(contact);
-        savedContact.current = contact;
-        setEditingContact(false);
-
-        setLoadingAvailability(false);
+        setSelectedAvailability(user.defaultAvailabilityMode || 'ANYTIME_TODAY');
+        setStartTime(parseHHmm(user.defaultAvailabilityStartTime));
+        setEndTime(parseHHmm(user.defaultAvailabilityEndTime));
+        setSelectedContact(user.courierContactPreference || 'CALL_ON_ARRIVAL');
+        setLoadingSettings(false);
       }).catch(() => {
-        setLoadingAvailability(false);
+        setLoadingSettings(false);
       });
     }, [firebaseUser]),
   );
+
+  // Auto-dismiss success toasts
+  useEffect(() => {
+    if (!availabilitySuccess) return;
+    const timer = setTimeout(() => setAvailabilitySuccess(false), 2000);
+    return () => clearTimeout(timer);
+  }, [availabilitySuccess]);
+
+  useEffect(() => {
+    if (!contactSuccess) return;
+    const timer = setTimeout(() => setContactSuccess(false), 2000);
+    return () => clearTimeout(timer);
+  }, [contactSuccess]);
 
   if (!isLoading && !isAuthenticated) {
     return <Redirect href="/(auth)/login" />;
@@ -212,70 +213,80 @@ export default function SettingsScreen() {
     router.replace('/(tabs)/dashboard' as any);
   }
 
-  function handleEdit() {
-    setEditing(true);
-  }
+  const isSavingAvailability = savingAvailabilityValue !== null || savingTime;
 
-  function handleCancelEdit() {
-    setSelectedAvailability(savedMode.current);
-    setStartTime(savedStart.current);
-    setEndTime(savedEnd.current);
-    setEditing(false);
-  }
-
-  async function handleSave() {
-    if (!firebaseUser) return;
-    setSaving(true);
+  async function handleAvailabilityTap(value: AvailabilityMode) {
+    if (!firebaseUser || value === selectedAvailability || isSavingAvailability) return;
+    const previousValue = selectedAvailability;
+    setSelectedAvailability(value);
+    setSavingAvailabilityValue(value);
+    setAvailabilitySuccess(false);
     try {
       await updateUser(firebaseUser.uid, {
-        defaultAvailabilityMode: selectedAvailability,
-        defaultAvailabilityStartTime: selectedAvailability === 'TIME_WINDOW' ? formatTimeShort(startTime) : null,
-        defaultAvailabilityEndTime: selectedAvailability === 'TIME_WINDOW' ? formatTimeShort(endTime) : null,
+        defaultAvailabilityMode: value,
+        defaultAvailabilityStartTime: value === 'TIME_WINDOW' ? formatTimeShort(startTime) : null,
+        defaultAvailabilityEndTime: value === 'TIME_WINDOW' ? formatTimeShort(endTime) : null,
       });
-      savedMode.current = selectedAvailability;
-      savedStart.current = startTime;
-      savedEnd.current = endTime;
-      setEditing(false);
+      setAvailabilitySuccess(true);
     } catch (err) {
       console.error('Failed to save availability:', err);
+      setSelectedAvailability(previousValue);
+      Alert.alert(t('common.error'), t('settings.availabilitySaveError'));
     } finally {
-      setSaving(false);
+      setSavingAvailabilityValue(null);
     }
   }
 
-  const hasChanges =
-    selectedAvailability !== savedMode.current ||
-    (selectedAvailability === 'TIME_WINDOW' &&
-      (formatTimeShort(startTime) !== formatTimeShort(savedStart.current) ||
-        formatTimeShort(endTime) !== formatTimeShort(savedEnd.current)));
-
-  function handleEditContact() {
-    setEditingContact(true);
-  }
-
-  function handleCancelEditContact() {
-    setSelectedContact(savedContact.current);
-    setEditingContact(false);
-  }
-
-  async function handleSaveContact() {
-    if (!firebaseUser) return;
-    setSavingContact(true);
+  async function handleTimeSave(newStart: Date, newEnd: Date) {
+    if (!firebaseUser || isSavingAvailability) return;
+    setSavingTime(true);
+    setAvailabilitySuccess(false);
     try {
-      await updateUser(firebaseUser.uid, { courierContactPreference: selectedContact });
-      savedContact.current = selectedContact;
-      setEditingContact(false);
+      await updateUser(firebaseUser.uid, {
+        defaultAvailabilityMode: 'TIME_WINDOW',
+        defaultAvailabilityStartTime: formatTimeShort(newStart),
+        defaultAvailabilityEndTime: formatTimeShort(newEnd),
+      });
+      setAvailabilitySuccess(true);
+    } catch (err) {
+      console.error('Failed to save time window:', err);
+      Alert.alert(t('common.error'), t('settings.availabilitySaveError'));
+    } finally {
+      setSavingTime(false);
+    }
+  }
+
+  async function handleContactTap(value: CourierContactPreference) {
+    if (!firebaseUser || value === selectedContact || savingContactValue !== null) return;
+    const previousValue = selectedContact;
+    setSelectedContact(value);
+    setSavingContactValue(value);
+    setContactSuccess(false);
+    try {
+      await updateUser(firebaseUser.uid, { courierContactPreference: value });
+      setContactSuccess(true);
     } catch (err) {
       console.error('Failed to save contact preference:', err);
+      setSelectedContact(previousValue);
+      Alert.alert(t('common.error'), t('settings.contactSaveError'));
     } finally {
-      setSavingContact(false);
+      setSavingContactValue(null);
     }
   }
 
-  const hasContactChanges = selectedContact !== savedContact.current;
+  function getAvailabilitySummary(): string {
+    if (selectedAvailability === 'TIME_WINDOW') {
+      return t('settings.availabilityTimeWindow', {
+        from: formatTimeShort(startTime),
+        to: formatTimeShort(endTime),
+      });
+    }
+    if (selectedAvailability === 'NOT_AVAILABLE_TODAY') return t('settings.availabilityNotAvailable');
+    return t('settings.availabilityAnytime');
+  }
 
   function getContactSummary(): string {
-    if (savedContact.current === 'NO_CALL_LEAVE_PHOTO') return t('settings.contactNoCallSummary');
+    if (selectedContact === 'NO_CALL_LEAVE_PHOTO') return t('settings.contactNoCallSummary');
     return t('settings.contactCallSummary');
   }
 
@@ -290,17 +301,6 @@ export default function SettingsScreen() {
         },
       },
     ]);
-  }
-
-  function getAvailabilitySummary(): string {
-    if (savedMode.current === 'TIME_WINDOW') {
-      return t('settings.availabilityTimeWindow', {
-        from: formatTimeShort(savedStart.current),
-        to: formatTimeShort(savedEnd.current),
-      });
-    }
-    if (savedMode.current === 'NOT_AVAILABLE_TODAY') return t('settings.availabilityNotAvailable');
-    return t('settings.availabilityAnytime');
   }
 
   return (
@@ -389,228 +389,240 @@ export default function SettingsScreen() {
 
         {/* Delivery Availability */}
         <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <View style={styles.sectionHeaderText}>
-              <Text style={styles.sectionTitle}>{t('settings.availability')}</Text>
-              <Text style={styles.sectionDescription}>{t('settings.availabilityDescription')}</Text>
-            </View>
-            {!editing && (
-              <Pressable
-                style={[styles.editButton, loadingAvailability && styles.editButtonDisabled]}
-                onPress={handleEdit}
-                disabled={loadingAvailability}
-              >
-                <Text style={[styles.editButtonText, loadingAvailability && styles.editButtonTextDisabled]}>
-                  {t('common.edit')}
-                </Text>
-              </Pressable>
-            )}
+          <View style={styles.sectionHeaderText}>
+            <Text style={styles.sectionTitle}>{t('settings.availability')}</Text>
+            <Text style={styles.sectionDescription}>{t('settings.availabilityDescription')}</Text>
           </View>
 
-          {loadingAvailability ? (
+          {loadingSettings ? (
             <View style={styles.skeletonContainer}>
               <View style={styles.skeletonRow}>
                 <SkeletonBlock width={18} height={18} />
                 <SkeletonBlock width={160} height={16} />
               </View>
             </View>
-          ) : editing ? (
-            <>
-              <View style={styles.availabilityOptions}>
-                {AVAILABILITY_OPTIONS.map((option) => {
-                  const isSelected = selectedAvailability === option.value;
-                  return (
-                    <Pressable
-                      key={option.value}
-                      style={[
-                        styles.availabilityOption,
-                        isSelected && styles.availabilityOptionSelected,
-                      ]}
-                      onPress={() => setSelectedAvailability(option.value)}
-                    >
-                      <View
-                        style={[
-                          styles.availabilityIconCircle,
-                          isSelected && styles.availabilityIconCircleSelected,
-                        ]}
-                      >
-                        <AvailabilityIcon icon={option.icon} selected={isSelected} />
-                      </View>
-                      <View style={styles.availabilityText}>
-                        <Text style={styles.availabilityLabel}>{t(option.labelKey)}</Text>
-                        <Text style={styles.availabilityDesc}>{t(option.descriptionKey)}</Text>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              {selectedAvailability === 'TIME_WINDOW' && (
-                <View style={styles.timeWindow}>
-                  <View style={styles.timeRow}>
-                    <Text style={styles.timeLabel}>{t('share.from')}</Text>
-                    {isIOS ? (
-                      <DateTimePicker
-                        value={startTime}
-                        mode="time"
-                        is24Hour
-                        display="compact"
-                        onChange={(_e, date) => { if (date) setStartTime(date); }}
-                      />
-                    ) : (
-                      <Pressable style={styles.timeButton} onPress={() => setShowStartPicker(true)}>
-                        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                          <Circle cx={12} cy={12} r={10} stroke="#99a1af" strokeWidth={2} />
-                          <Path d="M12 6v6l4 2" stroke="#99a1af" strokeWidth={2} strokeLinecap="round" />
-                        </Svg>
-                        <Text style={styles.timeButtonText}>{formatTimeShort(startTime)}</Text>
-                      </Pressable>
-                    )}
-                  </View>
-                  <View style={styles.timeRowDivider} />
-                  <View style={styles.timeRow}>
-                    <Text style={styles.timeLabel}>{t('share.to')}</Text>
-                    {isIOS ? (
-                      <DateTimePicker
-                        value={endTime}
-                        mode="time"
-                        is24Hour
-                        display="compact"
-                        onChange={(_e, date) => { if (date) setEndTime(date); }}
-                      />
-                    ) : (
-                      <Pressable style={styles.timeButton} onPress={() => setShowEndPicker(true)}>
-                        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                          <Circle cx={12} cy={12} r={10} stroke="#99a1af" strokeWidth={2} />
-                          <Path d="M12 6v6l4 2" stroke="#99a1af" strokeWidth={2} strokeLinecap="round" />
-                        </Svg>
-                        <Text style={styles.timeButtonText}>{formatTimeShort(endTime)}</Text>
-                      </Pressable>
-                    )}
-                  </View>
-                </View>
-              )}
-
-              <View style={styles.editActions}>
-                <Pressable style={styles.cancelButton} onPress={handleCancelEdit} disabled={saving}>
-                  <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.saveButton, (!hasChanges || saving) && styles.saveButtonDisabled]}
-                  onPress={handleSave}
-                  disabled={!hasChanges || saving}
-                >
-                  {saving ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
-                  ) : (
-                    <Text style={styles.saveButtonText}>{t('common.save')}</Text>
-                  )}
-                </Pressable>
-              </View>
-            </>
           ) : (
-            <View style={styles.availabilitySummaryRow}>
-              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                <Circle cx={12} cy={12} r={10} stroke={Colors.textMuted} strokeWidth={2} />
-                <Path d="M12 6v6l4 2" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" />
-              </Svg>
-              <Text style={styles.availabilitySummaryText}>{getAvailabilitySummary()}</Text>
-            </View>
+            <>
+              {/* Accordion header — always visible, tap to toggle */}
+              <Pressable style={styles.summaryRow} onPress={() => setAvailabilityExpanded((v) => !v)}>
+                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                  <Circle cx={12} cy={12} r={10} stroke={Colors.textMuted} strokeWidth={2} />
+                  <Path d="M12 6v6l4 2" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" />
+                </Svg>
+                <Text style={styles.summaryText}>{getAvailabilitySummary()}</Text>
+                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                  <Path
+                    d={availabilityExpanded ? 'M18 15l-6-6-6 6' : 'M6 9l6 6 6-6'}
+                    stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+                  />
+                </Svg>
+              </Pressable>
+
+              {/* Expanded options */}
+              {availabilityExpanded && (
+                <>
+                  <View style={styles.availabilityOptions}>
+                    {AVAILABILITY_OPTIONS.map((option) => {
+                      const isSelected = selectedAvailability === option.value;
+                      const isSaving = savingAvailabilityValue === option.value;
+                      return (
+                        <Pressable
+                          key={option.value}
+                          style={[
+                            styles.availabilityOption,
+                            isSelected && styles.availabilityOptionSelected,
+                            isSavingAvailability && !isSaving && !isSelected && styles.optionDisabled,
+                          ]}
+                          onPress={() => handleAvailabilityTap(option.value)}
+                          disabled={isSavingAvailability}
+                        >
+                          <View
+                            style={[
+                              styles.availabilityIconCircle,
+                              isSelected && styles.availabilityIconCircleSelected,
+                            ]}
+                          >
+                            {isSaving ? (
+                              <ActivityIndicator size="small" color="#ffffff" />
+                            ) : (
+                              <AvailabilityIcon icon={option.icon} selected={isSelected} />
+                            )}
+                          </View>
+                          <View style={styles.availabilityText}>
+                            <Text style={styles.availabilityLabel}>{t(option.labelKey)}</Text>
+                            <Text style={styles.availabilityDesc}>{t(option.descriptionKey)}</Text>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  {selectedAvailability === 'TIME_WINDOW' && (
+                    <View style={styles.timeWindow}>
+                      <View style={styles.timeRow}>
+                        <Text style={styles.timeLabel}>{t('share.from')}</Text>
+                        {isIOS ? (
+                          <DateTimePicker
+                            value={startTime}
+                            mode="time"
+                            is24Hour
+                            display="compact"
+                            onChange={(_e, date) => {
+                              if (date) {
+                                setStartTime(date);
+                                handleTimeSave(date, endTime);
+                              }
+                            }}
+                          />
+                        ) : (
+                          <Pressable style={styles.timeButton} onPress={() => setShowStartPicker(true)}>
+                            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                              <Circle cx={12} cy={12} r={10} stroke="#99a1af" strokeWidth={2} />
+                              <Path d="M12 6v6l4 2" stroke="#99a1af" strokeWidth={2} strokeLinecap="round" />
+                            </Svg>
+                            <Text style={styles.timeButtonText}>{formatTimeShort(startTime)}</Text>
+                          </Pressable>
+                        )}
+                      </View>
+                      <View style={styles.timeRowDivider} />
+                      <View style={styles.timeRow}>
+                        <Text style={styles.timeLabel}>{t('share.to')}</Text>
+                        {isIOS ? (
+                          <DateTimePicker
+                            value={endTime}
+                            mode="time"
+                            is24Hour
+                            display="compact"
+                            onChange={(_e, date) => {
+                              if (date) {
+                                setEndTime(date);
+                                handleTimeSave(startTime, date);
+                              }
+                            }}
+                          />
+                        ) : (
+                          <Pressable style={styles.timeButton} onPress={() => setShowEndPicker(true)}>
+                            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                              <Circle cx={12} cy={12} r={10} stroke="#99a1af" strokeWidth={2} />
+                              <Path d="M12 6v6l4 2" stroke="#99a1af" strokeWidth={2} strokeLinecap="round" />
+                            </Svg>
+                            <Text style={styles.timeButtonText}>{formatTimeShort(endTime)}</Text>
+                          </Pressable>
+                        )}
+                      </View>
+                      {savingTime && (
+                        <View style={styles.timeSavingRow}>
+                          <ActivityIndicator size="small" color={Colors.textMuted} />
+                          <Text style={styles.timeSavingText}>{t('common.saving')}</Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+
+                  {availabilitySuccess && (
+                    <View style={styles.successToast}>
+                      <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                        <Path d="M20 6L9 17l-5-5" stroke={Colors.success} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+                      </Svg>
+                      <Text style={styles.successToastText}>{t('settings.saved')}</Text>
+                    </View>
+                  )}
+                </>
+              )}
+            </>
           )}
         </View>
 
         {/* Courier Contact Preference */}
         <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <View style={styles.sectionHeaderText}>
-              <Text style={styles.sectionTitle}>{t('settings.courierContact')}</Text>
-              <Text style={styles.sectionDescription}>{t('settings.courierContactDescription')}</Text>
-            </View>
-            {!editingContact && (
-              <Pressable
-                style={[styles.editButton, loadingAvailability && styles.editButtonDisabled]}
-                onPress={handleEditContact}
-                disabled={loadingAvailability}
-              >
-                <Text style={[styles.editButtonText, loadingAvailability && styles.editButtonTextDisabled]}>
-                  {t('common.edit')}
-                </Text>
-              </Pressable>
-            )}
+          <View style={styles.sectionHeaderText}>
+            <Text style={styles.sectionTitle}>{t('settings.courierContact')}</Text>
+            <Text style={styles.sectionDescription}>{t('settings.courierContactDescription')}</Text>
           </View>
 
-          {loadingAvailability ? (
+          {loadingSettings ? (
             <View style={styles.skeletonContainer}>
               <View style={styles.skeletonRow}>
                 <SkeletonBlock width={18} height={18} />
                 <SkeletonBlock width={160} height={16} />
               </View>
             </View>
-          ) : editingContact ? (
-            <>
-              <View style={styles.availabilityOptions}>
-                {CONTACT_PREFERENCE_OPTIONS.map((option) => {
-                  const isSelected = selectedContact === option.value;
-                  return (
-                    <Pressable
-                      key={option.value}
-                      style={[
-                        styles.availabilityOption,
-                        isSelected && styles.availabilityOptionSelected,
-                      ]}
-                      onPress={() => setSelectedContact(option.value)}
-                    >
-                      <View
-                        style={[
-                          styles.availabilityIconCircle,
-                          isSelected && styles.availabilityIconCircleSelected,
-                        ]}
-                      >
-                        <ContactIcon icon={option.icon} selected={isSelected} />
-                      </View>
-                      <View style={styles.availabilityText}>
-                        <Text style={styles.availabilityLabel}>{t(option.labelKey)}</Text>
-                        <Text style={styles.availabilityDesc}>{t(option.descriptionKey)}</Text>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              <View style={styles.editActions}>
-                <Pressable style={styles.cancelButton} onPress={handleCancelEditContact} disabled={savingContact}>
-                  <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.saveButton, (!hasContactChanges || savingContact) && styles.saveButtonDisabled]}
-                  onPress={handleSaveContact}
-                  disabled={!hasContactChanges || savingContact}
-                >
-                  {savingContact ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
-                  ) : (
-                    <Text style={styles.saveButtonText}>{t('common.save')}</Text>
-                  )}
-                </Pressable>
-              </View>
-            </>
           ) : (
-            <View style={styles.availabilitySummaryRow}>
-              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                {savedContact.current === 'CALL_ON_ARRIVAL' ? (
+            <>
+              {/* Accordion header — always visible, tap to toggle */}
+              <Pressable style={styles.summaryRow} onPress={() => setContactExpanded((v) => !v)}>
+                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                  {selectedContact === 'CALL_ON_ARRIVAL' ? (
+                    <Path
+                      d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"
+                      stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+                    />
+                  ) : (
+                    <>
+                      <Path d="M13.73 21a2 2 0 01-3.46 0M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9z" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                      <Path d="M3 3l18 18" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" />
+                    </>
+                  )}
+                </Svg>
+                <Text style={styles.summaryText}>{getContactSummary()}</Text>
+                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
                   <Path
-                    d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"
+                    d={contactExpanded ? 'M18 15l-6-6-6 6' : 'M6 9l6 6 6-6'}
                     stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
                   />
-                ) : (
-                  <>
-                    <Path d="M13.73 21a2 2 0 01-3.46 0M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9z" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                    <Path d="M3 3l18 18" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" />
-                  </>
-                )}
-              </Svg>
-              <Text style={styles.availabilitySummaryText}>{getContactSummary()}</Text>
-            </View>
+                </Svg>
+              </Pressable>
+
+              {/* Expanded options */}
+              {contactExpanded && (
+                <>
+                  <View style={styles.availabilityOptions}>
+                    {CONTACT_PREFERENCE_OPTIONS.map((option) => {
+                      const isSelected = selectedContact === option.value;
+                      const isSaving = savingContactValue === option.value;
+                      return (
+                        <Pressable
+                          key={option.value}
+                          style={[
+                            styles.availabilityOption,
+                            isSelected && styles.availabilityOptionSelected,
+                            savingContactValue !== null && !isSaving && !isSelected && styles.optionDisabled,
+                          ]}
+                          onPress={() => handleContactTap(option.value)}
+                          disabled={savingContactValue !== null}
+                        >
+                          <View
+                            style={[
+                              styles.availabilityIconCircle,
+                              isSelected && styles.availabilityIconCircleSelected,
+                            ]}
+                          >
+                            {isSaving ? (
+                              <ActivityIndicator size="small" color="#ffffff" />
+                            ) : (
+                              <ContactIcon icon={option.icon} selected={isSelected} />
+                            )}
+                          </View>
+                          <View style={styles.availabilityText}>
+                            <Text style={styles.availabilityLabel}>{t(option.labelKey)}</Text>
+                            <Text style={styles.availabilityDesc}>{t(option.descriptionKey)}</Text>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  {contactSuccess && (
+                    <View style={styles.successToast}>
+                      <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                        <Path d="M20 6L9 17l-5-5" stroke={Colors.success} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+                      </Svg>
+                      <Text style={styles.successToastText}>{t('settings.saved')}</Text>
+                    </View>
+                  )}
+                </>
+              )}
+            </>
           )}
         </View>
 
@@ -642,7 +654,10 @@ export default function SettingsScreen() {
           display="default"
           onChange={(_e, date) => {
             setShowStartPicker(false);
-            if (date) setStartTime(date);
+            if (date) {
+              setStartTime(date);
+              handleTimeSave(date, endTime);
+            }
           }}
         />
       )}
@@ -654,7 +669,10 @@ export default function SettingsScreen() {
           display="default"
           onChange={(_e, date) => {
             setShowEndPicker(false);
-            if (date) setEndTime(date);
+            if (date) {
+              setEndTime(date);
+              handleTimeSave(startTime, date);
+            }
           }}
         />
       )}
@@ -705,10 +723,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderRadius: 12,
     overflow: 'hidden',
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
   },
   sectionHeaderText: {
     flex: 1,
@@ -781,25 +795,26 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
 
-  editButton: {
-    marginTop: Spacing.lg,
-    marginRight: Spacing.lg,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
+  successToast: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
   },
-  editButtonDisabled: {
-    opacity: 0.4,
-  },
-  editButtonText: {
+  successToastText: {
     fontSize: FontSize.sm,
     fontWeight: '500',
-    color: Colors.textSecondary,
+    color: Colors.success,
   },
-  editButtonTextDisabled: {
+  timeSavingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: Spacing.sm,
+  },
+  timeSavingText: {
+    fontSize: FontSize.sm,
     color: Colors.textMuted,
   },
 
@@ -819,21 +834,6 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.sm,
   },
 
-  availabilitySummaryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  availabilitySummaryText: {
-    fontSize: FontSize.base,
-    color: Colors.text,
-    flex: 1,
-  },
-
   availabilityOptions: {
     gap: Spacing.md,
     padding: Spacing.lg,
@@ -851,6 +851,23 @@ const styles = StyleSheet.create({
   availabilityOptionSelected: {
     borderColor: Colors.text,
     backgroundColor: Colors.background,
+  },
+  optionDisabled: {
+    opacity: 0.5,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  summaryText: {
+    fontSize: FontSize.base,
+    color: Colors.text,
+    flex: 1,
   },
   availabilityIconCircle: {
     width: 40,
@@ -918,44 +935,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.text,
     letterSpacing: 0.5,
-  },
-
-  editActions: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.lg,
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButtonText: {
-    fontSize: FontSize.base,
-    fontWeight: '500',
-    color: Colors.textSecondary,
-  },
-  saveButton: {
-    flex: 2,
-    paddingVertical: 12,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.text,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,
-  },
-  saveButtonDisabled: {
-    opacity: 0.4,
-  },
-  saveButtonText: {
-    fontSize: FontSize.base,
-    fontWeight: '600',
-    color: '#ffffff',
   },
 
   logoutButton: {

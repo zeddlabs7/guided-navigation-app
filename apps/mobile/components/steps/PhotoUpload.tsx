@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
   },
   privacyText: {
     fontSize: 12,
-    color: '#4a5565',
+    color: '#4C4578',
     flex: 1,
     lineHeight: 16,
   },
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   },
   uploadText: {
     fontSize: 14,
-    color: '#4a5565',
+    color: '#4C4578',
   },
   previewContainer: {
     borderRadius: 12,

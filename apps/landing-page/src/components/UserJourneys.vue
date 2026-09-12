@@ -25,7 +25,7 @@ const courierFeatures = [
         <span class="journeys__label">Two Apps, One Goal</span>
         <h2 class="journeys__title">Designed for Both Sides of Delivery</h2>
         <p class="journeys__subtitle">
-          Whether you're receiving packages or delivering them, Arriveo makes the experience seamless.
+          Whether you're receiving packages or delivering them, Yadul makes the experience seamless.
         </p>
       </div>
 
@@ -404,12 +404,12 @@ const courierFeatures = [
 }
 
 .journeys__btn--primary {
-  background: var(--color-primary);
+  background: var(--color-button);
   color: white;
 }
 
 .journeys__btn--primary:hover {
-  background: var(--color-primary-dark);
+  background: var(--color-button-hover);
   text-decoration: none;
 }
 

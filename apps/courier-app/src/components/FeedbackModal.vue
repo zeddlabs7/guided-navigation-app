@@ -278,7 +278,7 @@ function handleBackdropClick(event: MouseEvent) {
 .submit-button {
   width: 100%;
   padding: var(--spacing-md);
-  background-color: var(--color-primary);
+  background-color: var(--color-button);
   color: white;
   border: none;
   border-radius: var(--radius-md);

@@ -162,7 +162,7 @@ export function OverlayTutorial({
 function TutorialIcon({ icon }: { icon: string }) {
   const color =
     icon === 'drag'
-      ? '#2c3e50'
+      ? '#5B21B6'
       : icon === 'resize'
         ? '#16a34a'
         : icon === 'rotate'
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e5e7eb',
   },
   dotActive: {
-    backgroundColor: '#2c3e50',
+    backgroundColor: '#5B21B6',
     width: 24,
     borderRadius: 4,
   },
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 12,
-    backgroundColor: '#2c3e50',
+    backgroundColor: '#5B21B6',
     alignItems: 'center',
   },
   btnPrimaryText: {
@@ -333,6 +333,6 @@ const styles = StyleSheet.create({
   btnSecondaryText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#4a5565',
+    color: '#4C4578',
   },
 });

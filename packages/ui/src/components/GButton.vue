@@ -80,21 +80,23 @@ function handleClick(event: MouseEvent) {
 }
 
 .g-button--primary {
-  background-color: var(--color-primary, #2c3e50);
+  background-color: var(--color-button, #1E1B4B);
   color: white;
 }
 
 .g-button--primary:hover:not(:disabled) {
-  background-color: var(--color-primary-dark, #1a252f);
+  background-color: var(--color-button-hover, #2D2A5E);
 }
 
 .g-button--secondary {
-  background-color: var(--color-secondary, #e5e7eb);
-  color: var(--color-text, #1f2937);
+  background-color: var(--color-surface, #ffffff);
+  color: var(--color-text, #1E1B4B);
+  border: 1px solid var(--color-border, #DDD8EB);
 }
 
 .g-button--secondary:hover:not(:disabled) {
-  background-color: var(--color-secondary-dark, #d1d5db);
+  background-color: var(--color-background, #f9fafb);
+  border-color: var(--color-secondary-dark, #d1d5db);
 }
 
 .g-button--danger {
@@ -108,11 +110,11 @@ function handleClick(event: MouseEvent) {
 
 .g-button--ghost {
   background-color: transparent;
-  color: var(--color-primary, #2c3e50);
+  color: var(--color-primary, #5B21B6);
 }
 
 .g-button--ghost:hover:not(:disabled) {
-  background-color: var(--color-primary-light, #eff6ff);
+  background-color: var(--color-primary-light, #EDE9FE);
 }
 
 .g-button--full-width {

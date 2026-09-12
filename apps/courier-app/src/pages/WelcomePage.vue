@@ -142,7 +142,7 @@ async function selectLanguage(lang: Language) {
       <div class="logo-section">
         <img
           :src="currentCycleRtl ? '/logo-ar.png' : '/logo-eng.png'"
-          alt="Arriveo"
+          alt="Yadul"
           class="logo"
         />
       </div>

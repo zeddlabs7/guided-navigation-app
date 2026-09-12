@@ -909,7 +909,7 @@ async function handleDeleteGuidance() {
 
 .edit-header__save-btn {
   padding: 8px 16px;
-  background-color: var(--color-primary);
+  background-color: var(--color-button);
   border: none;
   border-radius: var(--radius-lg);
   font-size: var(--font-size-base);
@@ -982,13 +982,13 @@ async function handleDeleteGuidance() {
 }
 
 .error-state__retry {
-  background-color: var(--color-primary);
+  background-color: var(--color-button);
   border: none;
   color: white;
 }
 
 .error-state__retry:hover {
-  background-color: var(--color-primary-dark);
+  background-color: var(--color-button-hover);
 }
 
 .error-state__back {
@@ -1234,7 +1234,7 @@ async function handleDeleteGuidance() {
 .continue-btn {
   margin-top: 12px;
   padding: 14px 24px;
-  background-color: var(--color-primary);
+  background-color: var(--color-button);
   border: none;
   border-radius: var(--radius-lg);
   font-size: var(--font-size-base);
@@ -1395,7 +1395,7 @@ async function handleDeleteGuidance() {
   height: 56px;
   background-color: var(--color-primary-bg, #eff6ff);
   border-radius: 50%;
-  color: var(--color-primary, #2c3e50);
+  color: var(--color-primary, #5B21B6);
   margin-bottom: 16px;
 }
 
@@ -1555,7 +1555,7 @@ async function handleDeleteGuidance() {
 }
 
 .footer-btn--primary {
-  background-color: var(--color-primary);
+  background-color: var(--color-button);
   border: none;
   color: white;
 }

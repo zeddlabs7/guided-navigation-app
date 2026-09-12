@@ -161,7 +161,7 @@ async function handleRetryVerify() {
   <div class="login-page">
     <div class="login-container">
       <header class="login-header">
-        <img src="/logo-eng.png" alt="Arriveo" class="login-logo" />
+        <img src="/logo-eng.png" alt="Yadul" class="login-logo" />
         <p class="login-subtitle">{{ subtitle }}</p>
       </header>
 

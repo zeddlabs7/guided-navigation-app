@@ -75,8 +75,8 @@ const emit = defineEmits<{
 }
 
 .filter-tabs__tab--active {
-  background-color: var(--color-primary);
-  border-color: var(--color-primary);
+  background-color: var(--color-button);
+  border-color: var(--color-button);
   color: white;
   box-shadow: var(--shadow-button);
 }

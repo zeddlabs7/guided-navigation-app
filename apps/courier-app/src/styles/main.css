@@ -6,26 +6,26 @@
  * border > border-light > primary-light (icon wells) > background
  */
 :root {
-  --color-text-secondary: #3d4852;
-  --color-text-muted: #5c6672;
-  --color-text-light: #8b949e;
+  --color-text-secondary: #3D3764;
+  --color-text-muted: #5C5580;
+  --color-text-light: #8B849E;
 
-  --color-border: #c5cad1;
-  --color-border-light: #dce0e5;
+  --color-border: #C5C0D8;
+  --color-border-light: #DCD8EA;
 
-  --color-primary-light: #dce1e7;
-  --color-primary-bg: #dce1e7;
-  --color-secondary: #dce0e5;
-  --color-secondary-dark: #c5cad1;
+  --color-primary-light: #DDD8EB;
+  --color-primary-bg: #DDD8EB;
+  --color-secondary: #DCD8EA;
+  --color-secondary-dark: #C5C0D8;
 
-  --color-background: #eef0f3;
+  --color-background: #EEEAF5;
 
-  --color-step-parking: #5c6672;
-  --color-step-parking-bg: #dce0e5;
+  --color-step-parking: #5C5580;
+  --color-step-parking-bg: #DCD8EA;
 
-  --color-disabled: #dce0e5;
-  --color-disabled-text: #5c6672;
-  --color-disabled-dot: #8b949e;
+  --color-disabled: #DCD8EA;
+  --color-disabled-text: #5C5580;
+  --color-disabled-dot: #8B849E;
 }
 
 html {

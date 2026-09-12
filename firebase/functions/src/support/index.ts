@@ -55,7 +55,7 @@ export const onSupportRequestCreated = functions.firestore
       return;
     }
 
-    const subject = `[Arriveo Support] New request from ${phone} (#${requestId.slice(0, 8)})`;
+    const subject = `[Yadul Support] New request from ${phone} (#${requestId.slice(0, 8)})`;
 
     const imageSection = imageUrls.length > 0
       ? `
@@ -100,7 +100,7 @@ export const onSupportRequestCreated = functions.firestore
           </table>
         </div>
         <p style="color:#999;font-size:12px;margin-top:16px;text-align:center;">
-          This is an automated notification from Arriveo.
+          This is an automated notification from Yadul.
         </p>
       </div>
     `;
@@ -108,7 +108,7 @@ export const onSupportRequestCreated = functions.firestore
     try {
       const transporter = getTransporter();
       await transporter.sendMail({
-        from: `"Arriveo Support" <${SUPPORT_EMAIL}>`,
+        from: `"Yadul Support" <${SUPPORT_EMAIL}>`,
         to: SUPPORT_RECIPIENT,
         replyTo: email,
         subject,

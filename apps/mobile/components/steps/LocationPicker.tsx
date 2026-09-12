@@ -422,14 +422,14 @@ export function LocationPicker({
               coordinate={markerCoord}
               draggable={!disabled}
               onDragEnd={handleMarkerDragEnd}
-              pinColor="#2c3e50"
+              pinColor="#5B21B6"
             />
           )}
         </MapView>
 
         {!mapReady && (
           <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color="#2c3e50" />
+            <ActivityIndicator size="large" color="#5B21B6" />
             <Text style={styles.loadingText}>{t('location.loadingMap')}</Text>
           </View>
         )}
@@ -439,10 +439,10 @@ export function LocationPicker({
             <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
               <Path
                 d="M21 10c0 7-9 13-9 13s-9-6-9-13C3 5.03 7.03 1 12 1s9 4.03 9 9z"
-                stroke="#2c3e50"
+                stroke="#5B21B6"
                 strokeWidth={2}
               />
-              <Circle cx={12} cy={10} r={3} stroke="#2c3e50" strokeWidth={2} />
+              <Circle cx={12} cy={10} r={3} stroke="#5B21B6" strokeWidth={2} />
             </Svg>
             <Text style={styles.hintText}>
               {t('location.searchHint')}
@@ -464,10 +464,10 @@ export function LocationPicker({
             >
               <Path
                 d="M21 10c0 7-9 13-9 13s-9-6-9-13C3 5.03 7.03 1 12 1s9 4.03 9 9z"
-                stroke="#2c3e50"
+                stroke="#5B21B6"
                 strokeWidth={2}
               />
-              <Circle cx={12} cy={10} r={3} stroke="#2c3e50" strokeWidth={2} />
+              <Circle cx={12} cy={10} r={3} stroke="#5B21B6" strokeWidth={2} />
             </Svg>
             <View style={styles.selectedText}>
               <Text style={styles.selectedAddress}>{value.formattedAddress}</Text>

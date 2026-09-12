@@ -1042,7 +1042,7 @@ async function handleAddStep() {
 .continue-btn {
   margin-top: 12px;
   padding: 14px 24px;
-  background-color: var(--color-primary);
+  background-color: var(--color-button);
   border: none;
   border-radius: var(--radius-lg);
   font-size: var(--font-size-base);
@@ -1203,7 +1203,7 @@ async function handleAddStep() {
   height: 56px;
   background-color: var(--color-primary-bg, #eff6ff);
   border-radius: 50%;
-  color: var(--color-primary, #2c3e50);
+  color: var(--color-primary, #5B21B6);
   margin-bottom: 16px;
 }
 
@@ -1326,7 +1326,7 @@ async function handleAddStep() {
 }
 
 .footer-btn--primary {
-  background-color: var(--color-primary);
+  background-color: var(--color-button);
   border: none;
   color: white;
 }

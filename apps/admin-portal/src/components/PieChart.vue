@@ -16,7 +16,7 @@ const props = withDefaults(defineProps<{
 }>(), {});
 
 const colors = [
-  '#2c3e50',
+  '#5B21B6',
   '#008236',
   '#bb4d00',
   '#8200db',
@@ -49,7 +49,7 @@ const chartOptions = {
     legend: {
       position: 'right' as const,
       labels: {
-        color: '#4a5565',
+        color: '#4C4578',
         font: {
           size: 12,
         },

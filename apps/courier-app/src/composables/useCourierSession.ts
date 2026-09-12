@@ -267,7 +267,7 @@ export function useCourierSession() {
 
   function getGuidanceTitle(): string {
     const gs = guidanceSet.value;
-    const title = gs?.title || 'Arriveo';
+    const title = gs?.title || 'Yadul';
     const lang = currentLanguage.value;
     if (lang === 'ar') {
       const arTitle = gs?.titleArabic?.replace(/[\u200F\u200E\u200B\u00A0\s]/g, '');

@@ -8,21 +8,21 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 const STEP_TYPE_COLORS: Record<StepType, { bg: string; dot: string; text: string }> = {
   LOCATION_CHECK: { bg: '#fffbeb', dot: '#ffb900', text: '#bb4d00' },
-  LANDMARK_REFERENCE: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
-  PARKING_LOCATION: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
+  LANDMARK_REFERENCE: { bg: '#f3f4f6', dot: '#99a1af', text: '#4C4578' },
+  PARKING_LOCATION: { bg: '#f3f4f6', dot: '#99a1af', text: '#4C4578' },
   BUILDING_ENTRY: { bg: '#eff6ff', dot: '#2b7fff', text: '#1447e6' },
   RECEPTION_OR_SECURITY: { bg: '#faf5ff', dot: '#ad46ff', text: '#8200db' },
-  LOBBY_NAVIGATION: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
+  LOBBY_NAVIGATION: { bg: '#f3f4f6', dot: '#99a1af', text: '#4C4578' },
   ELEVATOR_ENTRY: { bg: '#faf5ff', dot: '#ad46ff', text: '#8200db' },
-  STAIRS_ENTRY: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
+  STAIRS_ENTRY: { bg: '#f3f4f6', dot: '#99a1af', text: '#4C4578' },
   FLOOR_NUMBER: { bg: '#eff6ff', dot: '#2b7fff', text: '#1447e6' },
-  CORRIDOR_OR_PATH: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
+  CORRIDOR_OR_PATH: { bg: '#f3f4f6', dot: '#99a1af', text: '#4C4578' },
   DOOR_IDENTIFICATION: { bg: '#eff6ff', dot: '#2b7fff', text: '#1447e6' },
   DROP_OFF_POINT: { bg: '#f0fdf4', dot: '#00c950', text: '#008236' },
   GATE_ENTRY: { bg: '#f0fdf4', dot: '#00c950', text: '#008236' },
   UNIT_OR_DOOR_IDENTIFICATION: { bg: '#eff6ff', dot: '#2b7fff', text: '#1447e6' },
-  FLOOR_NAVIGATION: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
-  OTHER: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
+  FLOOR_NAVIGATION: { bg: '#f3f4f6', dot: '#99a1af', text: '#4C4578' },
+  OTHER: { bg: '#f3f4f6', dot: '#99a1af', text: '#4C4578' },
 };
 
 export { STEP_TYPE_COLORS };
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#4a5565',
+    color: '#4C4578',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   triggerHintText: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#4a5565',
+    color: '#4C4578',
   },
   chevron: {
     fontSize: 14,
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
   },
   checkmark: {
     fontSize: 18,
-    color: '#4a5565',
+    color: '#4C4578',
     fontWeight: '600',
   },
 });

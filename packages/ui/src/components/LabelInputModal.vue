@@ -148,7 +148,7 @@ function handleBackdropClick(event: MouseEvent) {
 }
 
 .label-modal__input:focus {
-  border-color: #2c3e50;
+  border-color: #5B21B6;
   box-shadow: 0 0 0 3px rgba(21, 93, 252, 0.1);
 }
 
@@ -175,7 +175,7 @@ function handleBackdropClick(event: MouseEvent) {
 .label-modal__btn--cancel {
   background-color: white;
   border: 1px solid #e5e7eb;
-  color: #4a5565;
+  color: #4C4578;
 }
 
 .label-modal__btn--cancel:hover {
@@ -184,13 +184,13 @@ function handleBackdropClick(event: MouseEvent) {
 }
 
 .label-modal__btn--save {
-  background-color: #2c3e50;
+  background-color: #5B21B6;
   border: none;
   color: white;
 }
 
 .label-modal__btn--save:hover:not(:disabled) {
-  background-color: #1a252f;
+  background-color: #4C1D95;
 }
 
 .label-modal__btn--save:disabled {

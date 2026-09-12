@@ -31,21 +31,21 @@ const emit = defineEmits<{
 
 const stepTypeColors: Record<StepType, { bg: string; dot: string; text: string }> = {
   LOCATION_CHECK: { bg: '#fffbeb', dot: '#ffb900', text: '#bb4d00' },
-  LANDMARK_REFERENCE: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
-  PARKING_LOCATION: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
+  LANDMARK_REFERENCE: { bg: '#f3f4f6', dot: '#99a1af', text: '#4C4578' },
+  PARKING_LOCATION: { bg: '#f3f4f6', dot: '#99a1af', text: '#4C4578' },
   BUILDING_ENTRY: { bg: '#eff6ff', dot: '#2b7fff', text: '#1447e6' },
   RECEPTION_OR_SECURITY: { bg: '#faf5ff', dot: '#ad46ff', text: '#8200db' },
-  LOBBY_NAVIGATION: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
+  LOBBY_NAVIGATION: { bg: '#f3f4f6', dot: '#99a1af', text: '#4C4578' },
   ELEVATOR_ENTRY: { bg: '#faf5ff', dot: '#ad46ff', text: '#8200db' },
-  STAIRS_ENTRY: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
+  STAIRS_ENTRY: { bg: '#f3f4f6', dot: '#99a1af', text: '#4C4578' },
   FLOOR_NUMBER: { bg: '#eff6ff', dot: '#2b7fff', text: '#1447e6' },
-  CORRIDOR_OR_PATH: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
+  CORRIDOR_OR_PATH: { bg: '#f3f4f6', dot: '#99a1af', text: '#4C4578' },
   DOOR_IDENTIFICATION: { bg: '#eff6ff', dot: '#2b7fff', text: '#1447e6' },
   DROP_OFF_POINT: { bg: '#f0fdf4', dot: '#00c950', text: '#008236' },
   GATE_ENTRY: { bg: '#f0fdf4', dot: '#00c950', text: '#008236' },
   UNIT_OR_DOOR_IDENTIFICATION: { bg: '#eff6ff', dot: '#2b7fff', text: '#1447e6' },
-  FLOOR_NAVIGATION: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
-  OTHER: { bg: '#f3f4f6', dot: '#99a1af', text: '#4a5565' },
+  FLOOR_NAVIGATION: { bg: '#f3f4f6', dot: '#99a1af', text: '#4C4578' },
+  OTHER: { bg: '#f3f4f6', dot: '#99a1af', text: '#4C4578' },
 };
 
 const stepTypeLabels: Record<StepType, string> = {
@@ -358,12 +358,12 @@ const extraStepCount = props.steps.length > 3 ? props.steps.length - 3 : 0;
 
 .guidance-card__action-btn--share {
   padding: 0 12px;
-  background-color: var(--color-primary-bg);
-  color: var(--color-primary);
+  background-color: var(--color-button);
+  color: white;
 }
 
 .guidance-card__action-btn--share:hover {
-  background-color: #dbeafe;
+  background-color: var(--color-button-hover);
 }
 
 .guidance-card__action-btn--delete {
@@ -380,11 +380,12 @@ const extraStepCount = props.steps.length > 3 ? props.steps.length - 3 : 0;
 
 .guidance-card__action-btn--edit {
   padding: 0 12px;
-  background-color: var(--color-primary);
-  color: white;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
 }
 
 .guidance-card__action-btn--edit:hover {
-  background-color: var(--color-primary-dark);
+  background-color: var(--color-background);
 }
 </style>

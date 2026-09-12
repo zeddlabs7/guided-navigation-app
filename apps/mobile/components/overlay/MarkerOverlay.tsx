@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
   },
   dotSelected: {
     borderWidth: 3,
-    borderColor: '#2c3e50',
+    borderColor: '#5B21B6',
     zIndex: 2,
   },
   dotInner: {
