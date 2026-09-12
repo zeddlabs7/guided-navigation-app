@@ -17,9 +17,19 @@ const {
   dropOffStep,
   totalSteps,
   isRtl,
+  currentLanguage,
   getRecipientPhoneNumber,
   getGuidanceTitle,
+  getContactPreferenceLongText,
+  getCourierContactPreference,
 } = useCourierSession();
+
+const contactPreferenceInstruction = computed(() => {
+  const texts = getContactPreferenceLongText();
+  return texts[currentLanguage.value];
+});
+
+const isCallOnArrival = computed(() => getCourierContactPreference() === 'CALL_ON_ARRIVAL');
 const deliveryConfirmed = ref(false);
 const isConfirming = ref(false);
 
@@ -100,7 +110,7 @@ function handleHome() {
           <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
-      <span class="header-title">{{ guidanceTitle }}</span>
+      <span class="header-title"></span>
       <div class="header-actions">
         <button class="header-home" @click="handleHome" :aria-label="t('home')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -125,6 +135,14 @@ function handleHome() {
         </svg>
       </div>
       
+      <!-- Destination Label -->
+      <div class="destination-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="currentColor"/>
+        </svg>
+        <span class="destination-badge-text">{{ guidanceTitle }}</span>
+      </div>
+
       <!-- Location Badge -->
       <div class="location-badge">
         <div class="badge-icon">
@@ -158,6 +176,20 @@ function handleHome() {
       <p class="success-message">
         {{ deliveryConfirmed ? t('thankYou') : t('confirmBelow') }}
       </p>
+    </div>
+
+    <!-- Contact Preference Instruction -->
+    <div class="contact-instruction" :class="isCallOnArrival ? 'contact-instruction--call' : 'contact-instruction--no-call'">
+      <div class="contact-instruction-icon">
+        <svg v-if="isCallOnArrival" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M13.73 21a2 2 0 01-3.46 0M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M3 3l18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="contact-instruction-text">{{ contactPreferenceInstruction }}</span>
     </div>
 
     <!-- Action Buttons -->
@@ -268,6 +300,36 @@ function handleHome() {
 
 [dir="rtl"] .header-back svg {
   transform: scaleX(-1);
+}
+
+/* Destination Badge */
+.destination-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: var(--radius-full);
+  color: white;
+  max-width: 60%;
+  z-index: 2;
+}
+
+[dir="rtl"] .destination-badge {
+  left: auto;
+  right: 12px;
+}
+
+.destination-badge-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Drop-off Image */
@@ -439,5 +501,38 @@ function handleHome() {
 .whatsapp-hint-icon {
   flex-shrink: 0;
   color: #25D366;
+}
+
+/* Contact Preference Instruction */
+.contact-instruction {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  margin: 0 var(--spacing-md);
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+}
+
+.contact-instruction--call {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+}
+
+.contact-instruction--no-call {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.contact-instruction-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.contact-instruction-text {
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
 }
 </style>

@@ -10,6 +10,8 @@ import {
   TextInput,
   Share,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -17,6 +19,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
+import { HomeButton } from '@/components/ui/HomeButton';
 import type { GuidanceSet } from '@guidenav/types';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { openWhatsAppShare, openWhatsAppShareToNumber } from '@/lib/share-whatsapp';
@@ -26,7 +29,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   createShareLink,
   getShareLinkForGuidance,
-  revokeShareLink,
+  deleteShareLink,
+  deleteAllLinksForGuidance,
   buildShareUrl,
 } from '@/services/share-links';
 import {
@@ -94,6 +98,7 @@ export default function ShareScreen() {
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
 
   const [availabilitySummary, setAvailabilitySummary] = useState('');
+  const [contactPreferenceSummary, setContactPreferenceSummary] = useState('');
   const [selectedValidity, setSelectedValidity] = useState<LinkValidityOption>(DEFAULT_VALIDITY_OPTION);
   const [showValidityPicker, setShowValidityPicker] = useState(false);
 
@@ -104,20 +109,28 @@ export default function ShareScreen() {
   const linkSettingsRef = useRef<View>(null);
   const [linkSettingsPosition, setLinkSettingsPosition] = useState({ top: 0, right: 0 });
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (isCancelled?: () => boolean) => {
     if (!guidanceSetId || !firebaseUser) return;
     setLoading(true);
     try {
       const gs = await getGuidanceSet(guidanceSetId);
-      if (!gs) return;
+      if (!gs || isCancelled?.()) return;
       setGuidanceSet(gs);
 
       const user = await getUser(firebaseUser.uid);
+      if (isCancelled?.()) return;
       const mode = user?.defaultAvailabilityMode || 'ANYTIME_TODAY';
       const startHHmm = user?.defaultAvailabilityStartTime || null;
       const endHHmm = user?.defaultAvailabilityEndTime || null;
 
       setAvailabilitySummary(getAvailabilitySummaryText(mode, startHHmm, endHHmm, t));
+
+      const contactPref = user?.courierContactPreference || 'CALL_ON_ARRIVAL';
+      setContactPreferenceSummary(
+        contactPref === 'NO_CALL_LEAVE_PHOTO'
+          ? t('settings.contactNoCallSummary')
+          : t('settings.contactCallSummary'),
+      );
 
       const updateData: Record<string, any> = { availabilityMode: mode };
       if (mode === 'TIME_WINDOW' && startHHmm && endHHmm) {
@@ -130,9 +143,11 @@ export default function ShareScreen() {
         updateData.availabilityEndTs = endDate.toISOString();
       }
       await updateGuidanceSet(guidanceSetId, updateData);
+      if (isCancelled?.()) return;
 
       if (gs.status === 'PUBLISHED') {
         const existingLink = await getShareLinkForGuidance(guidanceSetId);
+        if (isCancelled?.()) return;
         if (existingLink && existingLink.status === 'ACTIVE') {
           setShareLinkId(existingLink.id);
           setCourierAppUrl(buildShareUrl(existingLink.id));
@@ -144,11 +159,19 @@ export default function ShareScreen() {
     } catch (err) {
       console.error('Failed to load guidance set:', err);
     } finally {
-      setLoading(false);
+      if (!isCancelled?.()) {
+        setLoading(false);
+      }
     }
   }, [guidanceSetId, firebaseUser, t]);
 
-  useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
+  useFocusEffect(useCallback(() => {
+    let cancelled = false;
+    (async () => {
+      await loadData(() => cancelled);
+    })();
+    return () => { cancelled = true; };
+  }, [loadData]));
 
   useEffect(() => {
     return () => {
@@ -159,9 +182,7 @@ export default function ShareScreen() {
   async function generateLink(gsId: string, validity: LinkValidityOption) {
     setGenerating(true);
     try {
-      if (shareLinkId) {
-        await revokeShareLink(shareLinkId);
-      }
+      await deleteAllLinksForGuidance(gsId);
       const result = await createShareLink({
         guidanceSetId: gsId,
         expiryDurationMinutes: validity.minutes,
@@ -232,12 +253,12 @@ export default function ShareScreen() {
         onPress: async () => {
           setRevoking(true);
           try {
-            await revokeShareLink(shareLinkId);
+            await deleteShareLink(shareLinkId);
             setShareLinkId(null);
             setCourierAppUrl(null);
             setExpiresAt(null);
           } catch (err) {
-            console.error('Failed to revoke share link:', err);
+            console.error('Failed to delete share link:', err);
             Alert.alert(t('common.error'), t('share.errorRevoke'));
           } finally {
             setRevoking(false);
@@ -288,16 +309,11 @@ export default function ShareScreen() {
       <View style={styles.header}>
         <View style={styles.headerNav}>
           <Pressable style={styles.headerBtn} onPress={handleBack}>
-            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-              <Path d="M19 12H5M5 12L12 19M5 12L12 5" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+              <Path d="M15 18L9 12L15 6" stroke={Colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
           </Pressable>
-          <Pressable style={styles.headerBtn} onPress={handleGoToDashboard}>
-            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-              <Path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-              <Path d="M9 22V12H15V22" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-            </Svg>
-          </Pressable>
+          <HomeButton onPress={handleGoToDashboard} />
         </View>
       </View>
 
@@ -320,12 +336,33 @@ export default function ShareScreen() {
         ) : null}
 
         {/* Availability summary row */}
-        <View style={styles.availabilityRow}>
+        <View style={[styles.availabilityRow, { marginBottom: Spacing.sm }]}>
           <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
             <Circle cx={12} cy={12} r={10} stroke={Colors.textMuted} strokeWidth={2} />
             <Path d="M12 6v6l4 2" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" />
           </Svg>
           <Text style={styles.availabilityText}>{availabilitySummary}</Text>
+          <Pressable onPress={() => router.push('/settings')}>
+            <Text style={styles.availabilityChangeLink}>{t('share.linkExpiryChange')}</Text>
+          </Pressable>
+        </View>
+
+        {/* Contact preference summary row */}
+        <View style={styles.availabilityRow}>
+          <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+            {contactPreferenceSummary === t('settings.contactNoCallSummary') ? (
+              <>
+                <Path d="M13.73 21a2 2 0 01-3.46 0M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9z" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                <Path d="M3 3l18 18" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" />
+              </>
+            ) : (
+              <Path
+                d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"
+                stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+              />
+            )}
+          </Svg>
+          <Text style={styles.availabilityText}>{contactPreferenceSummary}</Text>
           <Pressable onPress={() => router.push('/settings')}>
             <Text style={styles.availabilityChangeLink}>{t('share.linkExpiryChange')}</Text>
           </Pressable>
@@ -432,7 +469,10 @@ export default function ShareScreen() {
         animationType="fade"
         onRequestClose={() => setShowWhatsAppNumberModal(false)}
       >
-        <View style={styles.waNumModalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.waNumModalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
           <View style={styles.waNumModalContent}>
             <Text style={styles.waNumModalTitle}>{t('share.whatsAppModalTitle')}</Text>
             <Text style={styles.waNumModalSubtitle}>
@@ -462,7 +502,7 @@ export default function ShareScreen() {
               </Pressable>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Link settings dropdown menu */}

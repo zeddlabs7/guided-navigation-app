@@ -1,4 +1,4 @@
-import firestore from '@react-native-firebase/firestore';
+import firestore, { type FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 import * as Crypto from 'expo-crypto';
 import type { ShareLink, CreateShareLinkInput } from '@guidenav/types';
 import { DEFAULT_LINK_EXPIRY_MINUTES } from '@guidenav/types';
@@ -60,28 +60,38 @@ export async function getShareLinkForGuidance(
 
   if (snapshot.empty) return null;
 
-  const doc = snapshot.docs[0];
-  const data = doc.data();
+  const now = new Date();
+  const expiredDocs: FirebaseFirestoreTypes.DocumentSnapshot[] = [];
+  let activeLink: ShareLink | null = null;
 
-  if (data.expiresAt && new Date(data.expiresAt) < new Date()) {
-    return null;
+  for (const doc of snapshot.docs) {
+    const data = doc.data()!;
+    if (data.expiresAt && new Date(data.expiresAt) < now) {
+      expiredDocs.push(doc);
+    } else if (!activeLink) {
+      activeLink = { id: doc.id, ...data } as ShareLink;
+    }
   }
 
-  return { id: doc.id, ...data } as ShareLink;
+  if (expiredDocs.length > 0) {
+    const batch = firestore().batch();
+    expiredDocs.forEach((doc) => batch.delete(doc.ref));
+    batch.commit().catch((err) =>
+      console.error('Failed to delete expired share links:', err),
+    );
+  }
+
+  return activeLink;
 }
 
-export async function revokeShareLink(shareLinkId: string): Promise<void> {
+export async function deleteShareLink(shareLinkId: string): Promise<void> {
   await firestore()
     .collection(SHARE_LINKS_COLLECTION)
     .doc(shareLinkId)
-    .update({
-      status: 'REVOKED',
-      revokedAt: firestore.FieldValue.serverTimestamp(),
-      updatedAt: firestore.FieldValue.serverTimestamp(),
-    });
+    .delete();
 }
 
-export async function revokeAllLinksForGuidance(guidanceSetId: string): Promise<void> {
+export async function deleteAllLinksForGuidance(guidanceSetId: string): Promise<void> {
   const snapshot = await firestore()
     .collection(SHARE_LINKS_COLLECTION)
     .where('guidanceSetId', '==', guidanceSetId)
@@ -91,13 +101,8 @@ export async function revokeAllLinksForGuidance(guidanceSetId: string): Promise<
   if (snapshot.empty) return;
 
   const batch = firestore().batch();
-  const now = firestore.FieldValue.serverTimestamp();
   snapshot.docs.forEach((doc) => {
-    batch.update(doc.ref, {
-      status: 'REVOKED',
-      revokedAt: now,
-      updatedAt: now,
-    });
+    batch.delete(doc.ref);
   });
 
   await batch.commit();

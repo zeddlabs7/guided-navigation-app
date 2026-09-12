@@ -13,6 +13,12 @@ service firebase.storage {
       allow write: if true;
     }
 
+    // Support request attachments
+    match /supportRequests/{requestId}/attachments/{fileName} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     // Allow all paths temporarily for development
     match /{allPaths=**} {
       allow read, write: if true;

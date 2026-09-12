@@ -24,6 +24,7 @@ export async function getOrCreateUser(
     defaultAvailabilityMode: 'ANYTIME_TODAY' as const,
     defaultAvailabilityStartTime: null,
     defaultAvailabilityEndTime: null,
+    courierContactPreference: 'CALL_ON_ARRIVAL' as const,
     isActive: true,
     createdAt: now,
     updatedAt: now,

@@ -25,6 +25,7 @@ const {
   getStepTitle,
   getGuidanceTitle,
   getAvailabilityText,
+  getContactPreferenceShortText,
   setLanguage,
   translateUserContent,
   saveLastStep,
@@ -52,6 +53,11 @@ const nextStepImageUrl = computed(() => {
 
 const availabilityText = computed(() => {
   const texts = getAvailabilityText();
+  return texts[currentLanguage.value];
+});
+
+const contactPreferenceText = computed(() => {
+  const texts = getContactPreferenceShortText();
   return texts[currentLanguage.value];
 });
 
@@ -169,7 +175,7 @@ function handleImageError() {
           <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
-      <span class="header-title">{{ guidanceTitle }}</span>
+      <span class="header-title"></span>
       <div class="header-actions">
         <button class="header-home" @click="handleHome" :aria-label="t('home')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -202,7 +208,7 @@ function handleImageError() {
         <path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M22 4L12 14.01l-3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      <span class="availability-text">{{ availabilityText }}</span>
+      <span class="availability-text">{{ availabilityText }} · {{ contactPreferenceText }}</span>
     </div>
 
     <!-- Main Content -->
@@ -251,6 +257,14 @@ function handleImageError() {
             <path d="M21 15L16 10L5 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
           <span>{{ t('noImage') }}</span>
+        </div>
+
+        <!-- Destination Label -->
+        <div class="destination-badge">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="currentColor"/>
+          </svg>
+          <span class="destination-badge-text">{{ guidanceTitle }}</span>
         </div>
 
         <!-- Annotation Count -->
@@ -536,6 +550,35 @@ function handleImageError() {
   justify-content: center;
   gap: var(--spacing-sm);
   color: var(--color-text-secondary);
+}
+
+/* Destination Badge */
+.destination-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: var(--radius-full);
+  color: white;
+  max-width: 60%;
+}
+
+[dir="rtl"] .destination-badge {
+  left: auto;
+  right: 12px;
+}
+
+.destination-badge-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Annotation Count */

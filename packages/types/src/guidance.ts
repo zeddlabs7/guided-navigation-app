@@ -4,6 +4,8 @@ export type GuidanceStatus = 'DRAFT' | 'PUBLISHED' | 'DISABLED';
 
 export type AvailabilityMode = 'ANYTIME_TODAY' | 'TIME_WINDOW' | 'NOT_AVAILABLE_TODAY';
 
+export type CourierContactPreference = 'CALL_ON_ARRIVAL' | 'NO_CALL_LEAVE_PHOTO';
+
 export type AddressType =
   | 'APARTMENT_BUILDING'
   | 'VILLA'

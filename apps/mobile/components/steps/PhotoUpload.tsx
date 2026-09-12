@@ -20,6 +20,7 @@ interface PhotoUploadProps {
   onImageSelected: (uri: string) => void;
   onRemove: () => void;
   disabled?: boolean;
+  label?: string;
 }
 
 const FIXED_ASPECT_RATIO = 4 / 5;
@@ -32,6 +33,7 @@ export function PhotoUpload({
   onImageSelected,
   onRemove,
   disabled,
+  label,
 }: PhotoUploadProps) {
   const { t } = useTranslation();
 
@@ -78,39 +80,42 @@ export function PhotoUpload({
 
   const launchGallery = useCallback(async () => {
     try {
-      const result = await ExpoImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        quality: 1,
-        allowsEditing: false,
-      });
-
-      if (result.canceled || !result.assets?.[0]?.uri) return;
-
-      const image = await ImageCropPicker.openCropper({
-        path: result.assets[0].uri,
-        width: CROP_WIDTH,
-        height: CROP_HEIGHT,
-        cropperToolbarTitle: t('steps.cropPhoto'),
-        cropperChooseText: t('common.done'),
-        cropperCancelText: t('common.cancel'),
-        cropperChooseColor: '#ffffff',
-        mediaType: 'photo',
-        compressImageQuality: 0.7,
-        freeStyleCropEnabled: false,
-        hideBottomControls: true,
-        enableRotationGesture: true,
-        cropperActiveWidgetColor: '#2563eb',
-        cropperStatusBarColor: '#000000',
-        cropperToolbarColor: '#000000',
-        cropperToolbarWidgetColor: '#ffffff',
-        showCropGuidelines: false,
-        showCropFrame: true,
-      });
-      handleResult(image);
+      if (Platform.OS === 'ios') {
+        const result = await ExpoImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          quality: 1,
+          allowsEditing: true,
+          aspect: [4, 5],
+        });
+        if (result.canceled || !result.assets?.[0]?.uri) return;
+        onImageSelected(result.assets[0].uri);
+      } else {
+        const image = await ImageCropPicker.openPicker({
+          width: CROP_WIDTH,
+          height: CROP_HEIGHT,
+          cropping: true,
+          cropperToolbarTitle: t('steps.cropPhoto'),
+          cropperChooseText: t('common.done'),
+          cropperCancelText: t('common.cancel'),
+          cropperChooseColor: '#ffffff',
+          mediaType: 'photo',
+          compressImageQuality: 0.7,
+          freeStyleCropEnabled: false,
+          hideBottomControls: true,
+          enableRotationGesture: true,
+          cropperActiveWidgetColor: '#2563eb',
+          cropperStatusBarColor: '#000000',
+          cropperToolbarColor: '#000000',
+          cropperToolbarWidgetColor: '#ffffff',
+          showCropGuidelines: false,
+          showCropFrame: true,
+        });
+        handleResult(image);
+      }
     } catch (err: any) {
       handleError(err);
     }
-  }, [handleResult, handleError, t]);
+  }, [handleResult, handleError, onImageSelected, t]);
 
   const showPicker = useCallback(async () => {
     if (disabled) return;
@@ -139,7 +144,9 @@ export function PhotoUpload({
     return (
       <View style={styles.container}>
         <View style={styles.labelRow}>
-          <Text style={styles.label}>{t('steps.uploadPhoto')}</Text>
+          {(label === undefined || label) ? (
+            <Text style={styles.label}>{label ?? t('steps.uploadPhoto')}</Text>
+          ) : <View />}
           {!uploading && (
             <Pressable onPress={onRemove} disabled={disabled}>
               <Text style={styles.removeText}>{t('steps.remove')}</Text>
@@ -173,7 +180,9 @@ export function PhotoUpload({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{t('steps.uploadPhoto')}</Text>
+      {(label === undefined || label) ? (
+        <Text style={styles.label}>{label ?? t('steps.uploadPhoto')}</Text>
+      ) : null}
       <View style={styles.privacyBanner}>
         <Text style={styles.privacyIcon}>🛡️</Text>
         <Text style={styles.privacyText}>

@@ -26,6 +26,7 @@ export async function createUser(userId: string, data: CreateUserInput): Promise
     defaultAvailabilityMode: 'ANYTIME_TODAY' as const,
     defaultAvailabilityStartTime: null,
     defaultAvailabilityEndTime: null,
+    courierContactPreference: 'CALL_ON_ARRIVAL' as const,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
@@ -39,6 +40,7 @@ export async function createUser(userId: string, data: CreateUserInput): Promise
     defaultAvailabilityMode: 'ANYTIME_TODAY' as const,
     defaultAvailabilityStartTime: null,
     defaultAvailabilityEndTime: null,
+    courierContactPreference: 'CALL_ON_ARRIVAL' as const,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

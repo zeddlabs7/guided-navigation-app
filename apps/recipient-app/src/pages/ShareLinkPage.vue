@@ -6,7 +6,7 @@ import {
   getGuidanceSet,
   createShareLink,
   getShareLinkForGuidance,
-  revokeShareLink,
+  deleteShareLink,
   updateGuidanceSet,
 } from '@guidenav/services';
 import type { AvailabilityMode } from '@guidenav/types';
@@ -128,9 +128,9 @@ async function handleConfirmAndGenerate() {
     await updateGuidanceSet(guidanceSetId, updateData);
     currentAvailability.value = selectedAvailability.value;
     
-    // If there's an existing link, revoke it first
+    // If there's an existing link, delete it first
     if (shareLinkId.value) {
-      await revokeShareLink(shareLinkId.value);
+      await deleteShareLink(shareLinkId.value);
     }
     
     // Create new share link
@@ -168,7 +168,7 @@ async function handleRevokeLink() {
   
   revoking.value = true;
   try {
-    await revokeShareLink(shareLinkId.value);
+    await deleteShareLink(shareLinkId.value);
     shareToken.value = null;
     shareLinkId.value = null;
     linkStatus.value = null;

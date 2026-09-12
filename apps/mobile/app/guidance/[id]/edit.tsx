@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,11 +15,13 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { ScreenFooter, useFooterScrollPadding } from '@/components/ui/ScreenFooter';
+import { HomeButton } from '@/components/ui/HomeButton';
 import { requiresMetadata as checkRequiresMetadata } from '@guidenav/types';
 import { ADDRESS_TYPE_LABELS, getMetadataFieldConfigs } from '@guidenav/types';
 import type {
   AddressType,
   GuidanceStatus,
+  LocationData,
   StepType,
   Overlay,
 } from '@guidenav/types';
@@ -29,7 +30,11 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import {
   getGuidanceSet,
   getGuidanceSteps,
+  createGuidanceStep,
   updateGuidanceSet,
+  updateGuidanceStep,
+  uploadStepImage,
+  deleteStepImage,
   reorderGuidanceSteps,
   deleteGuidanceStep,
   deleteGuidanceSet,
@@ -88,6 +93,17 @@ export default function EditGuidanceScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Location / landmark state (from system steps)
+  const [locationStepId, setLocationStepId] = useState<string | null>(null);
+  const [locationData, setLocationData] = useState<LocationData | null>(null);
+  const [locationPhotoUri, setLocationPhotoUri] = useState<string | null>(null);
+  const [locationOverlays, setLocationOverlays] = useState<Overlay[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const imageStoragePathRef = useRef<string | null>(null);
+  const [landmarkStepId, setLandmarkStepId] = useState<string | null>(null);
+  const [landmarkDescription, setLandmarkDescription] = useState('');
+  const [landmarkDescriptionArabic, setLandmarkDescriptionArabic] = useState('');
+
   const displayTitle = title.trim() || t('edit.untitledAddress');
   const footerScrollPadding = useFooterScrollPadding(60);
 
@@ -122,8 +138,44 @@ export default function EditGuidanceScreen() {
         apartmentNumber: guidanceSet.apartmentNumber || '',
         locationDescription: guidanceSet.locationDescription || '',
       });
+
+      // Separate system steps from user steps
+      const locStep = guidanceSteps.find((s) => s.stepType === 'LOCATION_CHECK');
+      const lmStep = guidanceSteps.find((s) => s.stepType === 'LANDMARK_REFERENCE');
+      const userSteps = guidanceSteps.filter(
+        (s) => s.stepType !== 'LOCATION_CHECK' && s.stepType !== 'LANDMARK_REFERENCE',
+      );
+
+      // Initialize location state from LOCATION_CHECK step
+      if (locStep) {
+        setLocationStepId(locStep.id);
+        setLocationData(locStep.locationData ?? null);
+        setLocationPhotoUri(locStep.image?.publicUrl ?? null);
+        setLocationOverlays(locStep.overlays ?? []);
+        imageStoragePathRef.current = locStep.image?.storagePath ?? null;
+      } else {
+        setLocationStepId(null);
+        setLocationData(null);
+        setLocationPhotoUri(null);
+        setLocationOverlays([]);
+        imageStoragePathRef.current = null;
+      }
+
+      // Initialize landmark state from LANDMARK_REFERENCE step
+      if (lmStep) {
+        setLandmarkStepId(lmStep.id);
+        setLandmarkDescription(lmStep.instructionOriginal || '');
+        setLandmarkDescriptionArabic(
+          (lmStep as any).instructionTranslations?.ar || '',
+        );
+      } else {
+        setLandmarkStepId(null);
+        setLandmarkDescription('');
+        setLandmarkDescriptionArabic('');
+      }
+
       setSteps(
-        guidanceSteps.map((s) => ({
+        userSteps.map((s) => ({
           id: s.id,
           stepType: s.stepType,
           instructions: s.instructionOriginal,
@@ -218,6 +270,87 @@ export default function EditGuidanceScreen() {
     setCurrentStep('steps');
   }, []);
 
+  // --- Location / Landmark handlers ---
+
+  const ensureLocationStep = useCallback(async (): Promise<string> => {
+    if (locationStepId) return locationStepId;
+    if (!guidanceSetId) throw new Error('No guidance set');
+    const stepId = await createGuidanceStep(
+      guidanceSetId,
+      {
+        stepType: 'LOCATION_CHECK',
+        contentType: 'TEXT',
+        title: null,
+        instructionOriginal: '',
+        locationData: locationData ?? undefined,
+      },
+      0,
+    );
+    setLocationStepId(stepId);
+    return stepId;
+  }, [locationStepId, guidanceSetId, locationData]);
+
+  const handleLocationChange = useCallback(async (data: LocationData | null) => {
+    setLocationData(data);
+    if (!data) return;
+    try {
+      const stepId = await ensureLocationStep();
+      await updateGuidanceStep(stepId, { locationData: data });
+    } catch (err) {
+      console.error('[Edit] Failed to save location:', err);
+    }
+  }, [ensureLocationStep]);
+
+  const handleLocationPhotoSelected = useCallback(async (uri: string) => {
+    setLocationPhotoUri(uri);
+    setUploading(true);
+    try {
+      const stepId = await ensureLocationStep();
+      const uploaded = await uploadStepImage(guidanceSetId!, stepId, uri);
+      imageStoragePathRef.current = uploaded.storagePath;
+      await updateGuidanceStep(stepId, {
+        image: uploaded,
+        contentType: 'PHOTO',
+      });
+    } catch (err: any) {
+      console.error('[Edit] Failed to upload location photo:', err);
+      Alert.alert(t('common.error'), err?.message ?? t('edit.errorSave'));
+    } finally {
+      setUploading(false);
+    }
+  }, [ensureLocationStep, guidanceSetId, t]);
+
+  const handleLocationPhotoRemoved = useCallback(async () => {
+    const storagePath = imageStoragePathRef.current;
+    setLocationPhotoUri(null);
+    setLocationOverlays([]);
+    imageStoragePathRef.current = null;
+
+    if (storagePath && locationStepId) {
+      try {
+        await deleteStepImage(storagePath);
+        await updateGuidanceStep(locationStepId, {
+          image: null as any,
+          contentType: 'TEXT',
+          overlays: [],
+        });
+      } catch (err) {
+        console.error('[Edit] Failed to remove photo:', err);
+      }
+    }
+  }, [locationStepId]);
+
+  const handleUpdateOverlays = useCallback(async (overlays: Overlay[]) => {
+    setLocationOverlays(overlays);
+    if (locationStepId) {
+      try {
+        await updateGuidanceStep(locationStepId, { overlays });
+      } catch (err) {
+        console.error('[Edit] Failed to save overlays:', err);
+      }
+    }
+  }, [locationStepId]);
+
   // --- Steps tab actions ---
 
   const buildMetadataPayload = useCallback(() => {
@@ -237,8 +370,8 @@ export default function EditGuidanceScreen() {
     return payload;
   }, [addressType, metadata]);
 
-  const handleSave = useCallback(async () => {
-    if (!guidanceSetId || !title.trim() || !addressType) return;
+  const handleSave = useCallback(async (): Promise<boolean> => {
+    if (!guidanceSetId || !title.trim() || !addressType) return false;
     setSaving(true);
     setError(null);
     try {
@@ -251,43 +384,87 @@ export default function EditGuidanceScreen() {
         title: title.trim(),
         ...(arTitle ? { titleArabic: arTitle } : {}),
         addressType,
+        destinationCoordinates: locationData?.coordinates ?? null,
         ...metaPayload,
       });
-      const currentStepIds = steps.map((s) => s.id);
-      if (currentStepIds.length > 0) {
-        await reorderGuidanceSteps(guidanceSetId, currentStepIds);
+
+      // Save or delete landmark step
+      const hasLandmark = landmarkDescription.trim() || landmarkDescriptionArabic.trim();
+      let currentLandmarkId = landmarkStepId;
+      if (hasLandmark) {
+        if (currentLandmarkId) {
+          await updateGuidanceStep(currentLandmarkId, {
+            instructionOriginal: landmarkDescription.trim(),
+            ...(landmarkDescriptionArabic.trim()
+              ? { instructionTranslations: { ar: landmarkDescriptionArabic.trim() } }
+              : { instructionTranslations: {} }),
+          });
+        } else {
+          const lmId = await createGuidanceStep(
+            guidanceSetId,
+            {
+              stepType: 'LANDMARK_REFERENCE',
+              contentType: 'TEXT',
+              title: null,
+              instructionOriginal: landmarkDescription.trim(),
+              ...(landmarkDescriptionArabic.trim()
+                ? { instructionTranslations: { ar: landmarkDescriptionArabic.trim() } }
+                : {}),
+            },
+            1,
+          );
+          currentLandmarkId = lmId;
+          setLandmarkStepId(lmId);
+        }
+      } else if (currentLandmarkId) {
+        await deleteGuidanceStep(currentLandmarkId);
+        setLandmarkStepId(null);
+        currentLandmarkId = null;
       }
+
+      const allStepIds: string[] = [];
+      if (locationStepId) allStepIds.push(locationStepId);
+      if (currentLandmarkId) allStepIds.push(currentLandmarkId);
+      allStepIds.push(...steps.map((s) => s.id));
+      if (allStepIds.length > 0) {
+        await reorderGuidanceSteps(guidanceSetId, allStepIds);
+      }
+      return true;
     } catch (err) {
       console.error('Failed to save guidance set:', err);
       setError(t('edit.errorSave'));
+      return false;
     } finally {
       setSaving(false);
     }
-  }, [guidanceSetId, title, titleArabic, addressType, steps, buildMetadataPayload]);
+  }, [guidanceSetId, title, titleArabic, addressType, steps, buildMetadataPayload, locationData, locationStepId, landmarkDescription, landmarkDescriptionArabic, landmarkStepId]);
 
-  const handlePreviewAndPublish = useCallback(() => {
-    const hasLocationStep = steps.some(
-      (s) => s.stepType === 'LOCATION_CHECK' && !!s.imageUrl,
-    );
-    if (!hasLocationStep) {
+  const handlePreviewAndPublish = useCallback(async () => {
+    if (!locationData || !locationPhotoUri) {
       Alert.alert(
         t('preview.locationRequired'),
         t('preview.locationRequiredMessage'),
       );
       return;
     }
-    router.push(`/guidance/${guidanceSetId}/preview` as any);
-  }, [router, guidanceSetId, steps, t]);
+    const saved = await handleSave();
+    if (saved) {
+      router.push(`/guidance/${guidanceSetId}/preview` as any);
+    }
+  }, [router, guidanceSetId, locationData, locationPhotoUri, t, handleSave]);
 
   const handleAddStep = useCallback(() => {
+    const systemStepCount = (locationStepId ? 1 : 0) + (landmarkStepId ? 1 : 0);
+    const nextIndex = systemStepCount + steps.length;
     const params = new URLSearchParams();
     if (addressType) {
       params.set('addressType', addressType);
     }
+    params.set('userStepIndex', String(steps.length));
     router.push(
-      `/guidance/${guidanceSetId}/steps/${steps.length}?${params.toString()}` as any,
+      `/guidance/${guidanceSetId}/steps/${nextIndex}?${params.toString()}` as any,
     );
-  }, [router, guidanceSetId, steps.length, addressType]);
+  }, [router, guidanceSetId, steps.length, addressType, locationStepId, landmarkStepId]);
 
   const handleEditStep = useCallback(
     (stepId: string) => {
@@ -303,6 +480,14 @@ export default function EditGuidanceScreen() {
     [router, guidanceSetId, addressType],
   );
 
+  const buildAllStepIds = useCallback((userSteps: StepData[]): string[] => {
+    const ids: string[] = [];
+    if (locationStepId) ids.push(locationStepId);
+    if (landmarkStepId) ids.push(landmarkStepId);
+    ids.push(...userSteps.map((s) => s.id));
+    return ids;
+  }, [locationStepId, landmarkStepId]);
+
   const handleMoveUp = useCallback(
     async (index: number) => {
       if (index <= 0 || !guidanceSetId) return;
@@ -312,10 +497,7 @@ export default function EditGuidanceScreen() {
       newSteps[index - 1] = temp;
       setSteps(newSteps);
       try {
-        await reorderGuidanceSteps(
-          guidanceSetId,
-          newSteps.map((s) => s.id),
-        );
+        await reorderGuidanceSteps(guidanceSetId, buildAllStepIds(newSteps));
       } catch (err) {
         console.error('Failed to reorder steps:', err);
         const revert = [...newSteps];
@@ -324,7 +506,7 @@ export default function EditGuidanceScreen() {
         setSteps(revert);
       }
     },
-    [steps, guidanceSetId],
+    [steps, guidanceSetId, buildAllStepIds],
   );
 
   const handleMoveDown = useCallback(
@@ -336,10 +518,7 @@ export default function EditGuidanceScreen() {
       newSteps[index + 1] = temp;
       setSteps(newSteps);
       try {
-        await reorderGuidanceSteps(
-          guidanceSetId,
-          newSteps.map((s) => s.id),
-        );
+        await reorderGuidanceSteps(guidanceSetId, buildAllStepIds(newSteps));
       } catch (err) {
         console.error('Failed to reorder steps:', err);
         const revert = [...newSteps];
@@ -348,7 +527,7 @@ export default function EditGuidanceScreen() {
         setSteps(revert);
       }
     },
-    [steps, guidanceSetId],
+    [steps, guidanceSetId, buildAllStepIds],
   );
 
   const handleDeleteStep = useCallback(
@@ -452,24 +631,36 @@ export default function EditGuidanceScreen() {
           contentContainerStyle={[styles.stepsScrollContent, { paddingBottom: footerScrollPadding }]}
           showsVerticalScrollIndicator={false}
         >
-          {/* Address summary */}
+          {/* Address summary card */}
           {addressType && (
             <Pressable
               style={({ pressed }) => [
-                styles.addressSummary,
-                pressed && styles.addressSummaryPressed,
+                styles.addressCard,
+                pressed && styles.addressCardPressed,
               ]}
               onPress={() => setCurrentStep('title')}
             >
-              <View style={styles.addressSummaryRow}>
-                <View style={styles.addressSummaryType}>
-                  <Text style={styles.addressSummaryIcon}>
-                    {ADDRESS_TYPE_ICONS[addressType]}
-                  </Text>
-                  <Text style={styles.addressSummaryLabel}>{typeLabel}</Text>
+              {/* Card header: icon + type label + edit */}
+              <View style={styles.addressCardHeader}>
+                <View style={styles.addressCardTypeRow}>
+                  <View style={styles.addressCardIconWrap}>
+                    <Text style={styles.addressCardIcon}>
+                      {ADDRESS_TYPE_ICONS[addressType]}
+                    </Text>
+                  </View>
+                  <View style={styles.addressCardTypeInfo}>
+                    <Text style={styles.addressCardTypeLabel}>{typeLabel}</Text>
+                    <Text style={styles.addressCardTitle} numberOfLines={1}>
+                      {displayTitle}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.addressSummaryEditBtn}>
-                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                <Pressable
+                  style={styles.addressCardEditBtn}
+                  onPress={() => setCurrentStep('title')}
+                  hitSlop={8}
+                >
+                  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
                     <Path
                       d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13"
                       stroke={Colors.primary}
@@ -485,15 +676,38 @@ export default function EditGuidanceScreen() {
                       strokeLinejoin="round"
                     />
                   </Svg>
-                  <Text style={styles.addressSummaryEditText}>{t('edit.editInfo')}</Text>
-                </View>
+                  <Text style={styles.addressCardEditText}>{t('edit.editInfo')}</Text>
+                </Pressable>
               </View>
+
+              {/* Address line */}
+              {locationData?.formattedAddress && (
+                <View style={styles.addressCardLocationRow}>
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"
+                      fill={Colors.danger}
+                    />
+                    <Path d="M12 11.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" fill="#ffffff" />
+                  </Svg>
+                  <Text style={styles.addressCardLocationText} numberOfLines={2}>
+                    {locationData.formattedAddress}
+                  </Text>
+                </View>
+              )}
+
+              {/* Metadata grid */}
               {visibleMeta.length > 0 && (
-                <View style={styles.addressSummaryDetails}>
+                <View style={styles.addressCardMetaGrid}>
                   {visibleMeta.map((fc) => (
-                    <Text key={fc.field} style={styles.addressSummaryDetail}>
-                      {getFieldShortLabel(fc.field)}: {getDisplayValue(fc.field)}
-                    </Text>
+                    <View key={fc.field} style={styles.addressCardMetaItem}>
+                      <Text style={styles.addressCardMetaLabel}>
+                        {getFieldShortLabel(fc.field)}
+                      </Text>
+                      <Text style={styles.addressCardMetaValue} numberOfLines={1}>
+                        {getDisplayValue(fc.field)}
+                      </Text>
+                    </View>
                   ))}
                 </View>
               )}
@@ -511,39 +725,37 @@ export default function EditGuidanceScreen() {
           {/* Empty state or step list */}
           {steps.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>🛡️</Text>
+              <Pressable
+                style={styles.addStepButton}
+                onPress={handleAddStep}
+                disabled={saving}
+              >
+                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                  <Path
+                    d="M12 5V19M5 12H19"
+                    stroke={Colors.textSecondary}
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </Svg>
+                <Text style={styles.addStepButtonText}>{t('edit.addFirstStep')}</Text>
+              </Pressable>
               <Text style={styles.emptyTitle}>
-                {t('edit.stepsSubtitle')}
+                {t('edit.emptyTitle')}
               </Text>
               <Text style={styles.emptySubtitle}>
-                {t('edit.stepsDescription1')}
+                {t('edit.emptySubtitle')}
               </Text>
               <View style={styles.examplesList}>
-                <View style={styles.exampleRow}>
-                  <Text style={styles.exampleEmoji}>🖼️</Text>
-                  <Text style={styles.exampleText}>
-                    {t('edit.stepsDescription2')}
-                  </Text>
-                </View>
-                <View style={styles.exampleRow}>
-                  <Text style={styles.exampleEmoji}>📋</Text>
-                  <Text style={styles.exampleText}>
-                    {t('edit.stepsDescription3')}
-                  </Text>
-                </View>
-                <View style={styles.exampleRow}>
-                  <Text style={styles.exampleEmoji}>📌</Text>
-                  <Text style={styles.exampleText}>
-                    {t('edit.stepsDescription5')}
-                  </Text>
-                </View>
-                <View style={styles.exampleRow}>
-                  <Text style={styles.exampleEmoji}>📍</Text>
-                  <Text style={styles.exampleText}>
-                    {t('edit.stepsDescription4')}
-                  </Text>
-                </View>
+                <Text style={styles.exampleText}>📷  {t('edit.emptyBullet1')}</Text>
+                <Text style={styles.exampleText}>↗️  {t('edit.emptyBullet2')}</Text>
+                <Text style={styles.exampleText}>📝  {t('edit.emptyBullet3')}</Text>
+                <Text style={styles.exampleText}>🚗  {t('edit.emptyBullet4')}</Text>
               </View>
+              <Text style={styles.emptyHint}>
+                {t('edit.emptyHint')}
+              </Text>
             </View>
           ) : (
             <View style={styles.stepsList}>
@@ -566,25 +778,25 @@ export default function EditGuidanceScreen() {
             </View>
           )}
 
-          {/* Add step button */}
-          <Pressable
-            style={styles.addStepButton}
-            onPress={handleAddStep}
-            disabled={saving}
-          >
-            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-              <Path
-                d="M12 5V19M5 12H19"
-                stroke={Colors.textSecondary}
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </Svg>
-            <Text style={styles.addStepButtonText}>
-              {steps.length === 0 ? t('edit.addFirstStep') : t('edit.addStep')}
-            </Text>
-          </Pressable>
+          {/* Add step button (shown only when steps exist) */}
+          {steps.length > 0 && (
+            <Pressable
+              style={styles.addStepButton}
+              onPress={handleAddStep}
+              disabled={saving}
+            >
+              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M12 5V19M5 12H19"
+                  stroke={Colors.textSecondary}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
+              <Text style={styles.addStepButtonText}>{t('edit.addStep')}</Text>
+            </Pressable>
+          )}
 
           {/* Divider */}
           <View style={styles.divider} />
@@ -658,6 +870,18 @@ export default function EditGuidanceScreen() {
             metadata={metadata}
             onMetadataChange={handleMetadataChange}
             onContinue={handleMetadataContinue}
+            locationData={locationData}
+            onLocationChange={handleLocationChange}
+            locationPhotoUri={locationPhotoUri}
+            onPhotoSelected={handleLocationPhotoSelected}
+            onPhotoRemoved={handleLocationPhotoRemoved}
+            locationOverlays={locationOverlays}
+            onUpdateLocationOverlays={handleUpdateOverlays}
+            landmarkDescription={landmarkDescription}
+            onLandmarkDescriptionChange={setLandmarkDescription}
+            landmarkDescriptionArabic={landmarkDescriptionArabic}
+            onLandmarkDescriptionArabicChange={setLandmarkDescriptionArabic}
+            uploading={uploading}
           />
         );
       case 'steps':
@@ -705,18 +929,11 @@ export default function EditGuidanceScreen() {
       <View style={styles.header}>
         <View style={styles.headerNav}>
           <Pressable onPress={handleBack} style={styles.headerButton} hitSlop={8}>
-            <Text style={styles.headerBackIcon}>←</Text>
-          </Pressable>
-          <Pressable
-            onPress={handleGoToDashboard}
-            style={styles.headerButton}
-            hitSlop={8}
-          >
-            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-              <Path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-              <Path d="M9 22V12H15V22" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+              <Path d="M15 18L9 12L15 6" stroke={Colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
           </Pressable>
+          <HomeButton onPress={handleGoToDashboard} />
         </View>
 
         <View style={styles.headerInfo}>
@@ -766,12 +983,9 @@ export default function EditGuidanceScreen() {
       />
 
       {/* Step content */}
-      <KeyboardAvoidingView
-        style={styles.stepContent}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+      <View style={styles.stepContent}>
         {renderStep()}
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -859,10 +1073,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: BorderRadius.md,
   },
-  headerBackIcon: {
-    fontSize: 20,
-    color: Colors.textSecondary,
-  },
   headerInfo: {
     flex: 1,
   },
@@ -946,56 +1156,122 @@ const styles = StyleSheet.create({
   stepsScrollContent: {
     padding: Spacing.xl,
   },
-  addressSummary: {
-    backgroundColor: Colors.background,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    marginBottom: Spacing.lg,
-    gap: 6,
-  },
-  addressSummaryPressed: {
+  addressCard: {
     backgroundColor: Colors.surface,
-    borderColor: Colors.primary,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    gap: Spacing.md,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
-  addressSummaryRow: {
+  addressCardPressed: {
+    backgroundColor: '#FAFAFA',
+  },
+  addressCardHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
   },
-  addressSummaryType: {
+  addressCardTypeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.md,
     flex: 1,
   },
-  addressSummaryEditBtn: {
+  addressCardIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addressCardIcon: {
+    fontSize: 20,
+  },
+  addressCardTypeInfo: {
+    flex: 1,
+    gap: 1,
+  },
+  addressCardTypeLabel: {
+    fontSize: FontSize.xs,
+    fontWeight: '600',
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  addressCardTitle: {
+    fontSize: FontSize.base,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  addressCardEditBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    backgroundColor: Colors.primaryBg,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: BorderRadius.full,
   },
-  addressSummaryEditText: {
+  addressCardEditText: {
     fontSize: FontSize.xs,
     fontWeight: '600',
     color: Colors.primary,
   },
-  addressSummaryIcon: {
-    fontSize: 18,
+  addressCardLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: Colors.background,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.md,
   },
-  addressSummaryLabel: {
+  addressCardLocationText: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    flex: 1,
+    lineHeight: 19,
+  },
+  addressCardMetaGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 1,
+    backgroundColor: Colors.border,
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+  },
+  addressCardMetaItem: {
+    backgroundColor: Colors.background,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 8,
+    minWidth: '30%',
+    flexGrow: 1,
+    flexBasis: '30%',
+  },
+  addressCardMetaLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    marginBottom: 2,
+  },
+  addressCardMetaValue: {
     fontSize: FontSize.sm,
     fontWeight: '500',
     color: Colors.text,
-  },
-  addressSummaryDetails: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.md,
-  },
-  addressSummaryDetail: {
-    fontSize: FontSize.xs,
-    color: Colors.textSecondary,
   },
   stepsHeader: {
     flexDirection: 'row',
@@ -1025,42 +1301,39 @@ const styles = StyleSheet.create({
 
   emptyState: {
     alignItems: 'center',
-    paddingVertical: Spacing.xxl,
-  },
-  emptyIcon: {
-    fontSize: 36,
-    marginBottom: Spacing.lg,
+    paddingVertical: Spacing.md,
   },
   emptyTitle: {
-    fontSize: FontSize.lg,
+    fontSize: FontSize.base,
     fontWeight: '600',
     color: Colors.text,
     textAlign: 'center',
-    marginBottom: Spacing.sm,
+    marginBottom: 4,
   },
   emptySubtitle: {
     fontSize: FontSize.sm,
     color: Colors.textSecondary,
     textAlign: 'center',
+    marginBottom: Spacing.md,
+  },
+  emptyHint: {
+    fontSize: FontSize.sm,
+    color: Colors.primary,
+    fontWeight: '500',
+    textAlign: 'center',
     marginBottom: Spacing.lg,
+    lineHeight: 20,
   },
   examplesList: {
-    gap: Spacing.md,
+    gap: 6,
     alignSelf: 'stretch',
-    paddingHorizontal: Spacing.lg,
-  },
-  exampleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  exampleEmoji: {
-    fontSize: 18,
+    paddingHorizontal: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   exampleText: {
     fontSize: FontSize.sm,
     color: Colors.textSecondary,
-    flex: 1,
+    lineHeight: 22,
   },
 
   stepsList: {
@@ -1070,6 +1343,7 @@ const styles = StyleSheet.create({
   addStepButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'stretch',
     justifyContent: 'center',
     gap: 8,
     borderWidth: 1.5,
@@ -1077,7 +1351,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderRadius: BorderRadius.lg,
     paddingVertical: 14,
-    marginTop: Spacing.lg,
+    marginVertical: Spacing.md,
     backgroundColor: Colors.surface,
   },
   addStepButtonText: {
@@ -1089,7 +1363,7 @@ const styles = StyleSheet.create({
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: Colors.border,
-    marginVertical: Spacing.xl,
+    marginVertical: Spacing.md,
   },
 
   deleteButton: {

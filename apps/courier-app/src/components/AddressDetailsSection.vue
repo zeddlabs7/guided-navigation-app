@@ -382,8 +382,8 @@ onMounted(() => {
 }
 
 .address-line-label {
-  font-size: clamp(11px, 1.8dvh, 12px);
-  font-weight: 500;
+  font-size: clamp(15px, 3dvh, 17px);
+  font-weight: 600;
   color: var(--color-text-muted);
 }
 

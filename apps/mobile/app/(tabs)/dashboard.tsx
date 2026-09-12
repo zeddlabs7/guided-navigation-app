@@ -8,10 +8,12 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import Svg, { Path, Circle } from 'react-native-svg';
 import type { GuidanceStatus } from '@guidenav/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGuidanceSets } from '@/hooks/useGuidanceSets';
@@ -151,6 +153,20 @@ export default function DashboardScreen() {
             </Text>
           </View>
 
+          <Pressable
+            style={dashStyles.preferencesLink}
+            onPress={() => router.push('/settings' as any)}
+          >
+            <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+              <Path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z" stroke={Colors.primary} strokeWidth={1.5} />
+              <Circle cx={12} cy={12} r={3} stroke={Colors.primary} strokeWidth={1.5} />
+            </Svg>
+            <Text style={dashStyles.preferencesText}>{t('dashboard.updatePreferences')}</Text>
+            <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
+              <Path d="M9 18l6-6-6-6" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            </Svg>
+          </Pressable>
+
           <SearchInput value={searchQuery} onChangeText={setSearchQuery} />
           <FilterTabs
             activeFilter={activeFilter}
@@ -180,6 +196,28 @@ export default function DashboardScreen() {
     </SafeAreaView>
   );
 }
+
+const dashStyles = StyleSheet.create({
+  preferencesLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginHorizontal: Spacing.xl,
+    marginTop: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.full,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  preferencesText: {
+    fontSize: FontSize.sm,
+    fontWeight: '500',
+    color: Colors.primary,
+  },
+});
 
 const styles = StyleSheet.create({
   container: {

@@ -4,9 +4,9 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  ScrollView,
   Pressable,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useTranslation } from 'react-i18next';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { validateGuidanceTitle } from '@guidenav/core';
@@ -39,13 +39,12 @@ export function TitleStep({ title, titleArabic, onTitleChange, onTitleArabicChan
   }, [validation.valid, onContinue]);
 
   return (
-    <View style={styles.flex}>
-      <ScrollView
-        style={styles.flex}
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="interactive"
-      >
+    <KeyboardAwareScrollView
+      style={styles.flex}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+    >
         <Text style={styles.sectionTitle}>{t('create.titleLabel')}</Text>
 
         <View style={styles.fieldWrapper}>
@@ -100,8 +99,7 @@ export function TitleStep({ title, titleArabic, onTitleChange, onTitleArabicChan
             {t('create.continue')}
           </Text>
         </Pressable>
-      </ScrollView>
-    </View>
+    </KeyboardAwareScrollView>
   );
 }
 

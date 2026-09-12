@@ -105,6 +105,8 @@
     "saveDraft": "حفظ كمسودة",
     "saving": "جارٍ الحفظ...",
     "errorSave": "فشل حفظ المسودة. يرجى المحاولة مرة أخرى.",
+    "waitForUpload": "يرجى انتظار انتهاء رفع الصورة.",
+    "uploadFailedRetry": "فشل رفع الصورة. يرجى إعادة المحاولة أو إزالة الصورة قبل المتابعة.",
     "titleLabel": "تفاصيل العنوان",
     "titleField": "عنوان المكان",
     "titleRequired": "العنوان مطلوب",
@@ -124,7 +126,29 @@
     "stepsDescription3": "تعليمات لمواقف السيارات والبوابات ونقاط الدخول",
     "stepsDescription4": "علامات تبرز المعالم المهمة",
     "stepsDescription5": "خطوة الموقع مع صورة مطلوبة للنشر",
-    "addFirstStep": "إضافة أول خطوة"
+    "addFirstStep": "إضافة أول خطوة",
+    "locationPinLabel": "موقع التسليم على الخريطة",
+    "locationPinHelper": "ضع الدبوس حيث يجب أن يصل السائق.",
+    "locationPinRequired": "موقع التسليم مطلوب",
+    "locationPhotoLabel": "صورة الموقع",
+    "locationPhotoHelper": "أضف صورة واضحة للمبنى أو البوابة أو المدخل أو منطقة التسليم.",
+    "locationPhotoRequired": "صورة الموقع مطلوبة",
+    "landmarkLabel": "معلم قريب (اختياري)",
+    "landmarkPhotoLabel": "صورة المعلم",
+    "landmarkDescriptionLabel": "وصف المعلم",
+    "landmarkDescriptionPlaceholder": "مثال: بجانب المسجد الأزرق، مقابل محطة الوقود...",
+    "landmarkDescriptionArabicLabel": "الوصف بالعربية (اختياري)",
+    "landmarkDescriptionArabicPlaceholder": "أضف وصف المعلم بالعربية...",
+    "landmarkHelper": "أضف وصف لمعلم قريب لمساعدة السائقين في العثور على المنطقة.",
+    "newAddressCreated": "تم إنشاء العنوان الجديد",
+    "readyToPublish": "جاهز للنشر",
+    "readyToPublishDescription": "لقد أضفت موقع التسليم والصورة المطلوبة.\n\nيمكنك النشر الآن أو إضافة خطوات إضافية لتسهيل التوصيل على السائقين.",
+    "publishAddress": "نشر العنوان",
+    "addGuidanceSteps": "إضافة خطوات إرشادية",
+    "suggestedSteps": "خطوات اختيارية مقترحة:",
+    "publishing": "جارٍ النشر...",
+    "saveDraftBottom": "حفظ كمسودة",
+    "dropOffLocation": "موقع التسليم"
   },
   "edit": {
     "title": "تعديل العنوان",
@@ -151,7 +175,14 @@
     "deleteAddressTitle": "حذف العنوان",
     "deleteAddressMessage": "هل أنت متأكد أنك تريد حذف هذا العنوان وجميع خطواته؟ لا يمكن التراجع عن هذا.",
     "errorDelete": "فشل الحذف. يرجى المحاولة مرة أخرى.",
-    "errorSave": "فشل الحفظ. يرجى المحاولة مرة أخرى."
+    "errorSave": "فشل الحفظ. يرجى المحاولة مرة أخرى.",
+    "emptyTitle": "أرشد السائقين إلى بابك",
+    "emptySubtitle": "أضف خطوات مصورة ليتمكن سائقو التوصيل من العثور عليك بسهولة",
+    "emptyBullet1": "التقط صوراً على طول الطريق إلى موقعك",
+    "emptyBullet2": "أضف أسهماً وعلامات لإبراز المنعطفات الرئيسية",
+    "emptyBullet3": "اكتب تعليمات قصيرة لكل خطوة",
+    "emptyBullet4": "أضف نصائح للمواقف أو أكواد البوابات أو معلومات الدخول",
+    "emptyHint": "يمكنك النشر الآن أو إضافة خطوات إرشادية لمساعدة السائقين في العثور عليك."
   },
   "preview": {
     "title": "معاينة ونشر",
@@ -176,7 +207,9 @@
     "unpublishConfirm": "إلغاء النشر",
     "modified": "تم التعديل {{date}}",
     "overlays": "تراكبات",
-    "overlay": "تراكب"
+    "overlay": "تراكب",
+    "goHome": "الرئيسية",
+    "backToHome": "العودة إلى الرئيسية"
   },
   "share": {
     "title": "رابط المشاركة",
@@ -304,5 +337,23 @@
   "whatsapp": {
     "notAvailable": "واتساب غير متاح",
     "notAvailableMessage": "تعذر فتح واتساب. تأكد من أنه مثبت ثم حاول مرة أخرى."
+  },
+  "support": {
+    "title": "دعم العملاء",
+    "contactSupport": "تواصل مع الدعم",
+    "phone": "رقم الهاتف",
+    "email": "البريد الإلكتروني",
+    "emailPlaceholder": "your@email.com",
+    "emailRequired": "البريد الإلكتروني مطلوب",
+    "emailInvalid": "يرجى إدخال بريد إلكتروني صالح",
+    "description": "كيف يمكننا مساعدتك؟",
+    "descriptionPlaceholder": "صف مشكلتك أو سؤالك...",
+    "descriptionRequired": "يرجى وصف مشكلتك",
+    "attachImages": "إرفاق صور (اختياري)",
+    "maxImages": "حتى ٥ صور",
+    "submit": "إرسال الطلب",
+    "submitting": "جارٍ الإرسال...",
+    "successTitle": "تم إرسال الطلب",
+    "successMessage": "لقد استلمنا طلبك وسنعود إليك قريبًا."
   }
 }

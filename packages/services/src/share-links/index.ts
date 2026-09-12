@@ -3,6 +3,7 @@ import {
   doc,
   getDocs,
   setDoc,
+  deleteDoc,
   updateDoc,
   writeBatch,
   query,
@@ -63,27 +64,37 @@ export async function getShareLinkForGuidance(guidanceSetId: string): Promise<Sh
     return null;
   }
 
-  const docSnap = querySnapshot.docs[0];
-  const data = docSnap.data();
+  const now = new Date();
+  const expiredDocs: typeof querySnapshot.docs = [];
+  let activeLink: ShareLink | null = null;
 
-  if (data.expiresAt && new Date(data.expiresAt) < new Date()) {
-    return null;
+  for (const docSnap of querySnapshot.docs) {
+    const data = docSnap.data();
+    if (data.expiresAt && new Date(data.expiresAt) < now) {
+      expiredDocs.push(docSnap);
+    } else if (!activeLink) {
+      activeLink = { id: docSnap.id, ...data } as ShareLink;
+    }
   }
 
-  return { id: docSnap.id, ...data } as ShareLink;
+  if (expiredDocs.length > 0) {
+    const batch = writeBatch(db);
+    expiredDocs.forEach((docSnap) => batch.delete(docSnap.ref));
+    batch.commit().catch((err) =>
+      console.error('Failed to delete expired share links:', err),
+    );
+  }
+
+  return activeLink;
 }
 
-export async function revokeShareLink(shareLinkId: string): Promise<void> {
+export async function deleteShareLink(shareLinkId: string): Promise<void> {
   const db = getFirebaseFirestore();
   const docRef = doc(db, SHARE_LINKS_COLLECTION, shareLinkId);
-  await updateDoc(docRef, {
-    status: 'REVOKED',
-    revokedAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+  await deleteDoc(docRef);
 }
 
-export async function revokeAllLinksForGuidance(guidanceSetId: string): Promise<void> {
+export async function deleteAllLinksForGuidance(guidanceSetId: string): Promise<void> {
   const db = getFirebaseFirestore();
   const q = query(
     collection(db, SHARE_LINKS_COLLECTION),
@@ -95,13 +106,8 @@ export async function revokeAllLinksForGuidance(guidanceSetId: string): Promise<
   if (querySnapshot.empty) return;
 
   const batch = writeBatch(db);
-  const now = serverTimestamp();
   querySnapshot.docs.forEach((docSnap) => {
-    batch.update(docSnap.ref, {
-      status: 'REVOKED',
-      revokedAt: now,
-      updatedAt: now,
-    });
+    batch.delete(docSnap.ref);
   });
 
   await batch.commit();

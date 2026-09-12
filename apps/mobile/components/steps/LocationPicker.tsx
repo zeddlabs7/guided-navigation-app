@@ -35,6 +35,7 @@ interface LocationPickerProps {
   label?: string;
   placeholder?: string;
   defaultCenter?: Coordinates;
+  showRequired?: boolean;
 }
 
 async function reverseGeocode(
@@ -118,6 +119,7 @@ export function LocationPicker({
   label = 'Address Location',
   placeholder = 'Search for the delivery address...',
   defaultCenter = DEFAULT_CENTER,
+  showRequired = true,
 }: LocationPickerProps) {
   const { t } = useTranslation();
   const mapRef = useRef<MapView>(null);
@@ -311,7 +313,7 @@ export function LocationPicker({
   return (
     <View style={styles.container}>
       <Text style={styles.label}>
-        {label.toUpperCase()} <Text style={styles.required}>*</Text>
+        {label.toUpperCase()}{showRequired && <Text style={styles.required}> *</Text>}
       </Text>
 
       {/* Search row */}

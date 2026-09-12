@@ -49,7 +49,7 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update: if isAuthenticated();
-      allow delete: if false;
+      allow delete: if isAuthenticated();
     }
 
     // Feedback Events collection - append-only for couriers
@@ -63,6 +63,16 @@ service cloud.firestore {
     match /analyticsEvents/{eventId} {
       allow read: if isAuthenticated();
       allow create: if true;
+      allow update, delete: if false;
+    }
+
+    // Support Requests collection
+    // - Owner can read their own requests
+    // - Authenticated users can create (must set own userId)
+    // - No updates or deletes
+    match /supportRequests/{requestId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if false;
     }
 

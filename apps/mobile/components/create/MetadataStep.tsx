@@ -4,22 +4,42 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  ScrollView,
   Pressable,
+  ActivityIndicator,
+  type LayoutChangeEvent,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useTranslation } from 'react-i18next';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import {
   getMetadataFieldConfigs,
   getMetadataSectionTitle,
 } from '@guidenav/types';
-import type { AddressType, MetadataFieldConfig, UnitType } from '@guidenav/types';
+import type { AddressType, MetadataFieldConfig, UnitType, LocationData, Overlay } from '@guidenav/types';
+import { LocationPicker } from '@/components/steps/LocationPicker';
+import { PhotoEditorWithUpload } from '@/components/steps/PhotoEditorWithUpload';
+import { ScreenFooter, useFooterScrollPadding } from '@/components/ui/ScreenFooter';
 
 interface MetadataStepProps {
   addressType: AddressType;
   metadata: Record<string, string>;
   onMetadataChange: (field: string, value: string) => void;
   onContinue: () => void;
+  locationData?: LocationData | null;
+  onLocationChange?: (data: LocationData | null) => void;
+  locationPhotoUri?: string | null;
+  onPhotoSelected?: (uri: string) => void;
+  onPhotoRemoved?: () => void;
+  locationOverlays?: Overlay[];
+  onUpdateLocationOverlays?: (overlays: Overlay[]) => void;
+  landmarkDescription?: string;
+  onLandmarkDescriptionChange?: (text: string) => void;
+  landmarkDescriptionArabic?: string;
+  onLandmarkDescriptionArabicChange?: (text: string) => void;
+  uploading?: boolean;
+  uploadFailed?: boolean;
+  onRetryUpload?: () => void;
+  saving?: boolean;
 }
 
 export function MetadataStep({
@@ -27,11 +47,35 @@ export function MetadataStep({
   metadata,
   onMetadataChange,
   onContinue,
+  locationData,
+  onLocationChange,
+  locationPhotoUri,
+  onPhotoSelected,
+  onPhotoRemoved,
+  locationOverlays,
+  onUpdateLocationOverlays,
+  landmarkDescription,
+  onLandmarkDescriptionChange,
+  landmarkDescriptionArabic,
+  onLandmarkDescriptionArabicChange,
+  uploading,
+  uploadFailed,
+  onRetryUpload,
+  saving,
 }: MetadataStepProps) {
   const { t } = useTranslation();
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const inputRefs = useRef<Record<string, TextInput | null>>({});
+  const scrollRef = useRef<any>(null);
+
+  const [locationPinTouched, setLocationPinTouched] = useState(false);
+  const [locationPinError, setLocationPinError] = useState<string | null>(null);
+  const [locationPhotoTouched, setLocationPhotoTouched] = useState(false);
+  const [locationPhotoError, setLocationPhotoError] = useState<string | null>(null);
+
+  const locationPinLayoutY = useRef(0);
+  const locationPhotoLayoutY = useRef(0);
 
   const fieldConfigs = useMemo(
     () => getMetadataFieldConfigs(addressType),
@@ -90,6 +134,8 @@ export function MetadataStep({
     [fieldConfigs, validateField],
   );
 
+  const showLocationFields = Boolean(onLocationChange);
+
   const handleContinue = useCallback(() => {
     const newErrors: Record<string, string> = {};
     const newTouched = new Set(touchedFields);
@@ -106,10 +152,39 @@ export function MetadataStep({
     setTouchedFields(newTouched);
     setFieldErrors(newErrors);
 
-    if (allValid) {
-      onContinue();
+    if (showLocationFields) {
+      setLocationPinTouched(true);
+      setLocationPhotoTouched(true);
+
+      let locPinErr: string | null = null;
+      let locPhotoErr: string | null = null;
+
+      if (!locationData) {
+        locPinErr = t('create.locationPinRequired');
+        allValid = false;
+      }
+      if (!locationPhotoUri) {
+        locPhotoErr = t('create.locationPhotoRequired');
+        allValid = false;
+      }
+
+      setLocationPinError(locPinErr);
+      setLocationPhotoError(locPhotoErr);
+
+      if (!allValid) {
+        if (locPinErr) {
+          scrollRef.current?.scrollTo({ y: locationPinLayoutY.current, animated: true });
+        } else if (locPhotoErr) {
+          scrollRef.current?.scrollTo({ y: locationPhotoLayoutY.current, animated: true });
+        }
+        return;
+      }
     }
-  }, [visibleFields, validateField, touchedFields, onContinue]);
+
+    if (!allValid) return;
+
+    onContinue();
+  }, [visibleFields, validateField, touchedFields, onContinue, locationData, locationPhotoUri, showLocationFields]);
 
   const focusNextField = useCallback(
     (currentField: string) => {
@@ -210,11 +285,23 @@ export function MetadataStep({
     );
   };
 
+  const handleLocationPinLayout = (e: LayoutChangeEvent) => {
+    locationPinLayoutY.current = e.nativeEvent.layout.y;
+  };
+
+  const footerScrollPadding = useFooterScrollPadding();
+
+  const handleLocationPhotoLayout = (e: LayoutChangeEvent) => {
+    locationPhotoLayoutY.current = e.nativeEvent.layout.y;
+  };
+
   return (
     <View style={styles.flex}>
-      <ScrollView
+      <KeyboardAwareScrollView
+        ref={scrollRef}
         style={styles.flex}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: footerScrollPadding }]}
+        bottomOffset={62}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         showsVerticalScrollIndicator={false}
@@ -227,17 +314,124 @@ export function MetadataStep({
         </Text>
 
         <View style={styles.fields}>
-          {visibleFields.map((fc, idx) =>
+          {visibleFields.map((fc) =>
             fc.field === 'unitType'
               ? renderUnitTypePicker(fc)
               : renderTextField(fc, textFields.indexOf(fc)),
           )}
         </View>
 
-        <Pressable style={styles.continueButton} onPress={handleContinue}>
-          <Text style={styles.continueButtonText}>{t('create.continueToSteps')}</Text>
+        {showLocationFields && (
+          <>
+            {/* Delivery Location Section — distinct card */}
+            <View style={styles.locationSection} onLayout={handleLocationPinLayout}>
+              <Text style={styles.locationSectionTitle}>
+                {t('create.locationPinLabel')}
+                <Text style={styles.required}> *</Text>
+              </Text>
+              <Text style={styles.sectionHelper}>
+                {t('create.locationPinHelper')}
+              </Text>
+
+              <LocationPicker
+                value={locationData ?? null}
+                onChange={(data) => {
+                  onLocationChange?.(data);
+                  if (data) setLocationPinError(null);
+                }}
+                disabled={false}
+                label={t('location.title')}
+                placeholder={t('location.searchPlaceholder')}
+                showRequired={false}
+              />
+              {locationPinTouched && locationPinError && (
+                <Text style={styles.errorText}>{locationPinError}</Text>
+              )}
+
+              <View style={styles.locationDivider} />
+
+              <View onLayout={handleLocationPhotoLayout}>
+                <Text style={styles.locationSubLabel}>
+                  {t('create.locationPhotoLabel')}
+                </Text>
+                <Text style={styles.sectionHelper}>
+                  {t('create.locationPhotoHelper')}
+                </Text>
+                <PhotoEditorWithUpload
+                  imageUri={locationPhotoUri ?? null}
+                  overlays={locationOverlays ?? []}
+                  uploading={uploading ?? false}
+                  uploadFailed={uploadFailed}
+                  label={t('create.locationPhotoLabel')}
+                  onImageSelected={onPhotoSelected!}
+                  onRemove={onPhotoRemoved!}
+                  onUpdateOverlays={onUpdateLocationOverlays!}
+                  onRetryUpload={onRetryUpload}
+                />
+                {locationPhotoTouched && locationPhotoError && (
+                  <Text style={styles.errorText}>{locationPhotoError}</Text>
+                )}
+              </View>
+            </View>
+
+            {/* Nearby Landmark (optional) */}
+            <View style={styles.sectionDivider} />
+            <Text style={styles.landmarkTitle}>
+              {t('create.landmarkLabel')}
+            </Text>
+            <Text style={styles.sectionHelper}>
+              {t('create.landmarkHelper')}
+            </Text>
+
+            <View style={styles.fieldWrapper}>
+              <Text style={styles.fieldLabel}>
+                {t('create.landmarkDescriptionLabel')}
+              </Text>
+              <TextInput
+                style={[styles.input, styles.textarea]}
+                value={landmarkDescription ?? ''}
+                onChangeText={onLandmarkDescriptionChange}
+                placeholder={t('create.landmarkDescriptionPlaceholder')}
+                placeholderTextColor={Colors.textMuted}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            </View>
+
+            <View style={styles.fieldWrapper}>
+              <Text style={styles.fieldLabel}>
+                {t('create.landmarkDescriptionArabicLabel')}
+              </Text>
+              <TextInput
+                style={[styles.input, styles.textarea, styles.rtlInput]}
+                value={landmarkDescriptionArabic ?? ''}
+                onChangeText={onLandmarkDescriptionArabicChange}
+                placeholder={t('create.landmarkDescriptionArabicPlaceholder')}
+                placeholderTextColor={Colors.textMuted}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+                textAlign="right"
+              />
+            </View>
+          </>
+        )}
+      </KeyboardAwareScrollView>
+
+      <ScreenFooter>
+        <Pressable
+          style={[styles.continueButton, (saving || uploading) && styles.continueButtonDisabled]}
+          onPress={handleContinue}
+          disabled={saving || uploading}
+        >
+          {saving ? (
+            <ActivityIndicator color="#ffffff" size="small" />
+          ) : (
+            <Text style={styles.continueButtonText}>{t('create.continue')}</Text>
+          )}
         </Pressable>
-      </ScrollView>
+      </ScreenFooter>
     </View>
   );
 }
@@ -249,7 +443,7 @@ const styles = StyleSheet.create({
   content: {
     padding: Spacing.xl,
     paddingTop: Spacing.xl,
-    paddingBottom: Spacing.xxxl,
+    paddingBottom: Spacing.xl,
   },
   sectionTitle: {
     fontSize: FontSize.xl,
@@ -265,10 +459,10 @@ const styles = StyleSheet.create({
   },
   fields: {
     gap: Spacing.lg,
-    marginBottom: Spacing.xl,
   },
   fieldWrapper: {
     gap: 6,
+    marginBottom: Spacing.md,
   },
   fieldLabel: {
     fontSize: FontSize.sm,
@@ -325,10 +519,64 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.full,
     paddingVertical: 13,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  continueButtonDisabled: {
+    opacity: 0.6,
   },
   continueButtonText: {
     fontSize: FontSize.base,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  locationSection: {
+    marginTop: Spacing.xl,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  locationSectionTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+  },
+  locationSubLabel: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 2,
+  },
+  locationDivider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginVertical: Spacing.md,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginVertical: Spacing.xl,
+  },
+  sectionHelper: {
+    fontSize: FontSize.xs,
+    color: Colors.textMuted,
+    lineHeight: 16,
+    marginBottom: Spacing.md,
+  },
+  landmarkTitle: {
+    fontSize: FontSize.base,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+  },
+  textarea: {
+    minHeight: 80,
+  },
+  rtlInput: {
+    writingDirection: 'rtl',
   },
 });

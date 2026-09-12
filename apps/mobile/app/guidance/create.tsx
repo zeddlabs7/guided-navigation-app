@@ -1,24 +1,31 @@
-import { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { useState, useCallback, useMemo, useRef } from 'react';
+import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import Svg, { Path } from 'react-native-svg';
+import { HomeButton } from '@/components/ui/HomeButton';
 import { validateGuidanceTitle } from '@guidenav/core';
 import { requiresMetadata as checkRequiresMetadata } from '@guidenav/types';
-import type { AddressType, CreateGuidanceSetInput } from '@guidenav/types';
+import type { AddressType, CreateGuidanceSetInput, LocationData, Overlay } from '@guidenav/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { createGuidanceSet } from '@/services/guidance';
+import {
+  createGuidanceSet,
+  createGuidanceStep,
+  updateGuidanceSet,
+  updateGuidanceStep,
+  uploadStepImage,
+  deleteStepImage,
+} from '@/services/guidance';
 import {
   StepIndicator,
   TitleStep,
   AddressTypeStep,
   MetadataStep,
-  StepsOverviewStep,
 } from '@/components/create';
 
-type FormStep = 'title' | 'addressType' | 'metadata' | 'steps';
+type FormStep = 'title' | 'addressType' | 'metadata';
 
 export default function CreateGuidanceScreen() {
   const router = useRouter();
@@ -32,6 +39,25 @@ export default function CreateGuidanceScreen() {
   const [metadata, setMetadata] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
+  // Early-creation IDs (refs for mutex correctness, state for re-renders)
+  const [guidanceSetId, setGuidanceSetId] = useState<string | null>(null);
+  const [locationStepId, setLocationStepId] = useState<string | null>(null);
+  const guidanceSetIdRef = useRef<string | null>(null);
+  const locationStepIdRef = useRef<string | null>(null);
+  const creatingRef = useRef(false);
+
+  // Location & photo state
+  const [locationData, setLocationData] = useState<LocationData | null>(null);
+  const [locationPhotoUri, setLocationPhotoUri] = useState<string | null>(null);
+  const [locationOverlays, setLocationOverlays] = useState<Overlay[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadFailed, setUploadFailed] = useState(false);
+  const imageStoragePathRef = useRef<string | null>(null);
+
+  // Landmark state
+  const [landmarkDescription, setLandmarkDescription] = useState('');
+  const [landmarkDescriptionArabic, setLandmarkDescriptionArabic] = useState('');
+
   const displayTitle = title.trim() || t('create.untitledAddress');
 
   const stepIndicatorConfig = useMemo(
@@ -39,10 +65,98 @@ export default function CreateGuidanceScreen() {
       { key: 'title', label: t('create.stepTitle'), enabled: true },
       { key: 'addressType', label: t('create.stepType'), enabled: true },
       { key: 'metadata', label: t('create.stepDetails'), enabled: addressType !== null },
-      { key: 'steps', label: t('create.stepSteps'), enabled: addressType !== null },
+      { key: 'steps', label: t('create.stepSteps'), enabled: false },
     ],
     [addressType, t],
   );
+
+  const buildMetadataPayload = useCallback((): Partial<CreateGuidanceSetInput> => {
+    const payload: Partial<CreateGuidanceSetInput> = {};
+    if (metadata.buildingNumber) payload.buildingNumber = metadata.buildingNumber;
+    if (metadata.floorNumber) payload.floorNumber = metadata.floorNumber;
+    if (metadata.doorNumber) payload.doorNumber = metadata.doorNumber;
+    if (metadata.compoundName) payload.compoundName = metadata.compoundName;
+    if (metadata.gateNumber) payload.gateNumber = metadata.gateNumber;
+    if (metadata.unitType) payload.unitType = metadata.unitType as 'villa' | 'apartment';
+    if (metadata.villaNumber) payload.villaNumber = metadata.villaNumber;
+    if (metadata.apartmentNumber) payload.apartmentNumber = metadata.apartmentNumber;
+    if (metadata.locationDescription) payload.locationDescription = metadata.locationDescription;
+    return payload;
+  }, [metadata]);
+
+  // ── Shared helper: ensure guidance set + LOCATION_CHECK step exist ──
+
+  const ensureGuidanceSetAndStep = useCallback(async (
+    locData?: LocationData | null,
+  ): Promise<{ setId: string; stepId: string }> => {
+    // Use refs (not state) so concurrent callers see the latest value
+    if (guidanceSetIdRef.current && locationStepIdRef.current) {
+      return { setId: guidanceSetIdRef.current, stepId: locationStepIdRef.current };
+    }
+
+    if (creatingRef.current) {
+      await new Promise<void>((resolve) => {
+        const check = setInterval(() => {
+          if (!creatingRef.current) {
+            clearInterval(check);
+            resolve();
+          }
+        }, 100);
+      });
+      if (guidanceSetIdRef.current && locationStepIdRef.current) {
+        return { setId: guidanceSetIdRef.current, stepId: locationStepIdRef.current };
+      }
+    }
+
+    creatingRef.current = true;
+    try {
+      const uid = firebaseUser?.uid;
+      if (!uid || !addressType) throw new Error('Missing user or address type');
+
+      const metadataPayload = buildMetadataPayload();
+      const arTitle = titleArabic.trim();
+      const input: CreateGuidanceSetInput = {
+        title: title.trim() || t('create.untitledAddress'),
+        ...(arTitle ? { titleArabic: arTitle } : {}),
+        description: null,
+        languageOriginal: 'en',
+        availabilityMode: 'ANYTIME_TODAY',
+        destinationCoordinates: locData?.coordinates ?? locationData?.coordinates ?? null,
+        addressType,
+        ...metadataPayload,
+      };
+
+      let setId = guidanceSetIdRef.current;
+      if (!setId) {
+        setId = await createGuidanceSet(uid, input);
+        guidanceSetIdRef.current = setId;
+        setGuidanceSetId(setId);
+      }
+
+      let stepId = locationStepIdRef.current;
+      if (!stepId) {
+        stepId = await createGuidanceStep(
+          setId,
+          {
+            stepType: 'LOCATION_CHECK',
+            contentType: 'TEXT',
+            title: null,
+            instructionOriginal: '',
+            locationData: locData ?? locationData ?? undefined,
+          },
+          0,
+        );
+        locationStepIdRef.current = stepId;
+        setLocationStepId(stepId);
+      }
+
+      return { setId, stepId };
+    } finally {
+      creatingRef.current = false;
+    }
+  }, [firebaseUser, addressType, title, titleArabic, locationData, buildMetadataPayload, t]);
+
+  // ── Navigation ──
 
   const handleBack = useCallback(() => {
     switch (currentStep) {
@@ -55,15 +169,8 @@ export default function CreateGuidanceScreen() {
       case 'metadata':
         setCurrentStep('addressType');
         break;
-      case 'steps':
-        if (addressType && checkRequiresMetadata(addressType)) {
-          setCurrentStep('metadata');
-        } else {
-          setCurrentStep('addressType');
-        }
-        break;
     }
-  }, [currentStep, addressType, router]);
+  }, [currentStep, router]);
 
   const handleGoToDashboard = useCallback(() => {
     router.replace('/(tabs)/dashboard');
@@ -78,11 +185,7 @@ export default function CreateGuidanceScreen() {
 
   const handleAddressTypeContinue = useCallback(() => {
     if (!addressType) return;
-    if (checkRequiresMetadata(addressType)) {
-      setCurrentStep('metadata');
-    } else {
-      setCurrentStep('steps');
-    }
+    setCurrentStep('metadata');
   }, [addressType]);
 
   const handleAddressTypeSelect = useCallback((type: AddressType) => {
@@ -98,70 +201,145 @@ export default function CreateGuidanceScreen() {
     setMetadata((prev) => ({ ...prev, [field]: value }));
   }, []);
 
-  const handleMetadataContinue = useCallback(() => {
-    setCurrentStep('steps');
+  // ── Location handlers (trigger early creation) ──
+
+  const handleLocationChange = useCallback(async (data: LocationData | null) => {
+    setLocationData(data);
+    if (!data) return;
+
+    try {
+      const { stepId } = await ensureGuidanceSetAndStep(data);
+      await updateGuidanceStep(stepId, { locationData: data });
+    } catch (err) {
+      console.error('[Create] Failed to save location:', err);
+    }
+  }, [ensureGuidanceSetAndStep]);
+
+  const doLocationUpload = useCallback(async (uri: string) => {
+    setUploading(true);
+    setUploadFailed(false);
+    try {
+      const { setId, stepId } = await ensureGuidanceSetAndStep();
+      const uploaded = await uploadStepImage(setId, stepId, uri);
+      imageStoragePathRef.current = uploaded.storagePath;
+      await updateGuidanceStep(stepId, {
+        image: uploaded,
+        contentType: 'PHOTO',
+      });
+    } catch (err: any) {
+      console.error('[Create] Failed to upload location photo:', err);
+      setUploadFailed(true);
+      imageStoragePathRef.current = null;
+    } finally {
+      setUploading(false);
+    }
+  }, [ensureGuidanceSetAndStep]);
+
+  const handleLocationPhotoSelected = useCallback(async (uri: string) => {
+    setLocationPhotoUri(uri);
+    doLocationUpload(uri);
+  }, [doLocationUpload]);
+
+  const handleRetryLocationUpload = useCallback(() => {
+    if (locationPhotoUri) doLocationUpload(locationPhotoUri);
+  }, [locationPhotoUri, doLocationUpload]);
+
+  const handleLocationPhotoRemoved = useCallback(async () => {
+    const storagePath = imageStoragePathRef.current;
+    setLocationPhotoUri(null);
+    setLocationOverlays([]);
+    setUploadFailed(false);
+    imageStoragePathRef.current = null;
+
+    const stepId = locationStepIdRef.current;
+    if (storagePath && stepId) {
+      try {
+        await deleteStepImage(storagePath);
+        await updateGuidanceStep(stepId, {
+          image: null as any,
+          contentType: 'TEXT',
+          overlays: [],
+        });
+      } catch (err) {
+        console.error('[Create] Failed to remove photo:', err);
+      }
+    }
   }, []);
 
-  const buildAndCreate = useCallback(async (): Promise<string | null> => {
-    if (!firebaseUser?.uid || !addressType) return null;
+  const handleUpdateOverlays = useCallback(async (overlays: Overlay[]) => {
+    setLocationOverlays(overlays);
+    const stepId = locationStepIdRef.current;
+    if (stepId) {
+      try {
+        await updateGuidanceStep(stepId, { overlays });
+      } catch (err) {
+        console.error('[Create] Failed to save overlays:', err);
+      }
+    }
+  }, []);
 
-    const metadataPayload: Partial<CreateGuidanceSetInput> = {};
-    if (metadata.buildingNumber) metadataPayload.buildingNumber = metadata.buildingNumber;
-    if (metadata.floorNumber) metadataPayload.floorNumber = metadata.floorNumber;
-    if (metadata.doorNumber) metadataPayload.doorNumber = metadata.doorNumber;
-    if (metadata.compoundName) metadataPayload.compoundName = metadata.compoundName;
-    if (metadata.gateNumber) metadataPayload.gateNumber = metadata.gateNumber;
-    if (metadata.unitType) metadataPayload.unitType = metadata.unitType as 'villa' | 'apartment';
-    if (metadata.villaNumber) metadataPayload.villaNumber = metadata.villaNumber;
-    if (metadata.apartmentNumber) metadataPayload.apartmentNumber = metadata.apartmentNumber;
-    if (metadata.locationDescription) metadataPayload.locationDescription = metadata.locationDescription;
+  // ── Step 4 actions (update existing set, then navigate) ──
 
+  const updateExistingSet = useCallback(async (): Promise<string | null> => {
+    const setId = guidanceSetIdRef.current;
+    if (!setId || !firebaseUser?.uid || !addressType) return null;
+
+    const metadataPayload = buildMetadataPayload();
     const arTitle = titleArabic.trim();
-    const input: CreateGuidanceSetInput = {
+    await updateGuidanceSet(setId, {
       title: title.trim(),
       ...(arTitle ? { titleArabic: arTitle } : {}),
-      description: null,
-      languageOriginal: 'en',
-      availabilityMode: 'ANYTIME_TODAY',
-      destinationCoordinates: null,
       addressType,
+      destinationCoordinates: locationData?.coordinates ?? null,
       ...metadataPayload,
-    };
+    });
 
-    return createGuidanceSet(firebaseUser.uid, input);
-  }, [firebaseUser, title, titleArabic, addressType, metadata]);
+    // Create LANDMARK_REFERENCE if needed
+    const hasLandmark = landmarkDescription.trim() || landmarkDescriptionArabic.trim();
+    if (hasLandmark) {
+      await createGuidanceStep(
+        setId,
+        {
+          stepType: 'LANDMARK_REFERENCE',
+          contentType: 'TEXT',
+          title: null,
+          instructionOriginal: landmarkDescription.trim(),
+          ...(landmarkDescriptionArabic.trim()
+            ? { instructionTranslations: { ar: landmarkDescriptionArabic.trim() } }
+            : {}),
+        },
+        1,
+      );
+    }
 
-  const handleSaveDraft = useCallback(async () => {
+    return setId;
+  }, [firebaseUser, addressType, title, titleArabic, locationData, landmarkDescription, landmarkDescriptionArabic, buildMetadataPayload]);
+
+  const handleMetadataContinue = useCallback(async () => {
     if (!firebaseUser?.uid || !addressType) return;
+    if (uploading) {
+      Alert.alert(t('common.error'), t('create.waitForUpload'));
+      return;
+    }
+    if (uploadFailed) {
+      Alert.alert(t('common.error'), t('create.uploadFailedRetry'));
+      return;
+    }
     setSaving(true);
     try {
-      const guidanceSetId = await buildAndCreate();
-      if (guidanceSetId) {
-        router.replace(`/guidance/${guidanceSetId}/edit`);
+      const setId = await updateExistingSet();
+      if (setId) {
+        router.replace(`/guidance/${setId}/edit` as any);
       }
     } catch (error: any) {
+      console.error('[MetadataContinue] Failed:', error);
       Alert.alert(t('common.error'), error?.message ?? t('create.errorSave'));
     } finally {
       setSaving(false);
     }
-  }, [firebaseUser, addressType, buildAndCreate, router, t]);
+  }, [firebaseUser, addressType, uploading, uploadFailed, updateExistingSet, router, t]);
 
-  const handleAddFirstStep = useCallback(async () => {
-    if (!firebaseUser?.uid || !addressType) return;
-    setSaving(true);
-    try {
-      const guidanceSetId = await buildAndCreate();
-      if (guidanceSetId) {
-        router.replace(
-          `/guidance/${guidanceSetId}/steps/0?addressType=${addressType}` as any,
-        );
-      }
-    } catch (error: any) {
-      Alert.alert(t('common.error'), error?.message ?? t('create.errorSave'));
-    } finally {
-      setSaving(false);
-    }
-  }, [firebaseUser, addressType, buildAndCreate, router, t]);
+  // ── Render ──
 
   const renderStep = () => {
     switch (currentStep) {
@@ -191,17 +369,21 @@ export default function CreateGuidanceScreen() {
             metadata={metadata}
             onMetadataChange={handleMetadataChange}
             onContinue={handleMetadataContinue}
-          />
-        );
-      case 'steps':
-        if (!addressType) return null;
-        return (
-          <StepsOverviewStep
-            title={title}
-            addressType={addressType}
-            metadata={metadata}
+            locationData={locationData}
+            onLocationChange={handleLocationChange}
+            locationPhotoUri={locationPhotoUri}
+            onPhotoSelected={handleLocationPhotoSelected}
+            onPhotoRemoved={handleLocationPhotoRemoved}
+            locationOverlays={locationOverlays}
+            onUpdateLocationOverlays={handleUpdateOverlays}
+            landmarkDescription={landmarkDescription}
+            onLandmarkDescriptionChange={setLandmarkDescription}
+            landmarkDescriptionArabic={landmarkDescriptionArabic}
+            onLandmarkDescriptionArabicChange={setLandmarkDescriptionArabic}
+            uploading={uploading}
+            uploadFailed={uploadFailed}
+            onRetryUpload={handleRetryLocationUpload}
             saving={saving}
-            onAddFirstStep={handleAddFirstStep}
           />
         );
     }
@@ -209,18 +391,15 @@ export default function CreateGuidanceScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header matching PWA */}
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerNav}>
           <Pressable onPress={handleBack} style={styles.headerButton} hitSlop={8}>
-            <Text style={styles.headerBackIcon}>←</Text>
-          </Pressable>
-          <Pressable onPress={handleGoToDashboard} style={styles.headerButton} hitSlop={8}>
-            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-              <Path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-              <Path d="M9 22V12H15V22" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+              <Path d="M15 18L9 12L15 6" stroke={Colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
           </Pressable>
+          <HomeButton onPress={handleGoToDashboard} />
         </View>
 
         <View style={styles.headerInfo}>
@@ -230,27 +409,13 @@ export default function CreateGuidanceScreen() {
           </Text>
         </View>
 
-        {currentStep === 'steps' && (
-          <Pressable
-            style={[styles.saveDraftButton, saving && styles.saveDraftButtonDisabled]}
-            onPress={handleSaveDraft}
-            disabled={saving}
-          >
-            <Text style={styles.saveDraftButtonText}>
-              {saving ? t('create.saving') : t('create.saveDraft')}
-            </Text>
-          </Pressable>
-        )}
       </View>
 
       <StepIndicator steps={stepIndicatorConfig} currentStep={currentStep} />
 
-      <KeyboardAvoidingView
-        style={styles.stepContent}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+      <View style={styles.stepContent}>
         {renderStep()}
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -282,10 +447,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: BorderRadius.md,
   },
-  headerBackIcon: {
-    fontSize: 20,
-    color: Colors.textSecondary,
-  },
   headerInfo: {
     flex: 1,
   },
@@ -301,22 +462,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: Colors.text,
     letterSpacing: -0.2,
-  },
-  saveDraftButton: {
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.full,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-  },
-  saveDraftButtonDisabled: {
-    opacity: 0.5,
-  },
-  saveDraftButtonText: {
-    fontSize: FontSize.sm,
-    fontWeight: '500',
-    color: Colors.text,
   },
   stepContent: {
     flex: 1,

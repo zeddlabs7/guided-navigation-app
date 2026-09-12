@@ -67,11 +67,13 @@ export const validateToken = onRequest(
     const shareLink = shareLinkSnap.data()!;
 
     if (shareLink.status === 'REVOKED') {
-      res.json({ valid: false, error: 'REVOKED' });
+      shareLinkSnap.ref.delete().catch(() => {});
+      res.json({ valid: false, error: 'NOT_FOUND' });
       return;
     }
 
     if (new Date(shareLink.expiresAt) < new Date()) {
+      shareLinkSnap.ref.delete().catch(() => {});
       res.json({ valid: false, error: 'EXPIRED' });
       return;
     }
@@ -102,11 +104,13 @@ export const loadGuidanceData = onRequest(
     const shareLinkData = shareLinkSnap.data()!;
 
     if (shareLinkData.status === 'REVOKED') {
-      res.json({ valid: false, error: 'REVOKED' });
+      shareLinkSnap.ref.delete().catch(() => {});
+      res.json({ valid: false, error: 'NOT_FOUND' });
       return;
     }
 
     if (new Date(shareLinkData.expiresAt) < new Date()) {
+      shareLinkSnap.ref.delete().catch(() => {});
       res.json({ valid: false, error: 'EXPIRED' });
       return;
     }
@@ -154,12 +158,15 @@ export const loadGuidanceData = onRequest(
     }
 
     let recipientPhoneNumber: string | null = null;
+    let courierContactPreference: string | null = null;
     try {
       const recipientUserId = guidanceSetData.recipientUserId as string;
       if (recipientUserId) {
         const userSnap = await db.collection('users').doc(recipientUserId).get();
         if (userSnap.exists) {
-          recipientPhoneNumber = userSnap.data()?.phoneNumber ?? null;
+          const userData = userSnap.data();
+          recipientPhoneNumber = userData?.phoneNumber ?? null;
+          courierContactPreference = userData?.courierContactPreference ?? 'CALL_ON_ARRIVAL';
         }
       }
     } catch (err) {
@@ -180,6 +187,7 @@ export const loadGuidanceData = onRequest(
       guidanceSet,
       steps: courierSteps,
       recipientPhoneNumber,
+      courierContactPreference,
     });
   },
 );
@@ -202,10 +210,12 @@ export const validateShareLink = functions.https.onCall(async (data: { token: st
   const shareLink = shareLinkSnap.data()!;
 
   if (shareLink.status === 'REVOKED') {
-    return { valid: false, error: 'REVOKED' };
+    shareLinkSnap.ref.delete().catch(() => {});
+    return { valid: false, error: 'NOT_FOUND' };
   }
 
   if (new Date(shareLink.expiresAt) < new Date()) {
+    shareLinkSnap.ref.delete().catch(() => {});
     return { valid: false, error: 'EXPIRED' };
   }
 
@@ -238,10 +248,12 @@ export const loadGuidanceByToken = functions.https.onCall(async (data: { token: 
   const shareLinkData = shareLinkSnap.data()!;
 
   if (shareLinkData.status === 'REVOKED') {
-    return { valid: false, error: 'REVOKED' };
+    shareLinkSnap.ref.delete().catch(() => {});
+    return { valid: false, error: 'NOT_FOUND' };
   }
 
   if (new Date(shareLinkData.expiresAt) < new Date()) {
+    shareLinkSnap.ref.delete().catch(() => {});
     return { valid: false, error: 'EXPIRED' };
   }
 
@@ -284,12 +296,15 @@ export const loadGuidanceByToken = functions.https.onCall(async (data: { token: 
   }
 
   let recipientPhoneNumber: string | null = null;
+  let courierContactPreference: string | null = null;
   try {
     const recipientUserId = guidanceSetData.recipientUserId as string;
     if (recipientUserId) {
       const userSnap = await db.collection('users').doc(recipientUserId).get();
       if (userSnap.exists) {
-        recipientPhoneNumber = userSnap.data()?.phoneNumber ?? null;
+        const userData = userSnap.data();
+        recipientPhoneNumber = userData?.phoneNumber ?? null;
+        courierContactPreference = userData?.courierContactPreference ?? 'CALL_ON_ARRIVAL';
       }
     }
   } catch (err) {
@@ -302,6 +317,7 @@ export const loadGuidanceByToken = functions.https.onCall(async (data: { token: 
     guidanceSet,
     steps: courierSteps,
     recipientPhoneNumber,
+    courierContactPreference,
   };
 });
 
@@ -327,11 +343,7 @@ export const revokeShareLink = functions.https.onCall(
       throw new functions.https.HttpsError('permission-denied', 'Not authorized');
     }
 
-    await shareLinkRef.update({
-      status: 'REVOKED',
-      revokedAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    await shareLinkRef.delete();
 
     return { success: true };
   }

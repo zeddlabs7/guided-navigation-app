@@ -1,5 +1,5 @@
 import type { Timestamp, Language } from './common';
-import type { AvailabilityMode } from './guidance';
+import type { AvailabilityMode, CourierContactPreference } from './guidance';
 
 export interface User {
   id: string; // Firebase Auth UID
@@ -9,6 +9,7 @@ export interface User {
   defaultAvailabilityMode: AvailabilityMode;
   defaultAvailabilityStartTime: string | null; // HH:mm format
   defaultAvailabilityEndTime: string | null; // HH:mm format
+  courierContactPreference: CourierContactPreference;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   isActive: boolean;
@@ -24,4 +25,5 @@ export type UpdateUserInput = Partial<Pick<User,
   | 'defaultAvailabilityMode'
   | 'defaultAvailabilityStartTime'
   | 'defaultAvailabilityEndTime'
+  | 'courierContactPreference'
 >>;

@@ -123,7 +123,7 @@ const translations: Record<TranslationKey, Record<Language, string>> = {
 
   // GuidedPlaybackPage
   back: { en: 'Back', ar: 'رجوع', hi: 'वापस', ur: 'واپس', bn: 'পিছনে' },
-  home: { en: 'Home', ar: 'الرئيسية', hi: 'होम', ur: 'ہوم', bn: 'হোম' },
+  home: { en: 'Home', ar: 'الصفحة الرئيسية', hi: 'होम', ur: 'ہوم', bn: 'হোম' },
   noImage: { en: 'No image', ar: 'لا توجد صورة', hi: 'कोई छवि नहीं', ur: 'کوئی تصویر نہیں', bn: 'কোনো ছবি নেই' },
   annotationOnPhoto: { en: 'annotation on photo', ar: 'تعليق توضيحية على الصورة', hi: 'फोटो पर एनोटेशन', ur: 'تصویر پر نوٹ', bn: 'ছবিতে টীকা' },
   step: { en: 'Step', ar: 'الخطوة', hi: 'चरण', ur: 'مرحلہ', bn: 'ধাপ' },

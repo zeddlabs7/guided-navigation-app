@@ -21,9 +21,23 @@ import { STEP_TYPE_LABELS, ADDRESS_TYPE_LABELS } from '@guidenav/types';
 import { getMetadataFieldConfigs, requiresMetadata as checkRequiresMetadata } from '@guidenav/types';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { ScreenFooter, useFooterScrollPadding } from '@/components/ui/ScreenFooter';
+import { HomeButton } from '@/components/ui/HomeButton';
 import { hasUnpublishedStepChanges } from '@guidenav/core';
 import { getGuidanceSet, getGuidanceSteps, updateGuidanceSet, publishGuidanceWithSteps } from '@/services/guidance';
 import { useLanguage } from '@/contexts/LanguageContext';
+
+function sortSteps(steps: GuidanceStep[]): GuidanceStep[] {
+  const priority: Record<string, number> = {
+    LOCATION_CHECK: 0,
+    LANDMARK_REFERENCE: 1,
+  };
+  return [...steps].sort((a, b) => {
+    const pa = priority[a.stepType] ?? 2;
+    const pb = priority[b.stepType] ?? 2;
+    if (pa !== pb) return pa - pb;
+    return a.stepIndex - b.stepIndex;
+  });
+}
 
 const arrowCurvedLeft = require('@/assets/arrows/arrow-curved-left.png');
 const arrowCurvedRight = require('@/assets/arrows/arrow-curved-right.png');
@@ -155,7 +169,7 @@ export default function PreviewScreen() {
         return;
       }
       setGuidanceSet(gs);
-      setSteps(gSteps);
+      setSteps(sortSteps(gSteps));
     } catch (err) {
       console.error('Failed to load preview data:', err);
       setError(t('edit.errorSave'));
@@ -177,7 +191,7 @@ export default function PreviewScreen() {
         getGuidanceSteps(guidanceSetId),
       ]);
       if (gs) setGuidanceSet(gs);
-      setSteps(gSteps);
+      setSteps(sortSteps(gSteps));
     } catch (err) {
       console.error('Failed to publish:', err);
       setError(t('edit.errorSave'));
@@ -406,18 +420,15 @@ export default function PreviewScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerNav}>
-          <Pressable style={styles.backButton} onPress={handleBack}>
-            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-              <Path d="M19 12H5M5 12L12 19M5 12L12 5" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-            </Svg>
-            <Text style={styles.backButtonText}>{t('preview.back')}</Text>
-          </Pressable>
-          <Pressable style={styles.homeButton} onPress={handleGoHome} hitSlop={8}>
-            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-              <Path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-              <Path d="M9 22V12H15V22" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-            </Svg>
-          </Pressable>
+          {!isPublished && (
+            <Pressable style={styles.backButton} onPress={handleBack}>
+              <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+                <Path d="M15 18L9 12L15 6" stroke={Colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+              <Text style={styles.backButtonText}>{t('preview.back')}</Text>
+            </Pressable>
+          )}
+          <HomeButton showLabel={isPublished} onPress={handleGoHome} />
         </View>
 
         <Text style={styles.headerTitle}>{t('preview.title')}</Text>
@@ -596,6 +607,13 @@ export default function PreviewScreen() {
                   <Text style={styles.footerBtnPrimaryText}>{t('preview.shareLink')}</Text>
                 </Pressable>
               </View>
+              <Pressable style={styles.footerHomeBtn} onPress={handleGoHome}>
+                <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                  <Path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke={Colors.primary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                  <Path d="M9 22V12H15V22" stroke={Colors.primary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                </Svg>
+                <Text style={styles.footerHomeBtnText}>{t('preview.backToHome')}</Text>
+              </Pressable>
             </>
           )}
         </ScreenFooter>
@@ -674,13 +692,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     fontWeight: '500',
     color: Colors.textSecondary,
-  },
-  homeButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: BorderRadius.md,
   },
   headerTitle: {
     flex: 1,
@@ -1054,5 +1065,21 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     color: Colors.textMuted,
     textAlign: 'center',
+  },
+  footerHomeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    backgroundColor: Colors.primaryBg,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    borderRadius: BorderRadius.full,
+  },
+  footerHomeBtnText: {
+    fontSize: FontSize.base,
+    fontWeight: '600',
+    color: Colors.primary,
   },
 });

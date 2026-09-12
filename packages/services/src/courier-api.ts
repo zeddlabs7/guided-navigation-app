@@ -1,4 +1,4 @@
-import type { GuidanceSet, GuidanceStep, ShareLink } from '@guidenav/types';
+import type { GuidanceSet, GuidanceStep, ShareLink, CourierContactPreference } from '@guidenav/types';
 
 const FUNCTIONS_BASE_URL = '/api';
 
@@ -14,6 +14,7 @@ export interface LoadGuidanceDataResult {
   guidanceSet?: GuidanceSet;
   steps?: GuidanceStep[];
   recipientPhoneNumber?: string | null;
+  courierContactPreference?: CourierContactPreference | null;
 }
 
 export async function validateToken(token: string): Promise<ValidateTokenResult> {

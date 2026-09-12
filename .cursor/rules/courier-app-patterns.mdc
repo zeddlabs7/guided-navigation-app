@@ -1,0 +1,28 @@
+---
+description: Critical UX and performance patterns in the courier app that must not be changed
+globs: apps/courier-app/**
+alwaysApply: false
+---
+
+# Courier App — Protected Patterns
+
+## Optimistic Language Selection (WelcomePage.vue)
+
+The welcome page renders the language selection UI **immediately** while `validateToken` runs in the background. Do NOT add a loading spinner or gate the UI behind validation.
+
+**Why:** By the time the courier picks a language, validation + `loadDataInBackground` are already done. This makes the happy path (99%+ of traffic) feel instant. The only tradeoff is a brief flash of the language page before redirect on invalid/expired links — this is acceptable.
+
+**Flow:**
+1. Page mounts → language buttons render immediately
+2. `validateToken()` fires in parallel (HTTP to Cloud Function)
+3. On success → `loadDataInBackground()` starts fetching full guidance data
+4. User picks language → if data ready, navigate instantly; if not, wait with spinner on the selected button
+5. On failure → redirect to error page
+
+## Cloud Function Warm Instances
+
+`validateToken` uses `minInstances: 1` to eliminate cold starts. This is critical for courier-facing latency. Do not remove `minInstances` from courier-facing v2 functions (`validateToken`, `loadGuidanceData`).
+
+## Share Link Cleanup
+
+Share links are **deleted** (not status-updated to REVOKED) when replaced, manually revoked, or found expired. There is no background cleanup job — expiry is checked lazily at access time (Cloud Functions + client queries). This is intentional to keep the system simple.

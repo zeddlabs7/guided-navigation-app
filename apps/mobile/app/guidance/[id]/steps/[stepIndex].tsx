@@ -7,7 +7,7 @@ import {
   Pressable,
   ActivityIndicator,
 } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenFooter, useFooterScrollPadding } from '@/components/ui/ScreenFooter';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -23,9 +23,9 @@ import {
   uploadStepImage,
   deleteStepImage,
 } from '@/services/guidance';
+import Svg, { Path } from 'react-native-svg';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
-import { StepTypeDropdown, STEP_TYPE_COLORS, PhotoUpload, LocationPicker } from '@/components/steps';
-import { OverlayEditor } from '@/components/overlay';
+import { StepTypeDropdown, STEP_TYPE_COLORS, PhotoEditorWithUpload, LocationPicker } from '@/components/steps';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function StepBuilderScreen() {
@@ -40,11 +40,15 @@ export default function StepBuilderScreen() {
   const searchParams = useLocalSearchParams<{
     edit?: string;
     addressType?: string;
+    userStepIndex?: string;
   }>();
 
   const editStepId = searchParams.edit || null;
   const addressTypeParam = (searchParams.addressType as AddressType) || null;
   const stepIndex = stepIndexParam ? parseInt(stepIndexParam, 10) : 0;
+  const userStepIndex = searchParams.userStepIndex != null
+    ? parseInt(searchParams.userStepIndex, 10)
+    : stepIndex;
   const isEditMode = !!editStepId;
 
   const [addressType, setAddressType] = useState<AddressType | null>(addressTypeParam);
@@ -71,20 +75,19 @@ export default function StepBuilderScreen() {
 
   const stepIdRef = useRef<string | null>(editStepId);
   const stepSavedRef = useRef(false);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<any>(null);
   const arabicInputRef = useRef<TextInput>(null);
   const locationSectionY = useRef(0);
   const instructionsSectionY = useRef(0);
-  const arabicSectionY = useRef(0);
 
   const defaultStepType = useMemo((): StepType => {
     if (!addressType) return 'LOCATION_CHECK';
     const options = getStepTypesForAddressType(addressType);
-    const match = options.find((o) => o.orderIndex === stepIndex + 1);
+    const match = options.find((o) => o.orderIndex === userStepIndex + 1);
     if (match) return match.type;
-    if (stepIndex >= options.length) return options[options.length - 1]?.type || 'LOCATION_CHECK';
-    return options[stepIndex]?.type || options[0]?.type || 'LOCATION_CHECK';
-  }, [addressType, stepIndex]);
+    if (userStepIndex >= options.length) return options[options.length - 1]?.type || 'LOCATION_CHECK';
+    return options[userStepIndex]?.type || options[0]?.type || 'LOCATION_CHECK';
+  }, [addressType, userStepIndex]);
 
   const selectedTypeColors = STEP_TYPE_COLORS[selectedStepType] || STEP_TYPE_COLORS.OTHER;
   const selectedTypeLabel = (STEP_TYPE_LABELS[selectedStepType] as any)?.[language] || STEP_TYPE_LABELS[selectedStepType]?.en || selectedStepType;
@@ -108,10 +111,10 @@ export default function StepBuilderScreen() {
 
     if (isEditMode && editStepId) {
       loadExistingStep();
-    } else {
+    } else if (!isEditMode) {
       createNewStep();
     }
-  }, [guidanceSetId]);
+  }, [guidanceSetId, isEditMode, editStepId]);
 
   // Set default step type once address type is known (new step only)
   useEffect(() => {
@@ -355,7 +358,9 @@ export default function StepBuilderScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={handleBack} style={styles.headerButton} hitSlop={8}>
-          <Text style={styles.headerBackIcon}>←</Text>
+          <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+            <Path d="M15 18L9 12L15 6" stroke={Colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+          </Svg>
         </Pressable>
         <View style={styles.headerInfo}>
           <Text style={styles.headerLabel}>
@@ -394,10 +399,11 @@ export default function StepBuilderScreen() {
         </Pressable>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollView
         ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: footerScrollPadding }]}
+        bottomOffset={62}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         showsVerticalScrollIndicator={false}
@@ -451,48 +457,17 @@ export default function StepBuilderScreen() {
 
         {/* Photo Upload + Overlay Editor */}
         <View style={styles.section}>
-          {imageUri ? (
-            <View style={styles.photoEditorSection}>
-              <View style={styles.photoLabelRow}>
-                <Text style={styles.photoLabel}>{t('steps.uploadPhoto')}</Text>
-                {!uploading && (
-                  <Pressable onPress={handleRemovePhoto} disabled={saving}>
-                    <Text style={styles.removeText}>{t('steps.remove')}</Text>
-                  </Pressable>
-                )}
-              </View>
-              <OverlayEditor
-                imageUrl={imageUri}
-                overlays={overlays}
-                readonly={saving}
-                uploadStatus={uploading ? 'uploading' : uploadFailed ? 'failed' : 'idle'}
-                onUpdateOverlays={setOverlays}
-                onRetryUpload={handleRetryUpload}
-              />
-              {uploading && (
-                <View style={styles.uploadOverlay}>
-                  <ActivityIndicator color="#ffffff" size="small" />
-                  <Text style={styles.uploadOverlayText}>{t('steps.uploading')}</Text>
-                </View>
-              )}
-              {uploadFailed && !uploading && (
-                <View style={styles.uploadFailedBanner}>
-                  <Text style={styles.uploadFailedText}>{t('steps.uploadFailed')}</Text>
-                  <Pressable style={styles.retryButton} onPress={handleRetryUpload}>
-                    <Text style={styles.retryButtonText}>{t('steps.retryUpload')}</Text>
-                  </Pressable>
-                </View>
-              )}
-            </View>
-          ) : (
-            <PhotoUpload
-              imageUri={null}
-              uploading={uploading}
-              onImageSelected={handleImageSelected}
-              onRemove={handleRemovePhoto}
-              disabled={saving}
-            />
-          )}
+          <PhotoEditorWithUpload
+            imageUri={imageUri}
+            overlays={overlays}
+            uploading={uploading}
+            uploadFailed={uploadFailed}
+            saving={saving}
+            onImageSelected={handleImageSelected}
+            onRemove={handleRemovePhoto}
+            onUpdateOverlays={setOverlays}
+            onRetryUpload={handleRetryUpload}
+          />
         </View>
 
         <View style={styles.divider} />
@@ -521,11 +496,6 @@ export default function StepBuilderScreen() {
               value={instructions}
               onChangeText={setInstructions}
               onBlur={handleInstructionsBlur}
-              onFocus={() => {
-                setTimeout(() => {
-                  scrollRef.current?.scrollTo({ y: instructionsSectionY.current, animated: true });
-                }, 250);
-              }}
               onSubmitEditing={() => arabicInputRef.current?.focus()}
               placeholder={selectedStepType === 'LOCATION_CHECK'
                 ? 'e.g. Ring the doorbell, leave at the gate...'
@@ -543,12 +513,7 @@ export default function StepBuilderScreen() {
             )}
           </View>
 
-          <View
-            style={styles.fieldWrapper}
-            onLayout={(e) => {
-              arabicSectionY.current = instructionsSectionY.current + e.nativeEvent.layout.y;
-            }}
-          >
+          <View style={styles.fieldWrapper}>
             <Text style={styles.fieldLabelOptional}>
               {t('steps.arabicInstructions')}
             </Text>
@@ -557,11 +522,6 @@ export default function StepBuilderScreen() {
               style={styles.textarea}
               value={instructionsArabic}
               onChangeText={setInstructionsArabic}
-              onFocus={() => {
-                setTimeout(() => {
-                  scrollRef.current?.scrollTo({ y: arabicSectionY.current, animated: true });
-                }, 250);
-              }}
               placeholder={t('steps.arabicInstructionsPlaceholder')}
               placeholderTextColor={Colors.textMuted}
               multiline
@@ -573,7 +533,7 @@ export default function StepBuilderScreen() {
             />
           </View>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <ScreenFooter>
         <Pressable
@@ -619,10 +579,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: BorderRadius.md,
-  },
-  headerBackIcon: {
-    fontSize: 20,
-    color: Colors.textSecondary,
   },
   headerInfo: {
     flex: 1,
@@ -702,70 +658,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     color: Colors.danger,
     paddingLeft: Spacing.sm,
-  },
-  photoEditorSection: {
-    gap: 10,
-    position: 'relative',
-  },
-  photoLabelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  photoLabel: {
-    fontSize: FontSize.sm,
-    fontWeight: '500',
-    color: Colors.textMuted,
-  },
-  removeText: {
-    fontSize: FontSize.sm,
-    color: Colors.danger,
-    fontWeight: '500',
-  },
-  uploadOverlay: {
-    position: 'absolute',
-    top: 42,
-    right: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
-    zIndex: 10,
-  },
-  uploadOverlayText: {
-    fontSize: FontSize.xs,
-    fontWeight: '500',
-    color: '#ffffff',
-  },
-  uploadFailedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#fef2f2',
-    borderWidth: 1,
-    borderColor: '#fecaca',
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.md,
-    marginTop: 6,
-  },
-  uploadFailedText: {
-    fontSize: FontSize.sm,
-    color: Colors.danger,
-    fontWeight: '500',
-  },
-  retryButton: {
-    backgroundColor: Colors.danger,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
-  },
-  retryButtonText: {
-    fontSize: FontSize.sm,
-    fontWeight: '600',
-    color: '#ffffff',
   },
   fieldWrapper: {
     gap: 6,

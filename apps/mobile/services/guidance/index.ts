@@ -47,6 +47,7 @@ function mapDocToGuidanceSet(doc: { id: string; data: () => Record<string, any> 
     apartmentNumber: data.apartmentNumber,
     locationDescription: data.locationDescription,
     recipientPhoneNumber: data.recipientPhoneNumber,
+    ...(data.titleArabic ? { titleArabic: data.titleArabic } : {}),
   } as GuidanceSet;
 }
 

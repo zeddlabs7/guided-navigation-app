@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue';
-import type { GuidanceSet, GuidanceStep, ShareLink, Language } from '@guidenav/types';
+import type { GuidanceSet, GuidanceStep, ShareLink, Language, CourierContactPreference } from '@guidenav/types';
 import { loadGuidanceData, translateTexts } from '@guidenav/services/courier-api';
 
 const SUPPORTED_LANGUAGES: Language[] = ['en', 'ar', 'hi', 'ur', 'bn'];
@@ -12,6 +12,7 @@ const isLoading = ref(false);
 const error = ref<string | null>(null);
 const currentLanguage = ref<Language>('en');
 const recipientPhoneNumber = ref<string | null>(null);
+const courierContactPreference = ref<CourierContactPreference | null>(null);
 const translatedContent = ref<Record<string, string>>({});
 const isTranslating = ref(false);
 const isTokenValid = ref(false);
@@ -76,6 +77,9 @@ export function useCourierSession() {
   function setLanguage(lang: Language) {
     currentLanguage.value = lang;
     try { localStorage.setItem('arriveo_lang', lang); } catch {}
+    const rtl = lang === 'ar' || lang === 'ur';
+    document.documentElement.lang = lang;
+    document.documentElement.dir = rtl ? 'rtl' : 'ltr';
   }
 
   function getSavedLanguage(): Language | null {
@@ -149,6 +153,48 @@ export function useCourierSession() {
     return { en: 'Available', ar: 'متاح', hi: 'उपलब्ध', ur: 'دستیاب', bn: 'উপলব্ধ' };
   }
 
+  function getContactPreferenceShortText(): Record<Language, string> {
+    if (courierContactPreference.value === 'NO_CALL_LEAVE_PHOTO') {
+      return {
+        en: '🔕 NO CALL · LEAVE & SEND PHOTO',
+        ar: '🔕 لا اتصال · اترك وأرسل صورة',
+        hi: '🔕 कॉल नहीं · छोड़ें और फ़ोटो भेजें',
+        ur: '🔕 کال نہیں · چھوڑیں اور تصویر بھیجیں',
+        bn: '🔕 কল নয় · রেখে দিন ও ছবি পাঠান',
+      };
+    }
+    return {
+      en: '📞 CALL ON ARRIVAL',
+      ar: '📞 اتصل عند الوصول',
+      hi: '📞 पहुँचने पर कॉल करें',
+      ur: '📞 پہنچنے پر کال کریں',
+      bn: '📞 পৌঁছালে কল করুন',
+    };
+  }
+
+  function getContactPreferenceLongText(): Record<Language, string> {
+    if (courierContactPreference.value === 'NO_CALL_LEAVE_PHOTO') {
+      return {
+        en: 'NO CALL — Leave the shipment and send a delivery photo',
+        ar: 'لا اتصال — اترك الشحنة وأرسل صورة التسليم',
+        hi: 'कॉल नहीं — शिपमेंट छोड़ें और डिलीवरी फ़ोटो भेजें',
+        ur: 'کال نہیں — شپمنٹ چھوڑیں اور ڈیلیوری تصویر بھیجیں',
+        bn: 'কল নয় — চালান রেখে দিন এবং ডেলিভারি ছবি পাঠান',
+      };
+    }
+    return {
+      en: 'CALL ON ARRIVAL',
+      ar: 'اتصل عند الوصول',
+      hi: 'पहुँचने पर कॉल करें',
+      ur: 'پہنچنے پر کال کریں',
+      bn: 'পৌঁছালে কল করুন',
+    };
+  }
+
+  function getCourierContactPreference(): CourierContactPreference | null {
+    return courierContactPreference.value;
+  }
+
   const needsTranslation = computed(() => {
     return currentLanguage.value !== 'en';
   });
@@ -184,9 +230,7 @@ export function useCourierSession() {
       }
     });
 
-    if (guidanceSet.value?.title) {
-      textsToTranslate.push({ key: 'guidance_title', text: guidanceSet.value.title });
-    }
+    // Don't machine-translate guidance title — use titleArabic if available, otherwise show English
 
     if (textsToTranslate.length === 0) return;
 
@@ -222,10 +266,14 @@ export function useCourierSession() {
   }
 
   function getGuidanceTitle(): string {
-    const title = guidanceSet.value?.title || 'Arriveo';
+    const gs = guidanceSet.value;
+    const title = gs?.title || 'Arriveo';
     const lang = currentLanguage.value;
-    if (lang === 'en') return title;
-    return translatedContent.value['guidance_title'] || title;
+    if (lang === 'ar') {
+      const arTitle = gs?.titleArabic?.replace(/[\u200F\u200E\u200B\u00A0\s]/g, '');
+      if (arTitle) return gs!.titleArabic!;
+    }
+    return title;
   }
 
   function setTokenValid(valid: boolean) {
@@ -247,6 +295,7 @@ export function useCourierSession() {
       if (result.recipientPhoneNumber) {
         recipientPhoneNumber.value = result.recipientPhoneNumber;
       }
+      courierContactPreference.value = result.courierContactPreference ?? 'CALL_ON_ARRIVAL';
 
       setSession(result.shareLink, result.guidanceSet, result.steps);
     } catch (err) {
@@ -269,6 +318,7 @@ export function useCourierSession() {
     isDataLoading.value = false;
     dataLoadError.value = null;
     recipientPhoneNumber.value = null;
+    courierContactPreference.value = null;
     translatedContent.value = {};
     isTranslating.value = false;
   }
@@ -354,6 +404,10 @@ export function useCourierSession() {
     getStepTitle,
     getGuidanceTitle,
     getAvailabilityText,
+    getContactPreferenceShortText,
+    getContactPreferenceLongText,
+    getCourierContactPreference,
+    courierContactPreference,
     clearSession,
     setRecipientPhoneNumber,
     getRecipientPhoneNumber,
