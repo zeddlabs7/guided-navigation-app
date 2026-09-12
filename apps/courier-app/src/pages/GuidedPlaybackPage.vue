@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import ArrowOverlay from '@guidenav/ui/components/ArrowOverlay.vue';
 import MarkerOverlay from '@guidenav/ui/components/MarkerOverlay.vue';
@@ -34,6 +34,7 @@ const {
 const showFeedbackModal = ref(false);
 const imageLoaded = ref(false);
 const imageError = ref(false);
+const stepImageRef = ref<HTMLImageElement | null>(null);
 
 onMounted(() => {
   if (!guidanceSet.value) {
@@ -45,11 +46,6 @@ const currentStep = computed(() => getStepByIndex(currentIndex.value));
 const isFirstStep = computed(() => currentIndex.value === 0);
 const isLastStep = computed(() => currentIndex.value === totalSteps.value - 1);
 
-const nextStepImageUrl = computed(() => {
-  if (isLastStep.value) return null;
-  const next = getStepByIndex(currentIndex.value + 1);
-  return next?.image?.publicUrl ?? null;
-});
 
 const availabilityText = computed(() => {
   const texts = getAvailabilityText();
@@ -115,15 +111,26 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', closeLanguageMenu);
 });
 
-watch(() => route.params.index, () => {
+watch(() => route.params.index, async () => {
   imageLoaded.value = false;
   imageError.value = false;
 
   saveLastStep(currentIndex.value);
 
-  if (nextStepImageUrl.value) {
-    const img = new Image();
-    img.src = nextStepImageUrl.value;
+  // Prefetch next 2 steps ahead
+  for (let offset = 1; offset <= 2; offset++) {
+    const upcoming = getStepByIndex(currentIndex.value + offset);
+    const url = upcoming?.image?.publicUrl;
+    if (url) {
+      const img = new Image();
+      img.src = url;
+    }
+  }
+
+  // Check if current image is already in browser cache (after DOM update)
+  await nextTick();
+  if (stepImageRef.value?.complete && stepImageRef.value.naturalWidth > 0) {
+    imageLoaded.value = true;
   }
 }, { immediate: true });
 
@@ -218,6 +225,7 @@ function handleImageError() {
         <!-- Step Image -->
         <div v-if="currentStep?.image?.publicUrl" class="step-image-wrapper">
           <img
+            ref="stepImageRef"
             :src="currentStep.image.publicUrl"
             :alt="stepTitle"
             class="step-image"
