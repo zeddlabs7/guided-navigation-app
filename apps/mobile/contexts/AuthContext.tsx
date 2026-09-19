@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import { onAuthStateChange, signOut as authSignOut, type FirebaseUser } from '@/services/auth';
 import { getOrCreateUser } from '@/services/users';
+import { useLanguage } from '@/contexts/LanguageContext';
 import type { User } from '@guidenav/types';
 
 interface AuthState {
@@ -17,6 +18,7 @@ interface AuthContextValue extends AuthState {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { syncLanguageFromFirestore } = useLanguage();
   const [state, setState] = useState<AuthState>({
     firebaseUser: null,
     appUser: null,
@@ -29,6 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (user) {
         try {
           const appUser = await getOrCreateUser(user.uid, user.phoneNumber);
+          syncLanguageFromFirestore(appUser);
           setState({
             firebaseUser: user,
             appUser,

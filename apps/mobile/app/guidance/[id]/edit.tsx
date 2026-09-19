@@ -1,7 +1,10 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import {
+  useState,
+  useCallback,
+  useMemo,
+  useRef } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   Pressable,
@@ -9,6 +12,7 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -48,6 +52,7 @@ import {
 } from '@/components/create';
 import { StepCard } from '@/components/edit';
 import Svg, { Path } from 'react-native-svg';
+import { BackChevron } from '@/components/ui/BackChevron';
 
 type FormStep = 'title' | 'addressType' | 'metadata' | 'steps';
 
@@ -994,9 +999,7 @@ export default function EditGuidanceScreen() {
       <View style={styles.header}>
         <View style={styles.headerNav}>
           <Pressable onPress={handleBack} style={styles.headerButton} hitSlop={8}>
-            <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-              <Path d="M15 18L9 12L15 6" stroke={Colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-            </Svg>
+            <BackChevron />
           </Pressable>
           <HomeButton onPress={handleGoToDashboard} />
         </View>

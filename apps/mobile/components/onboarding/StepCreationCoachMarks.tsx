@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   Modal,
   Pressable,
   Animated,
   Dimensions,
 } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { useTranslation } from 'react-i18next';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import type { OnboardingPhase } from '@/hooks/useStepCreationOnboarding';
@@ -102,7 +102,7 @@ export function StepCreationCoachMarks({
             styles.tooltip,
             {
               top: finalTop,
-              left: Spacing.xl,
+              start: Spacing.xl,
               maxWidth: TOOLTIP_MAX_WIDTH,
               opacity: fadeAnim,
               transform: [

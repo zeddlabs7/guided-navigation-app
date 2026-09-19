@@ -1,5 +1,11 @@
-import { useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import {
+  useCallback } from 'react';
+import { View,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+} from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { useTranslation } from 'react-i18next';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { ADDRESS_TYPE_LABELS } from '@guidenav/types';

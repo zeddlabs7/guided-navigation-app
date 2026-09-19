@@ -1,10 +1,20 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
+import {
+  useState,
+  useCallback,
+  useMemo,
+  useRef } from 'react';
+import { View,
+  StyleSheet,
+  Pressable,
+  Alert,
+} from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import Svg, { Path } from 'react-native-svg';
+import { BackChevron } from '@/components/ui/BackChevron';
 import { HomeButton } from '@/components/ui/HomeButton';
 import { validateGuidanceTitle } from '@guidenav/core';
 import { requiresMetadata as checkRequiresMetadata } from '@guidenav/types';
@@ -395,9 +405,7 @@ export default function CreateGuidanceScreen() {
       <View style={styles.header}>
         <View style={styles.headerNav}>
           <Pressable onPress={handleBack} style={styles.headerButton} hitSlop={8}>
-            <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-              <Path d="M15 18L9 12L15 6" stroke={Colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-            </Svg>
+            <BackChevron />
           </Pressable>
           <HomeButton onPress={handleGoToDashboard} />
         </View>

@@ -1,5 +1,13 @@
-import { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import {
+  useState,
+  useCallback,
+  useMemo } from 'react';
+import { View,
+  StyleSheet,
+  Pressable,
+  ScrollView,
+} from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { useTranslation } from 'react-i18next';
 import type { StepType } from '@guidenav/types';
 import { STEP_TYPE_LABELS, getStepTypesForAddressType } from '@guidenav/types';

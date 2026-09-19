@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   TextInput,
   Pressable,
   Image,
@@ -11,6 +10,8 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
+import Svg, { Path } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -19,8 +20,14 @@ import { sendVerificationCode, confirmCode, devSignIn } from '@/services/auth';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+
 const logoEng = require('@/assets/logo-eng.png');
 const logoAr = require('@/assets/logo-ar.png');
+
+const LANGUAGE_OPTIONS: { value: 'en' | 'ar'; label: string }[] = [
+  { value: 'en', label: 'English' },
+  { value: 'ar', label: 'العربية' },
+];
 
 type Step = 'phone' | 'code';
 
@@ -30,13 +37,14 @@ export default function LoginScreen() {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showLangDropdown, setShowLangDropdown] = useState(false);
   const { t } = useTranslation();
-  const { language, toggleLanguage } = useLanguage();
-  const { isAuthenticated } = useAuth();
+  const { language, setLanguage } = useLanguage();
+  const { isAuthenticated, firebaseUser } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && firebaseUser) {
       router.replace('/(tabs)/dashboard');
     }
   }, [isAuthenticated]);
@@ -116,7 +124,7 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header with logo and language toggle */}
+      {/* Header with logo and language dropdown */}
       <View style={styles.header}>
         <Image
           source={language === 'ar' ? logoAr : logoEng}
@@ -124,15 +132,46 @@ export default function LoginScreen() {
           resizeMode="contain"
         />
         <View style={styles.headerSpacer} />
-        <TouchableOpacity
-          style={styles.langButton}
-          onPress={toggleLanguage}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.langText}>
-            {language === 'en' ? 'عربي' : 'EN'}
-          </Text>
-        </TouchableOpacity>
+        <View>
+          <TouchableOpacity
+            style={styles.langButton}
+            onPress={() => setShowLangDropdown((v) => !v)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.langText}>
+              {language === 'en' ? 'EN' : 'عربي'}
+            </Text>
+            <Text style={styles.langChevron}>{showLangDropdown ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+          {showLangDropdown && (
+            <View style={styles.langDropdown}>
+              {LANGUAGE_OPTIONS.map((option) => {
+                const isSelected = language === option.value;
+                return (
+                  <Pressable
+                    key={option.value}
+                    style={[styles.langOption, isSelected && styles.langOptionSelected]}
+                    onPress={() => {
+                      setShowLangDropdown(false);
+                      if (option.value !== language) {
+                        setLanguage(option.value);
+                      }
+                    }}
+                  >
+                    <Text style={[styles.langOptionText, isSelected && styles.langOptionTextSelected]}>
+                      {option.label}
+                    </Text>
+                    {isSelected && (
+                      <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                        <Path d="M20 6L9 17l-5-5" stroke={Colors.primary} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+                      </Svg>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+        </View>
       </View>
 
       <KeyboardAvoidingView
@@ -282,13 +321,56 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     backgroundColor: Colors.surface,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 6,
   },
   langText: {
     fontSize: FontSize.sm,
     color: Colors.textSecondary,
     fontWeight: '500',
+  },
+  langChevron: {
+    fontSize: 8,
+    color: Colors.textMuted,
+  },
+  langDropdown: {
+    position: 'absolute',
+    top: 40,
+    end: 0,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    minWidth: 140,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 6,
+    zIndex: 100,
+    overflow: 'hidden',
+  },
+  langOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.borderLight,
+  },
+  langOptionSelected: {
+    backgroundColor: Colors.primaryBg,
+  },
+  langOptionText: {
+    fontSize: FontSize.base,
+    color: Colors.text,
+  },
+  langOptionTextSelected: {
+    fontWeight: '600',
+    color: Colors.primary,
   },
   keyboardView: {
     flex: 1,

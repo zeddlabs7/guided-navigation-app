@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View,
-  Text,
   Pressable,
   Modal,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
   type ViewStyle,
   type StyleProp,
 } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';

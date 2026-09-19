@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { useTranslation } from 'react-i18next';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';

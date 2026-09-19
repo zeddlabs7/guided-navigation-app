@@ -1,13 +1,18 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef } from 'react';
 import {
   View,
-  Text,
   TextInput,
   StyleSheet,
   Pressable,
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenFooter, useFooterScrollPadding } from '@/components/ui/ScreenFooter';
@@ -25,6 +30,7 @@ import {
   deleteStepImage,
 } from '@/services/guidance';
 import Svg, { Path } from 'react-native-svg';
+import { BackChevron } from '@/components/ui/BackChevron';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { StepTypeDropdown, STEP_TYPE_COLORS, PhotoEditorWithUpload, LocationPicker } from '@/components/steps';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -453,9 +459,7 @@ export default function StepBuilderScreen() {
         onLayout={(e) => { headerHeightRef.current = e.nativeEvent.layout.y + e.nativeEvent.layout.height; }}
       >
         <Pressable onPress={handleBack} style={styles.headerButton} hitSlop={8}>
-          <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-            <Path d="M15 18L9 12L15 6" stroke={Colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-          </Svg>
+          <BackChevron />
         </Pressable>
         <View style={styles.headerInfo}>
           <Text style={styles.headerLabel}>
@@ -639,7 +643,7 @@ export default function StepBuilderScreen() {
             </Text>
             <TextInput
               ref={arabicInputRef}
-              style={styles.textarea}
+              style={[styles.textarea, styles.rtlInput]}
               value={instructionsArabic}
               onChangeText={setInstructionsArabic}
               placeholder={t('steps.arabicInstructionsPlaceholder')}
@@ -647,7 +651,6 @@ export default function StepBuilderScreen() {
               multiline
               numberOfLines={3}
               textAlignVertical="top"
-              textAlign="right"
               editable={!saving}
               returnKeyType="done"
             />
@@ -808,7 +811,7 @@ const styles = StyleSheet.create({
   errorDismiss: {
     fontSize: FontSize.base,
     color: Colors.danger,
-    paddingLeft: Spacing.sm,
+    paddingStart: Spacing.sm,
   },
   fieldWrapper: {
     gap: 6,
@@ -863,5 +866,8 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     fontWeight: '600',
     color: Colors.surface,
+  },
+  rtlInput: {
+    writingDirection: 'rtl',
   },
 });

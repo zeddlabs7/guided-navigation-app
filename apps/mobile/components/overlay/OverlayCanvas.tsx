@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   type LayoutChangeEvent,
 } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { Image } from 'expo-image';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Svg, { Path } from 'react-native-svg';

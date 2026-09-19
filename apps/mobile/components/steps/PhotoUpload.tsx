@@ -1,7 +1,7 @@
-import { useCallback } from 'react';
+import {
+  useCallback } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   Pressable,
   ActivityIndicator,
@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { Image } from 'expo-image';
 import ImageCropPicker from 'react-native-image-crop-picker';
 import * as ExpoImagePicker from 'expo-image-picker';

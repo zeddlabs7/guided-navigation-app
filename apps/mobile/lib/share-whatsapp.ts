@@ -29,6 +29,6 @@ export async function openWhatsAppShare(message: string): Promise<void> {
 
 export async function openWhatsAppShareToNumber(phone: string, message: string): Promise<void> {
   const digits = phone.replace(/[^\d]/g, '');
-  const url = `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
-  await openWhatsAppUrl(url);
+  const nativeUrl = `whatsapp://send?phone=${digits}&text=${encodeURIComponent(message)}`;
+  await openWhatsAppUrl(nativeUrl);
 }

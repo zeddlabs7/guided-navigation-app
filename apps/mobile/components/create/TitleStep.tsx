@@ -1,11 +1,14 @@
-import { useState, useCallback, useRef } from 'react';
+import {
+  useState,
+  useCallback,
+  useRef } from 'react';
 import {
   View,
-  Text,
   TextInput,
   StyleSheet,
   Pressable,
 } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useTranslation } from 'react-i18next';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
@@ -71,13 +74,12 @@ export function TitleStep({ title, titleArabic, onTitleChange, onTitleArabicChan
           <Text style={styles.fieldLabelOptional}>{t('create.arabicTitleLabel')}</Text>
           <TextInput
             ref={arabicInputRef}
-            style={styles.input}
+            style={[styles.input, styles.rtlInput]}
             value={titleArabic}
             onChangeText={onTitleArabicChange}
             onSubmitEditing={handleSubmit}
             placeholder={t('create.arabicTitlePlaceholder')}
             placeholderTextColor={Colors.textMuted}
-            textAlign="right"
             returnKeyType="done"
           />
         </View>
@@ -168,5 +170,8 @@ const styles = StyleSheet.create({
   },
   continueButtonTextDisabled: {
     color: Colors.textMuted,
+  },
+  rtlInput: {
+    writingDirection: 'rtl',
   },
 });

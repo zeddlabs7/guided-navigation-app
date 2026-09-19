@@ -1,7 +1,9 @@
-import { useState, useCallback, useMemo } from 'react';
+import {
+  useState,
+  useCallback,
+  useMemo } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   Pressable,
@@ -10,12 +12,14 @@ import {
   Platform,
   useWindowDimensions,
 } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import Svg, { Path, Circle } from 'react-native-svg';
+import { BackChevron } from '@/components/ui/BackChevron';
 import type { GuidanceSet, GuidanceStep, GuidanceStatus, Overlay, ArrowDirection, AddressType } from '@guidenav/types';
 import { STEP_TYPE_LABELS, ADDRESS_TYPE_LABELS } from '@guidenav/types';
 import { getMetadataFieldConfigs, requiresMetadata as checkRequiresMetadata } from '@guidenav/types';
@@ -423,9 +427,7 @@ export default function PreviewScreen() {
         <View style={styles.headerNav}>
           {!isPublished && (
             <Pressable style={styles.backButton} onPress={handleBack}>
-              <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-                <Path d="M15 18L9 12L15 6" stroke={Colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-              </Svg>
+              <BackChevron />
               <Text style={styles.backButtonText}>{t('preview.back')}</Text>
             </Pressable>
           )}
@@ -932,7 +934,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    marginLeft: 'auto',
+    marginStart: 'auto',
   },
   overlayCountDot: {
     width: 5,

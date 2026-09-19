@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { useTranslation } from 'react-i18next';
 import Svg, { Path } from 'react-native-svg';
 import type { OverlayType, ArrowDirection } from '@guidenav/types';

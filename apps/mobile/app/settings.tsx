@@ -1,7 +1,10 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import {
+  useState,
+  useCallback,
+  useRef,
+  useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   Pressable,
   Alert,
@@ -9,11 +12,13 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Redirect } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Svg, { Path, Circle } from 'react-native-svg';
+import { BackChevron } from '@/components/ui/BackChevron';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -234,9 +239,7 @@ export default function SettingsScreen() {
       <View style={styles.header}>
         <View style={styles.headerNav}>
           <Pressable style={styles.headerBtn} onPress={handleBack}>
-            <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-              <Path d="M15 18L9 12L15 6" stroke={Colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-            </Svg>
+            <BackChevron />
           </Pressable>
           <HomeButton onPress={handleGoToDashboard} />
         </View>
@@ -282,7 +285,7 @@ export default function SettingsScreen() {
                       isSelected && styles.languageOptionSelected,
                     ]}
                     onPress={() => {
-                      setLanguage(option.value);
+                      setLanguage(option.value, firebaseUser?.uid);
                       setShowLanguageDropdown(false);
                     }}
                   >

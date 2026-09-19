@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import type { CourierContactPreference } from '@guidenav/types';

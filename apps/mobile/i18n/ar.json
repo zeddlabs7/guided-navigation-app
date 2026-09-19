@@ -274,7 +274,7 @@
     "comingSoon": "قريباً",
     "updateRegenerate": "تحديث وإعادة إنشاء",
     "generateLink": "إنشاء الرابط",
-    "shareMessage": "📸 صور وخطوات سهلة\nاتبع دليل الصور للوصول إلى موقع التوصيل\n\nOpen in English | العربية | اردو | বাংলা\n\n{{url}}",
+    "shareMessage": "Click below link to view location photos & easy steps 👇\nاضغط على الرابط أدناه لعرض صور الموقع والخطوات السهلة 👇\n\n{{url}}",
     "whatsAppModalTitle": "إرسال إلى رقم واتساب",
     "whatsAppModalSubtitle": "أدخل رقم هاتف المستلم مع رمز الدولة",
     "whatsAppInvalidNumber": "رقم غير صحيح",

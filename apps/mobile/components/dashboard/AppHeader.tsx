@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, Alert } from 'react-native';
+import { View, TouchableOpacity, Image, StyleSheet, Alert } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,7 +19,7 @@ export function AppHeader({ currentLanguage: _legacyLang, onLanguageToggle: _leg
   const router = useRouter();
   const { t } = useTranslation();
   const { signOut } = useAuth();
-  const { language, toggleLanguage } = useLanguage();
+  const { language } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
 
   function handleNew() {
@@ -61,12 +62,6 @@ export function AppHeader({ currentLanguage: _legacyLang, onLanguageToggle: _leg
         </TouchableOpacity>
 
         <View style={styles.spacer} />
-
-        <TouchableOpacity style={styles.langButton} onPress={toggleLanguage} activeOpacity={0.7}>
-          <Text style={styles.langText}>
-            {language === 'en' ? 'عربي' : 'EN'}
-          </Text>
-        </TouchableOpacity>
 
         {/* + New button */}
         <TouchableOpacity style={styles.newButton} onPress={handleNew} activeOpacity={0.8}>
@@ -143,26 +138,6 @@ const styles = StyleSheet.create({
   spacer: {
     flex: 1,
   },
-  langButton: {
-    height: 34,
-    minWidth: 56,
-    paddingHorizontal: 14,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  langText: {
-    fontSize: FontSize.sm,
-    lineHeight: 16,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-    includeFontPadding: false,
-    textAlign: 'center',
-  },
   newButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -171,13 +146,13 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: BorderRadius.full,
     backgroundColor: Colors.text,
-    marginRight: 10,
+    marginEnd: 10,
   },
   newButtonPlus: {
     fontSize: 15,
     fontWeight: '300',
     color: '#FFFFFF',
-    marginRight: 5,
+    marginEnd: 5,
     includeFontPadding: false,
   },
   newButtonLabel: {
@@ -234,7 +209,7 @@ const styles = StyleSheet.create({
   dropdown: {
     position: 'absolute',
     top: 62,
-    right: Spacing.xl,
+    end: Spacing.xl,
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
@@ -257,7 +232,7 @@ const styles = StyleSheet.create({
   settingsIcon: {
     fontSize: 14,
     color: Colors.textSecondary,
-    marginRight: Spacing.sm,
+    marginEnd: Spacing.sm,
   },
   settingsText: {
     fontSize: FontSize.sm,
@@ -273,7 +248,7 @@ const styles = StyleSheet.create({
   logoutIcon: {
     fontSize: 13,
     color: Colors.danger,
-    marginRight: Spacing.sm,
+    marginEnd: Spacing.sm,
     transform: [{ rotate: '90deg' }],
   },
   logoutText: {

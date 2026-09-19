@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 import { Colors } from '@/constants/theme';

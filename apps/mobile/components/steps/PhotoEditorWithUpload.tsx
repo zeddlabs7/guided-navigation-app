@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { useTranslation } from 'react-i18next';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { PhotoUpload } from './PhotoUpload';

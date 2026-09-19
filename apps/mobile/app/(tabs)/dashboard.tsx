@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -19,6 +18,7 @@ import { deleteGuidanceSet } from '@/services/guidance';
 import { AppHeader, FilterTabs, SearchInput, GuidanceSetCard, EmptyState, ContactPreferenceToggle } from '@/components/dashboard';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { SupportFAB } from '@/components/ui/SupportFAB';
+import { AppText as Text } from '@/components/ui/AppText';
 
 type FilterKey = 'all' | GuidanceStatus;
 

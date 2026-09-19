@@ -1,4 +1,5 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { localizeDigits } from '@/utils/localeDigits';
@@ -108,7 +109,7 @@ const styles = StyleSheet.create({
     height: 2,
     backgroundColor: COLORS.default,
     marginTop: 12,
-    marginRight: 8,
+    marginEnd: 8,
   },
   lineCompleted: {
     backgroundColor: COLORS.completed,

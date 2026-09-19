@@ -1,13 +1,17 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import {
+  useState,
+  useCallback,
+  useMemo,
+  useRef } from 'react';
 import {
   View,
-  Text,
   TextInput,
   StyleSheet,
   Pressable,
   ActivityIndicator,
   type LayoutChangeEvent,
 } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useTranslation } from 'react-i18next';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
@@ -414,7 +418,6 @@ export function MetadataStep({
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
-                textAlign="right"
               />
             </View>
           </>

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { useTranslation } from 'react-i18next';
 import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
 
@@ -55,7 +56,7 @@ const styles = StyleSheet.create({
   icon: {
     fontSize: 18,
     color: Colors.textMuted,
-    marginRight: Spacing.sm,
+    marginEnd: Spacing.sm,
   },
   input: {
     flex: 1,
@@ -66,7 +67,7 @@ const styles = StyleSheet.create({
   },
   clearButton: {
     padding: Spacing.sm,
-    marginLeft: Spacing.xs,
+    marginStart: Spacing.xs,
   },
   clearText: {
     fontSize: FontSize.sm,

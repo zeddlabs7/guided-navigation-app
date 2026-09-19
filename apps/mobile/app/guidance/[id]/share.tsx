@@ -1,7 +1,10 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import {
+  useState,
+  useCallback,
+  useEffect,
+  useRef } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   Pressable,
@@ -13,11 +16,13 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import Svg, { Path, Circle } from 'react-native-svg';
+import { BackChevron } from '@/components/ui/BackChevron';
 import { useTranslation } from 'react-i18next';
 import { HomeButton } from '@/components/ui/HomeButton';
 import type { GuidanceSet } from '@guidenav/types';
@@ -309,9 +314,7 @@ export default function ShareScreen() {
       <View style={styles.header}>
         <View style={styles.headerNav}>
           <Pressable style={styles.headerBtn} onPress={handleBack}>
-            <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-              <Path d="M15 18L9 12L15 6" stroke={Colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-            </Svg>
+            <BackChevron />
           </Pressable>
           <HomeButton onPress={handleGoToDashboard} />
         </View>

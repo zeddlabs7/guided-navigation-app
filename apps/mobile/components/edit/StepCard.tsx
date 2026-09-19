@@ -1,4 +1,5 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import type { StepType, Overlay } from '@guidenav/types';
 import { STEP_TYPE_LABELS } from '@guidenav/types';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
@@ -247,7 +248,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     paddingHorizontal: Spacing.md,
     paddingBottom: Spacing.md,
-    paddingLeft: 52,
+    paddingStart: 52,
   },
   details: {
     flex: 1,

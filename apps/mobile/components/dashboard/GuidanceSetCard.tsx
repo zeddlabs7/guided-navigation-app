@@ -1,13 +1,13 @@
 import React, { memo, useState, useRef } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
   Modal,
   Pressable,
 } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 2.5,
-    marginRight: 4,
+    marginEnd: 4,
   },
   stepBadgeText: {
     color: '#FFFFFF',
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
   statusOverlay: {
     position: 'absolute',
     top: Spacing.lg,
-    right: Spacing.lg,
+    end: Spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 8,
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    marginRight: 4,
+    marginEnd: 4,
   },
   statusLabel: {
     fontSize: FontSize.xs,
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
   },
   primaryIcon: {
     fontSize: 13,
-    marginRight: 5,
+    marginEnd: 5,
     color: '#FFFFFF',
   },
   primaryText: {
@@ -503,11 +503,11 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.full,
     borderWidth: 1,
     borderColor: Colors.border,
-    marginLeft: Spacing.sm,
+    marginStart: Spacing.sm,
   },
   secondaryIcon: {
     fontSize: 13,
-    marginRight: 4,
+    marginEnd: 4,
     color: Colors.text,
   },
   secondaryText: {
@@ -524,7 +524,7 @@ const styles = StyleSheet.create({
     height: 36,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: Spacing.sm,
+    marginStart: Spacing.sm,
   },
   moreIcon: {
     fontSize: 20,

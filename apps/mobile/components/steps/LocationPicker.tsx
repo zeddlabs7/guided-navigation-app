@@ -1,7 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
-  Text,
   TextInput,
   StyleSheet,
   Pressable,
@@ -11,6 +10,7 @@ import {
   Platform,
   ScrollView as RNScrollView,
 } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { useTranslation } from 'react-i18next';
 import MapView, { Marker, PROVIDER_GOOGLE, PROVIDER_DEFAULT, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -524,7 +524,7 @@ const styles = StyleSheet.create({
   searchInput: {
     height: 48,
     paddingHorizontal: 16,
-    paddingRight: 40,
+    paddingEnd: 40,
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#d1d5db',

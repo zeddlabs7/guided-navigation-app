@@ -274,7 +274,7 @@
     "linkExpiryChange": "Change",
     "linkValiditySubtitle": "How long should this link remain active?",
     "continue": "Continue",
-    "shareMessage": "📸 Photos & Easy Steps\nFollow the photo guide to find the delivery location\n\nOpen in English | العربية | اردو | বাংলা\n\n{{url}}",
+    "shareMessage": "Click below link to view location photos & easy steps 👇\nاضغط على الرابط أدناه لعرض صور الموقع والخطوات السهلة 👇\n\n{{url}}",
     "whatsAppModalTitle": "Send to WhatsApp Number",
     "whatsAppModalSubtitle": "Enter the courier's phone number with country code",
     "whatsAppInvalidNumber": "Invalid Number",

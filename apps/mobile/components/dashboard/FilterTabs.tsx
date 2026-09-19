@@ -1,5 +1,6 @@
 import React from 'react';
-import { TouchableOpacity, Text, View, ScrollView, StyleSheet } from 'react-native';
+import { TouchableOpacity, View, ScrollView, StyleSheet } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
 import { useTranslation } from 'react-i18next';
 import type { GuidanceStatus } from '@guidenav/types';
 import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
@@ -94,7 +95,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   countBadge: {
-    marginLeft: 6,
+    marginStart: 6,
     backgroundColor: Colors.background,
     borderRadius: 8,
     minWidth: 18,
