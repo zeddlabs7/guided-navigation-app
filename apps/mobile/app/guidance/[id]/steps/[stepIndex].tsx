@@ -236,7 +236,7 @@ export default function StepBuilderScreen() {
       const steps = await getGuidanceSteps(guidanceSetId!);
       const step = steps.find((s) => s.id === editStepId);
       if (!step) {
-        setError('Step not found');
+        setError(t('steps.stepNotFound'));
         setLoading(false);
         return;
       }
@@ -253,7 +253,7 @@ export default function StepBuilderScreen() {
       stepIdRef.current = step.id;
     } catch (err) {
       console.error('Failed to load step:', err);
-      setError('Failed to load step. Please try again.');
+      setError(t('steps.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -276,7 +276,7 @@ export default function StepBuilderScreen() {
       stepIdRef.current = newId;
     } catch (err) {
       console.error('Failed to create step:', err);
-      setError('Failed to initialize step. Please try again.');
+      setError(t('steps.failedToInit'));
     } finally {
       setLoading(false);
     }
@@ -326,15 +326,15 @@ export default function StepBuilderScreen() {
     }
 
     if (!stepIdRef.current) {
-      setError('Step not initialized. Please refresh and try again.');
+      setError(t('steps.stepNotInit'));
       return;
     }
     if (uploading) {
-      setError('Please wait for image upload to complete');
+      setError(t('steps.waitForUpload'));
       return;
     }
     if (uploadFailed) {
-      setError('Image upload failed. Please retry the upload or remove the photo before saving.');
+      setError(t('steps.uploadFailedRetryHint'));
       return;
     }
 
@@ -360,7 +360,7 @@ export default function StepBuilderScreen() {
       }
     } catch (err: any) {
       console.error('Failed to save step:', err);
-      setError('Failed to save step. Please try again.');
+      setError(t('steps.failedToSave'));
     } finally {
       setSaving(false);
     }
@@ -393,7 +393,7 @@ export default function StepBuilderScreen() {
       } catch (err: any) {
         console.error('Failed to upload image:', err);
         setUploadFailed(true);
-        setError('Image upload failed. You can retry or remove the photo.');
+        setError(t('steps.uploadFailedHint'));
         setImageStoragePath(null);
         setPendingImage(null);
       } finally {
@@ -605,8 +605,8 @@ export default function StepBuilderScreen() {
             </Text>
             <Text style={styles.helperText}>
               {selectedStepType === 'LOCATION_CHECK'
-                ? 'Add any extra notes about this location for the courier.'
-                : 'Add instructions that will help the courier navigate to this location.'}
+                ? t('steps.helperNotes')
+                : t('steps.helperInstructions')}
             </Text>
             <TextInput
               style={[
@@ -618,7 +618,7 @@ export default function StepBuilderScreen() {
               onBlur={handleInstructionsBlur}
               onSubmitEditing={() => arabicInputRef.current?.focus()}
               placeholder={selectedStepType === 'LOCATION_CHECK'
-                ? 'e.g. Ring the doorbell, leave at the gate...'
+                ? t('steps.notesPlaceholder')
                 : t('steps.instructionsPlaceholder')}
               placeholderTextColor={Colors.textMuted}
               multiline
@@ -717,18 +717,19 @@ const styles = StyleSheet.create({
   headerInfo: {
     flex: 1,
     gap: 2,
+    alignItems: 'flex-start',
   },
   headerLabel: {
     fontSize: 10,
     fontWeight: '600',
     color: Colors.textMuted,
-    textTransform: 'uppercase',
     letterSpacing: 0.8,
+    includeFontPadding: false,
+    lineHeight: 16,
   },
   headerBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: BorderRadius.full,
@@ -742,6 +743,7 @@ const styles = StyleSheet.create({
   headerBadgeText: {
     fontSize: FontSize.xs,
     fontWeight: '600',
+    includeFontPadding: false,
   },
   helpButton: {
     width: 28,
@@ -772,6 +774,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     fontWeight: '500',
     color: Colors.text,
+    includeFontPadding: false,
   },
   scroll: {
     flex: 1,

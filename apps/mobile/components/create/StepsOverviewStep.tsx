@@ -38,7 +38,7 @@ export function StepsOverviewStep({
   const { t } = useTranslation();
   const { language } = useLanguage();
 
-  const typeLabel = ADDRESS_TYPE_LABELS[addressType]?.en ?? addressType;
+  const typeLabel = (ADDRESS_TYPE_LABELS[addressType] as any)?.[language] ?? ADDRESS_TYPE_LABELS[addressType]?.en ?? addressType;
   const fieldConfigs = getMetadataFieldConfigs(addressType);
   const footerScrollPadding = useFooterScrollPadding(120);
 
@@ -87,7 +87,7 @@ export function StepsOverviewStep({
           {/* Metadata */}
           {visibleMetadata.map((fc) => (
             <View key={fc.field} style={styles.detailRow}>
-              <Text style={styles.detailLabel}>{fc.label.en}</Text>
+              <Text style={styles.detailLabel}>{(fc.label as any)[language] ?? fc.label.en}</Text>
               <Text style={styles.detailValue}>{metadata[fc.field]}</Text>
             </View>
           ))}

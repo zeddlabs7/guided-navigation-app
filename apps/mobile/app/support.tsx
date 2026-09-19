@@ -419,7 +419,7 @@ export default function SupportScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
   },
   header: {
     paddingHorizontal: Spacing.lg,
@@ -442,6 +442,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    backgroundColor: Colors.background,
   },
   content: {
     padding: Spacing.lg,

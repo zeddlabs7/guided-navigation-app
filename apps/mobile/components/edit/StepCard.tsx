@@ -4,6 +4,8 @@ import { STEP_TYPE_LABELS } from '@guidenav/types';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { STEP_TYPE_COLORS } from '@/components/steps/StepTypeDropdown';
 import { StepThumbnail } from './StepThumbnail';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { localizeDigits } from '@/utils/localeDigits';
 import Svg, { Path, Circle } from 'react-native-svg';
 
 interface StepCardProps {
@@ -33,8 +35,9 @@ export function StepCard({
   onEdit,
   onDelete,
 }: StepCardProps) {
+  const { language } = useLanguage();
   const colors = STEP_TYPE_COLORS[stepType] || STEP_TYPE_COLORS.OTHER;
-  const label = STEP_TYPE_LABELS[stepType]?.en || stepType;
+  const label = STEP_TYPE_LABELS[stepType]?.[language] ?? STEP_TYPE_LABELS[stepType]?.en ?? stepType;
 
   return (
     <View style={styles.card}>
@@ -54,7 +57,7 @@ export function StepCard({
 
         {/* Step number */}
         <View style={styles.stepNumber}>
-          <Text style={styles.stepNumberText}>{stepNumber}</Text>
+          <Text style={styles.stepNumberText}>{localizeDigits(stepNumber, language)}</Text>
         </View>
 
         {/* Type badge */}
@@ -189,6 +192,9 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     fontWeight: '600',
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlign: 'center',
+    lineHeight: 24,
   },
   typeBadge: {
     flexDirection: 'row',

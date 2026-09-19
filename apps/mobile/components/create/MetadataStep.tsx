@@ -19,6 +19,7 @@ import type { AddressType, MetadataFieldConfig, UnitType, LocationData, Overlay 
 import { LocationPicker } from '@/components/steps/LocationPicker';
 import { PhotoEditorWithUpload } from '@/components/steps/PhotoEditorWithUpload';
 import { ScreenFooter, useFooterScrollPadding } from '@/components/ui/ScreenFooter';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface MetadataStepProps {
   addressType: AddressType;
@@ -64,6 +65,7 @@ export function MetadataStep({
   saving,
 }: MetadataStepProps) {
   const { t } = useTranslation();
+  const { language } = useLanguage();
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const inputRefs = useRef<Record<string, TextInput | null>>({});
@@ -121,7 +123,7 @@ export function MetadataStep({
       if (config && !validateField(config)) {
         setFieldErrors((prev) => ({
           ...prev,
-          [field]: t('create.fieldRequired', { field: config.label.en }),
+          [field]: t('create.fieldRequired', { field: (config.label as any)[language] ?? config.label.en }),
         }));
       } else {
         setFieldErrors((prev) => {
@@ -144,7 +146,7 @@ export function MetadataStep({
     for (const fc of visibleFields) {
       newTouched.add(fc.field);
       if (!validateField(fc)) {
-        newErrors[fc.field] = t('create.fieldRequired', { field: fc.label.en });
+        newErrors[fc.field] = t('create.fieldRequired', { field: (fc.label as any)[language] ?? fc.label.en });
         allValid = false;
       }
     }
@@ -200,14 +202,14 @@ export function MetadataStep({
   const renderUnitTypePicker = (fieldConfig: MetadataFieldConfig) => {
     const currentValue = metadata[fieldConfig.field] || '';
     const options: { value: UnitType; label: string }[] = [
-      { value: 'villa', label: 'Villa' },
-      { value: 'apartment', label: 'Apartment' },
+      { value: 'villa', label: language === 'ar' ? 'فيلا' : 'Villa' },
+      { value: 'apartment', label: language === 'ar' ? 'شقة' : 'Apartment' },
     ];
 
     return (
       <View key={fieldConfig.field} style={styles.fieldWrapper}>
         <Text style={styles.fieldLabel}>
-          {fieldConfig.label.en}
+          {(fieldConfig.label as any)[language] ?? fieldConfig.label.en}
           {fieldConfig.required && <Text style={styles.required}> *</Text>}
         </Text>
         <View style={styles.segmentedControl}>
@@ -255,7 +257,7 @@ export function MetadataStep({
     return (
       <View key={fieldConfig.field} style={styles.fieldWrapper}>
         <Text style={styles.fieldLabel}>
-          {fieldConfig.label.en}
+          {(fieldConfig.label as any)[language] ?? fieldConfig.label.en}
           {fieldConfig.required && <Text style={styles.required}> *</Text>}
         </Text>
         <TextInput
@@ -271,7 +273,7 @@ export function MetadataStep({
               focusNextField(fieldConfig.field);
             }
           }}
-          placeholder={fieldConfig.placeholder.en}
+          placeholder={(fieldConfig.placeholder as any)[language] ?? fieldConfig.placeholder.en}
           placeholderTextColor={Colors.textMuted}
           returnKeyType={isLast ? 'done' : 'next'}
           blurOnSubmit={isLast}
@@ -307,7 +309,7 @@ export function MetadataStep({
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.sectionTitle}>
-          {sectionTitle?.en ?? 'Address Details'}
+          {(sectionTitle as any)?.[language] ?? sectionTitle?.en ?? t('create.titleLabel')}
         </Text>
         <Text style={styles.sectionSubtitle}>
           {t('create.detailsSubtitle')}

@@ -3,6 +3,8 @@ import { TouchableOpacity, Text, View, ScrollView, StyleSheet } from 'react-nati
 import { useTranslation } from 'react-i18next';
 import type { GuidanceStatus } from '@guidenav/types';
 import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { localizeDigits } from '@/utils/localeDigits';
 
 type FilterKey = 'all' | GuidanceStatus;
 
@@ -21,6 +23,7 @@ const TAB_KEYS: { key: FilterKey; labelKey: string }[] = [
 
 export function FilterTabs({ activeFilter, onFilterChange, counts }: FilterTabsProps) {
   const { t } = useTranslation();
+  const { language } = useLanguage();
   return (
     <ScrollView
       horizontal
@@ -42,7 +45,7 @@ export function FilterTabs({ activeFilter, onFilterChange, counts }: FilterTabsP
             </Text>
             <View style={[styles.countBadge, isActive && styles.countBadgeActive]}>
               <Text style={[styles.countText, isActive && styles.countTextActive]}>
-                {counts[tab.key]}
+                {localizeDigits(counts[tab.key], language)}
               </Text>
             </View>
           </TouchableOpacity>
@@ -84,6 +87,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.textSecondary,
     fontWeight: '500',
+    includeFontPadding: false,
   },
   tabLabelActive: {
     color: '#FFFFFF',
@@ -106,6 +110,9 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     fontWeight: '600',
     color: Colors.textSecondary,
+    includeFontPadding: false,
+    textAlign: 'center',
+    lineHeight: 18,
   },
   countTextActive: {
     color: '#FFFFFF',

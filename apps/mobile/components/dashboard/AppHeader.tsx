@@ -145,6 +145,7 @@ const styles = StyleSheet.create({
   },
   langButton: {
     height: 34,
+    minWidth: 56,
     paddingHorizontal: 14,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
@@ -156,12 +157,16 @@ const styles = StyleSheet.create({
   },
   langText: {
     fontSize: FontSize.sm,
+    lineHeight: 16,
     color: Colors.textSecondary,
     fontWeight: '500',
+    includeFontPadding: false,
+    textAlign: 'center',
   },
   newButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 18,
     height: 34,
     borderRadius: BorderRadius.full,
@@ -173,13 +178,15 @@ const styles = StyleSheet.create({
     fontWeight: '300',
     color: '#FFFFFF',
     marginRight: 5,
-    marginTop: -1,
+    includeFontPadding: false,
   },
   newButtonLabel: {
     fontSize: FontSize.sm,
+    lineHeight: 18,
     fontWeight: '600',
     color: '#FFFFFF',
     letterSpacing: 0.1,
+    includeFontPadding: false,
   },
   userButton: {
     width: 34,
@@ -256,6 +263,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     fontWeight: '500',
     color: Colors.text,
+    includeFontPadding: false,
   },
   dropdownDivider: {
     height: StyleSheet.hairlineWidth,
@@ -272,5 +280,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     fontWeight: '500',
     color: Colors.danger,
+    includeFontPadding: false,
   },
 });

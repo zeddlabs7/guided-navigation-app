@@ -14,6 +14,8 @@ import { useTranslation } from 'react-i18next';
 import type { GuidanceSet, GuidanceStep, GuidanceStatus } from '@guidenav/types';
 import { STEP_TYPE_LABELS } from '@guidenav/types';
 import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { localizeDigits } from '@/utils/localeDigits';
 
 interface GuidanceSetCardProps {
   guidanceSet: GuidanceSet;
@@ -83,6 +85,7 @@ export const GuidanceSetCard = memo(function GuidanceSetCard({
   isDeleting = false,
 }: GuidanceSetCardProps) {
   const { t } = useTranslation();
+  const { language } = useLanguage();
   const status = STATUS_CONFIG[guidanceSet.status];
   const stepsWithImages = steps.filter((s) => s.image?.publicUrl);
   const visibleSteps = stepsWithImages.slice(0, MAX_THUMBNAILS);
@@ -119,14 +122,14 @@ export const GuidanceSetCard = memo(function GuidanceSetCard({
                 <View style={styles.stepBadge}>
                   <View style={[styles.stepDot, { backgroundColor: status.dot }]} />
                   <Text style={styles.stepBadgeText} numberOfLines={1}>
-                    {STEP_TYPE_LABELS[step.stepType]?.en ?? step.stepType}
+                    {(STEP_TYPE_LABELS[step.stepType] as any)?.[language] ?? STEP_TYPE_LABELS[step.stepType]?.en ?? step.stepType}
                   </Text>
                 </View>
               </View>
             ))}
             {overflowCount > 0 && (
               <View style={[styles.thumbnailWrapper, styles.overflowThumbnail]}>
-                <Text style={styles.overflowText}>+{overflowCount}</Text>
+                <Text style={styles.overflowText}>+{localizeDigits(overflowCount, language)}</Text>
               </View>
             )}
           </View>
@@ -169,7 +172,7 @@ export const GuidanceSetCard = memo(function GuidanceSetCard({
             <>
               <View style={styles.stepCountBadge}>
                 <Text style={styles.stepCountText}>
-                  {steps.length} {steps.length === 1 ? t('card.step') : t('card.steps')}
+                  {localizeDigits(steps.length, language)} {steps.length === 1 ? t('card.step') : t('card.steps')}
                 </Text>
               </View>
               <Text style={styles.metaDot}>·</Text>
@@ -490,6 +493,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     fontWeight: '600',
     color: '#FFFFFF',
+    includeFontPadding: false,
   },
   secondaryButton: {
     flexDirection: 'row',
@@ -510,6 +514,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     fontWeight: '500',
     color: Colors.text,
+    includeFontPadding: false,
   },
   actionSpacer: {
     flex: 1,

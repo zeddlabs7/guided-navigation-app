@@ -27,6 +27,25 @@ const STEP_TYPE_COLORS: Record<StepType, { bg: string; dot: string; text: string
 
 export { STEP_TYPE_COLORS };
 
+const ORDER_HINT_AR: Record<string, string> = {
+  'Usually 1st': 'عادةً ١',
+  'Usually 2nd': 'عادةً ٢',
+  'Usually 3rd': 'عادةً ٣',
+  'Usually 4th': 'عادةً ٤',
+  'Usually 5th': 'عادةً ٥',
+  'Usually 6th': 'عادةً ٦',
+  'Usually 7th': 'عادةً ٧',
+  'Usually 8th': 'عادةً ٨',
+  'Usually 9th': 'عادةً ٩',
+  'Usually last': 'عادةً الأخير',
+  'Alternative to elevator': 'بديل للمصعد',
+  'Anytime': 'أي وقت',
+};
+
+function translateOrderHint(hint: string): string {
+  return ORDER_HINT_AR[hint] ?? hint;
+}
+
 interface StepTypeOption {
   type: StepType;
   label: string;
@@ -65,7 +84,7 @@ export function StepTypeDropdown({
     return getStepTypesForAddressType(addressType).map((config) => ({
       type: config.type,
       label: (STEP_TYPE_LABELS[config.type] as any)[language] || STEP_TYPE_LABELS[config.type].en,
-      orderHint: config.orderHint,
+      orderHint: language === 'ar' ? translateOrderHint(config.orderHint) : config.orderHint,
       orderIndex: config.orderIndex,
     }));
   }, [addressType, language]);

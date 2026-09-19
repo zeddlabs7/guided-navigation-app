@@ -99,6 +99,8 @@
     "deleteMessage": "Are you sure you want to delete \"{{title}}\"? This cannot be undone.",
     "deleteError": "Failed to delete. Please try again.",
     "updatePreferences": "Update delivery preferences",
+    "contactCall": "Call on arrival",
+    "contactNoCall": "No call · Leave & photo",
     "logOut": "Log Out",
     "logOutConfirm": "Are you sure you want to sign out?"
   },
@@ -272,7 +274,7 @@
     "linkExpiryChange": "Change",
     "linkValiditySubtitle": "How long should this link remain active?",
     "continue": "Continue",
-    "shareMessage": "Here are directions to my address: {{url}}",
+    "shareMessage": "📸 Photos & Easy Steps\nFollow the photo guide to find the delivery location\n\nOpen in English | العربية | اردو | বাংলা\n\n{{url}}",
     "whatsAppModalTitle": "Send to WhatsApp Number",
     "whatsAppModalSubtitle": "Enter the courier's phone number with country code",
     "whatsAppInvalidNumber": "Invalid Number",
@@ -324,7 +326,18 @@
     "chooseSource": "Choose a source",
     "cropPhoto": "Crop Photo",
     "failedToPick": "Failed to pick image. Please try again.",
-    "privacyBanner": "Photos may contain personal information. Only share with trusted couriers."
+    "privacyBanner": "Photos may contain personal information. Only share with trusted couriers.",
+    "helperNotes": "Add any extra notes about this location for the courier.",
+    "helperInstructions": "Add instructions that will help the courier navigate to this location.",
+    "notesPlaceholder": "e.g. Ring the doorbell, leave at the gate...",
+    "stepNotFound": "Step not found",
+    "failedToLoad": "Failed to load step. Please try again.",
+    "failedToInit": "Failed to initialize step. Please try again.",
+    "stepNotInit": "Step not initialized. Please refresh and try again.",
+    "waitForUpload": "Please wait for image upload to complete",
+    "uploadFailedRetryHint": "Image upload failed. Please retry the upload or remove the photo before saving.",
+    "failedToSave": "Failed to save step. Please try again.",
+    "uploadFailedHint": "Image upload failed. You can retry or remove the photo."
   },
   "location": {
     "title": "Address Location",

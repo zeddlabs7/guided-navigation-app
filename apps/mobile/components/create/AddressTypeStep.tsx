@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { ADDRESS_TYPE_LABELS } from '@guidenav/types';
 import type { AddressType } from '@guidenav/types';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const ADDRESS_TYPE_ICONS: Record<AddressType, string> = {
   APARTMENT_BUILDING: '🏢',
@@ -30,6 +31,7 @@ export function AddressTypeStep({
   onContinue,
 }: AddressTypeStepProps) {
   const { t } = useTranslation();
+  const { language } = useLanguage();
   const handleContinue = useCallback(() => {
     if (selectedType) {
       onContinue();
@@ -64,7 +66,7 @@ export function AddressTypeStep({
                     isSelected && styles.cardLabelSelected,
                   ]}
                 >
-                  {labels.en}
+                  {labels[language] ?? labels.en}
                 </Text>
               </Pressable>
             );

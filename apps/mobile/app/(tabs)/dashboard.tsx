@@ -8,18 +8,17 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
-  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import Svg, { Path, Circle } from 'react-native-svg';
 import type { GuidanceStatus } from '@guidenav/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGuidanceSets } from '@/hooks/useGuidanceSets';
 import { deleteGuidanceSet } from '@/services/guidance';
-import { AppHeader, FilterTabs, SearchInput, GuidanceSetCard, EmptyState } from '@/components/dashboard';
+import { AppHeader, FilterTabs, SearchInput, GuidanceSetCard, EmptyState, ContactPreferenceToggle } from '@/components/dashboard';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
+import { SupportFAB } from '@/components/ui/SupportFAB';
 
 type FilterKey = 'all' | GuidanceStatus;
 
@@ -109,115 +108,79 @@ export default function DashboardScreen() {
     setTimeout(() => setRefreshing(false), 1000);
   }, [refresh]);
 
-  if (error) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorTitle}>{t('dashboard.errorTitle')}</Text>
-          <Text style={styles.errorMessage}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={refresh}>
-            <Text style={styles.retryText}>{t('common.retry')}</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <AppHeader />
 
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.text} />
-          <Text style={styles.loadingText}>{t('dashboard.loading')}</Text>
-        </View>
-      ) : (
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={Colors.text}
-            />
-          }
-        >
-          <View style={styles.pageTitle}>
-            <Text style={styles.title}>{t('dashboard.title')}</Text>
-            <Text style={styles.subtitle}>
-              {t('dashboard.subtitle')}
-            </Text>
-          </View>
-
-          <Pressable
-            style={dashStyles.preferencesLink}
-            onPress={() => router.push('/settings' as any)}
-          >
-            <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-              <Path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z" stroke={Colors.primary} strokeWidth={1.5} />
-              <Circle cx={12} cy={12} r={3} stroke={Colors.primary} strokeWidth={1.5} />
-            </Svg>
-            <Text style={dashStyles.preferencesText}>{t('dashboard.updatePreferences')}</Text>
-            <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
-              <Path d="M9 18l6-6-6-6" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-            </Svg>
-          </Pressable>
-
-          <SearchInput value={searchQuery} onChangeText={setSearchQuery} />
-          <FilterTabs
-            activeFilter={activeFilter}
-            onFilterChange={setActiveFilter}
-            counts={counts}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={Colors.text}
           />
+        }
+      >
+        <View style={styles.pageTitle}>
+          <Text style={styles.title}>{t('dashboard.title')}</Text>
+          <Text style={styles.subtitle}>
+            {t('dashboard.subtitle')}
+          </Text>
+        </View>
 
-          <View style={styles.cardList}>
-            {filteredSets.length === 0 ? (
-              <EmptyState hasSearchQuery={searchQuery.trim().length > 0} />
-            ) : (
-              filteredSets.map((item) => (
-                <GuidanceSetCard
-                  key={item.id}
-                  guidanceSet={item}
-                  steps={stepsMap.get(item.id) ?? []}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onShare={handleShare}
-                  isDeleting={deletingIds.has(item.id)}
-                />
-              ))
-            )}
+        <ContactPreferenceToggle />
+
+        {error ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorIcon}>⚠️</Text>
+            <Text style={styles.errorTitle}>{t('dashboard.errorTitle')}</Text>
+            <Text style={styles.errorMessage}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={refresh}>
+              <Text style={styles.retryText}>{t('common.retry')}</Text>
+            </TouchableOpacity>
           </View>
-        </ScrollView>
-      )}
+        ) : loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.text} />
+            <Text style={styles.loadingText}>{t('dashboard.loading')}</Text>
+          </View>
+        ) : (
+          <>
+            <SearchInput value={searchQuery} onChangeText={setSearchQuery} />
+            <FilterTabs
+              activeFilter={activeFilter}
+              onFilterChange={setActiveFilter}
+              counts={counts}
+            />
+
+            <View style={styles.cardList}>
+              {filteredSets.length === 0 ? (
+                <EmptyState hasSearchQuery={searchQuery.trim().length > 0} />
+              ) : (
+                filteredSets.map((item) => (
+                  <GuidanceSetCard
+                    key={item.id}
+                    guidanceSet={item}
+                    steps={stepsMap.get(item.id) ?? []}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onShare={handleShare}
+                    isDeleting={deletingIds.has(item.id)}
+                  />
+                ))
+              )}
+            </View>
+          </>
+        )}
+      </ScrollView>
+
+      <SupportFAB />
     </SafeAreaView>
   );
 }
-
-const dashStyles = StyleSheet.create({
-  preferencesLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginHorizontal: Spacing.xl,
-    marginTop: Spacing.sm,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.full,
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  preferencesText: {
-    fontSize: FontSize.sm,
-    fontWeight: '500',
-    color: Colors.primary,
-  },
-});
 
 const styles = StyleSheet.create({
   container: {
@@ -242,8 +205,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
+    paddingTop: Spacing.xxxl,
     alignItems: 'center',
   },
   loadingText: {
@@ -257,15 +219,15 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: Spacing.xxxl,
+    flexGrow: 1,
   },
   cardList: {
     paddingTop: Spacing.xs,
   },
   errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: Spacing.xxl,
+    paddingTop: Spacing.xxxl,
   },
   errorIcon: {
     fontSize: 48,

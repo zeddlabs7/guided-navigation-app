@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { I18nManager } from 'react-native';
+import { View, StyleSheet, I18nManager } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { loadSavedLanguage, setLanguage as persistLanguage } from '@/i18n';
 
@@ -21,10 +21,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    I18nManager.allowRTL(true);
     loadSavedLanguage().then((saved) => {
       setLang(saved);
-      I18nManager.allowRTL(true);
-      I18nManager.forceRTL(saved === 'ar');
       setIsLoading(false);
     });
   }, []);
@@ -32,7 +31,6 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const setLanguage = useCallback(async (lang: Language) => {
     setLang(lang);
     await persistLanguage(lang);
-    I18nManager.forceRTL(lang === 'ar');
   }, []);
 
   const toggleLanguage = useCallback(() => {
@@ -40,20 +38,34 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     setLanguage(next);
   }, [language, setLanguage]);
 
+  const isRTL = language === 'ar';
+
   return (
     <LanguageContext.Provider
       value={{
         language,
-        isRTL: language === 'ar',
+        isRTL,
         toggleLanguage,
         setLanguage,
         isLoading,
       }}
     >
-      {children}
+      <View style={[styles.root, isRTL && styles.rtl]}>
+        {children}
+      </View>
     </LanguageContext.Provider>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    direction: 'ltr',
+  },
+  rtl: {
+    direction: 'rtl',
+  },
+});
 
 export function useLanguage() {
   const context = useContext(LanguageContext);

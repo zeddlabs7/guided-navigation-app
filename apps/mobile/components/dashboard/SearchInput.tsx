@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
 
 interface SearchInputProps {
@@ -8,7 +9,9 @@ interface SearchInputProps {
   placeholder?: string;
 }
 
-export function SearchInput({ value, onChangeText, placeholder = 'Search addresses' }: SearchInputProps) {
+export function SearchInput({ value, onChangeText, placeholder }: SearchInputProps) {
+  const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? t('dashboard.searchPlaceholder');
   return (
     <View style={styles.container}>
       <View style={styles.inputWrapper}>
@@ -17,7 +20,7 @@ export function SearchInput({ value, onChangeText, placeholder = 'Search address
           style={styles.input}
           value={value}
           onChangeText={onChangeText}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           placeholderTextColor={Colors.textMuted}
           returnKeyType="search"
           autoCorrect={false}

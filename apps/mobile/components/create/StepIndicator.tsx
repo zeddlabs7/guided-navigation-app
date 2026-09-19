@@ -1,5 +1,7 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { localizeDigits } from '@/utils/localeDigits';
 
 export interface StepConfig {
   key: string;
@@ -22,6 +24,7 @@ const COLORS = {
 };
 
 export function StepIndicator({ steps, currentStep, onStepPress }: StepIndicatorProps) {
+  const { language } = useLanguage();
   const currentIndex = steps.findIndex((s) => s.key === currentStep);
 
   return (
@@ -47,7 +50,7 @@ export function StepIndicator({ steps, currentStep, onStepPress }: StepIndicator
                   isCompleted && styles.dotTextWhite,
                 ]}
               >
-                {index + 1}
+                {localizeDigits(index + 1, language)}
               </Text>
             </View>
             <Text

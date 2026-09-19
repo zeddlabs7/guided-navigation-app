@@ -27,6 +27,7 @@ import type {
 } from '@guidenav/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { localizeDigits } from '@/utils/localeDigits';
 import {
   getGuidanceSet,
   getGuidanceSteps,
@@ -604,23 +605,26 @@ export default function EditGuidanceScreen() {
       .filter((fc) => metadata[fc.field]?.trim());
 
     const getFieldShortLabel = (field: string): string => {
-      const shortLabels: Record<string, string> = {
-        buildingNumber: 'Bldg',
-        floorNumber: 'Floor',
-        doorNumber: 'Unit',
-        compoundName: 'Compound',
-        gateNumber: 'Gate',
-        unitType: 'Type',
-        villaNumber: 'Villa',
-        apartmentNumber: 'Apt',
-        locationDescription: 'Location',
+      const shortLabels: Record<string, Record<string, string>> = {
+        buildingNumber: { en: 'Bldg', ar: 'مبنى' },
+        floorNumber: { en: 'Floor', ar: 'طابق' },
+        doorNumber: { en: 'Unit', ar: 'وحدة' },
+        compoundName: { en: 'Compound', ar: 'مجمع' },
+        gateNumber: { en: 'Gate', ar: 'بوابة' },
+        unitType: { en: 'Type', ar: 'نوع' },
+        villaNumber: { en: 'Villa', ar: 'فيلا' },
+        apartmentNumber: { en: 'Apt', ar: 'شقة' },
+        locationDescription: { en: 'Location', ar: 'موقع' },
       };
-      return shortLabels[field] || field;
+      return shortLabels[field]?.[language] ?? shortLabels[field]?.en ?? field;
     };
 
     const getDisplayValue = (field: string): string => {
       const value = metadata[field];
       if (field === 'unitType') {
+        if (language === 'ar') {
+          return value === 'villa' ? 'فيلا' : value === 'apartment' ? 'شقة' : value;
+        }
         return value === 'villa' ? 'Villa' : value === 'apartment' ? 'Apartment' : value;
       }
       return value;
@@ -826,7 +830,7 @@ export default function EditGuidanceScreen() {
               <View style={styles.stepsHeader}>
                 <Text style={styles.stepsTitle}>{t('edit.guidanceStepsLabel')}</Text>
                 <View style={styles.stepsCountBadge}>
-                  <Text style={styles.stepsCountText}>{steps.length}</Text>
+                  <Text style={styles.stepsCountText}>{localizeDigits(steps.length, language)}</Text>
                 </View>
               </View>
               <View style={styles.stepsList}>

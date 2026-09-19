@@ -25,6 +25,7 @@ import { HomeButton } from '@/components/ui/HomeButton';
 import { hasUnpublishedStepChanges } from '@guidenav/core';
 import { getGuidanceSet, getGuidanceSteps, updateGuidanceSet, publishGuidanceWithSteps } from '@/services/guidance';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { localizeDigits } from '@/utils/localeDigits';
 
 function sortSteps(steps: GuidanceStep[]): GuidanceStep[] {
   const priority: Record<string, number> = {
@@ -98,16 +99,16 @@ const ADDRESS_TYPE_ICONS: Record<AddressType, string> = {
   OTHER: '📍',
 };
 
-const FIELD_SHORT_LABELS: Record<string, string> = {
-  buildingNumber: 'Bldg',
-  floorNumber: 'Floor',
-  doorNumber: 'Unit',
-  compoundName: 'Compound',
-  gateNumber: 'Gate',
-  unitType: 'Type',
-  villaNumber: 'Villa',
-  apartmentNumber: 'Apt',
-  locationDescription: 'Location',
+const FIELD_SHORT_LABELS: Record<string, Record<string, string>> = {
+  buildingNumber: { en: 'Bldg', ar: 'مبنى' },
+  floorNumber: { en: 'Floor', ar: 'طابق' },
+  doorNumber: { en: 'Unit', ar: 'وحدة' },
+  compoundName: { en: 'Compound', ar: 'مجمع' },
+  gateNumber: { en: 'Gate', ar: 'بوابة' },
+  unitType: { en: 'Type', ar: 'نوع' },
+  villaNumber: { en: 'Villa', ar: 'فيلا' },
+  apartmentNumber: { en: 'Apt', ar: 'شقة' },
+  locationDescription: { en: 'Location', ar: 'موقع' },
 };
 
 function formatDate(dateString: string): string {
@@ -331,7 +332,7 @@ export default function PreviewScreen() {
         {/* Header */}
         <View style={styles.stepCardHeader}>
           <View style={styles.stepNumber}>
-            <Text style={styles.stepNumberText}>{index + 1}</Text>
+            <Text style={styles.stepNumberText}>{localizeDigits(index + 1, language)}</Text>
           </View>
           <View style={styles.stepTypeBadge}>
             <View style={styles.stepTypeDot} />
@@ -472,7 +473,7 @@ export default function PreviewScreen() {
             <Text style={styles.summaryDescription}>{t('preview.reviewSubtitle')}</Text>
             <View style={styles.summaryMeta}>
               <Text style={styles.summaryMetaText}>
-                {totalSteps} {totalSteps === 1 ? t('card.step') : t('card.steps')}
+                {localizeDigits(totalSteps, language)} {totalSteps === 1 ? t('card.step') : t('card.steps')}
               </Text>
               <Text style={styles.metaDot}>•</Text>
               <Text style={styles.summaryMetaText}>
@@ -505,7 +506,7 @@ export default function PreviewScreen() {
                 <View style={styles.addressSummaryDetails}>
                   {visibleMeta.map((fc) => (
                     <Text key={fc.field} style={styles.addressSummaryDetail}>
-                      {FIELD_SHORT_LABELS[fc.field] || (language === 'ar' ? fc.label.ar : fc.label.en)}: {gs[fc.field]}
+                      {FIELD_SHORT_LABELS[fc.field]?.[language] ?? FIELD_SHORT_LABELS[fc.field]?.en ?? (language === 'ar' ? fc.label.ar : fc.label.en)}: {fc.field === 'unitType' ? (language === 'ar' ? (gs[fc.field] === 'villa' ? 'فيلا' : gs[fc.field] === 'apartment' ? 'شقة' : gs[fc.field]) : (gs[fc.field] === 'villa' ? 'Villa' : gs[fc.field] === 'apartment' ? 'Apartment' : gs[fc.field])) : gs[fc.field]}
                     </Text>
                   ))}
                 </View>
@@ -516,7 +517,7 @@ export default function PreviewScreen() {
 
         {/* Steps */}
         <View style={styles.stepsSection}>
-          <Text style={styles.stepsSectionTitle}>{t('preview.stepsSection', { count: totalSteps })}</Text>
+          <Text style={styles.stepsSectionTitle}>{t('preview.stepsSection', { count: localizeDigits(totalSteps, language) })}</Text>
 
           {totalSteps === 0 ? (
             <View style={styles.emptyState}>

@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getUser, updateUser } from '@/services/users';
-import type { AvailabilityMode, CourierContactPreference } from '@guidenav/types';
+import type { AvailabilityMode } from '@guidenav/types';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { HomeButton } from '@/components/ui/HomeButton';
 
@@ -53,45 +53,6 @@ const AVAILABILITY_OPTIONS: {
   },
 ];
 
-const CONTACT_PREFERENCE_OPTIONS: {
-  value: CourierContactPreference;
-  labelKey: string;
-  descriptionKey: string;
-  icon: 'phone' | 'no-bell';
-}[] = [
-  {
-    value: 'CALL_ON_ARRIVAL',
-    labelKey: 'settings.callOnArrival',
-    descriptionKey: 'settings.callOnArrivalDesc',
-    icon: 'phone',
-  },
-  {
-    value: 'NO_CALL_LEAVE_PHOTO',
-    labelKey: 'settings.noCallLeavePhoto',
-    descriptionKey: 'settings.noCallLeavePhotoDesc',
-    icon: 'no-bell',
-  },
-];
-
-function ContactIcon({ icon, selected }: { icon: 'phone' | 'no-bell'; selected: boolean }) {
-  const color = selected ? '#ffffff' : '#99a1af';
-  if (icon === 'phone') {
-    return (
-      <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-        <Path
-          d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"
-          stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-        />
-      </Svg>
-    );
-  }
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M13.73 21a2 2 0 01-3.46 0M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M3 3l18 18" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
-}
 
 function AvailabilityIcon({ icon, selected }: { icon: 'check' | 'clock' | 'x'; selected: boolean }) {
   const color = selected ? '#ffffff' : '#99a1af';
@@ -160,12 +121,6 @@ export default function SettingsScreen() {
   const [availabilitySuccess, setAvailabilitySuccess] = useState(false);
   const [availabilityExpanded, setAvailabilityExpanded] = useState(false);
 
-  // Contact preference state (single-tap toggle with optimistic update)
-  const [selectedContact, setSelectedContact] = useState<CourierContactPreference>('CALL_ON_ARRIVAL');
-  const [savingContactValue, setSavingContactValue] = useState<CourierContactPreference | null>(null);
-  const [contactSuccess, setContactSuccess] = useState(false);
-  const [contactExpanded, setContactExpanded] = useState(false);
-
   const scrollViewRef = useRef<ScrollView>(null);
 
   useFocusEffect(
@@ -180,7 +135,6 @@ export default function SettingsScreen() {
         setSelectedAvailability(user.defaultAvailabilityMode || 'ANYTIME_TODAY');
         setStartTime(parseHHmm(user.defaultAvailabilityStartTime));
         setEndTime(parseHHmm(user.defaultAvailabilityEndTime));
-        setSelectedContact(user.courierContactPreference || 'CALL_ON_ARRIVAL');
         setLoadingSettings(false);
       }).catch(() => {
         setLoadingSettings(false);
@@ -194,12 +148,6 @@ export default function SettingsScreen() {
     const timer = setTimeout(() => setAvailabilitySuccess(false), 2000);
     return () => clearTimeout(timer);
   }, [availabilitySuccess]);
-
-  useEffect(() => {
-    if (!contactSuccess) return;
-    const timer = setTimeout(() => setContactSuccess(false), 2000);
-    return () => clearTimeout(timer);
-  }, [contactSuccess]);
 
   if (!isLoading && !isAuthenticated) {
     return <Redirect href="/(auth)/login" />;
@@ -256,24 +204,6 @@ export default function SettingsScreen() {
     }
   }
 
-  async function handleContactTap(value: CourierContactPreference) {
-    if (!firebaseUser || value === selectedContact || savingContactValue !== null) return;
-    const previousValue = selectedContact;
-    setSelectedContact(value);
-    setSavingContactValue(value);
-    setContactSuccess(false);
-    try {
-      await updateUser(firebaseUser.uid, { courierContactPreference: value });
-      setContactSuccess(true);
-    } catch (err) {
-      console.error('Failed to save contact preference:', err);
-      setSelectedContact(previousValue);
-      Alert.alert(t('common.error'), t('settings.contactSaveError'));
-    } finally {
-      setSavingContactValue(null);
-    }
-  }
-
   function getAvailabilitySummary(): string {
     if (selectedAvailability === 'TIME_WINDOW') {
       return t('settings.availabilityTimeWindow', {
@@ -283,11 +213,6 @@ export default function SettingsScreen() {
     }
     if (selectedAvailability === 'NOT_AVAILABLE_TODAY') return t('settings.availabilityNotAvailable');
     return t('settings.availabilityAnytime');
-  }
-
-  function getContactSummary(): string {
-    if (selectedContact === 'NO_CALL_LEAVE_PHOTO') return t('settings.contactNoCallSummary');
-    return t('settings.contactCallSummary');
   }
 
   function handleSignOut() {
@@ -532,112 +457,6 @@ export default function SettingsScreen() {
             </>
           )}
         </View>
-
-        {/* Courier Contact Preference */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeaderText}>
-            <Text style={styles.sectionTitle}>{t('settings.courierContact')}</Text>
-            <Text style={styles.sectionDescription}>{t('settings.courierContactDescription')}</Text>
-          </View>
-
-          {loadingSettings ? (
-            <View style={styles.skeletonContainer}>
-              <View style={styles.skeletonRow}>
-                <SkeletonBlock width={18} height={18} />
-                <SkeletonBlock width={160} height={16} />
-              </View>
-            </View>
-          ) : (
-            <>
-              {/* Accordion header — always visible, tap to toggle */}
-              <Pressable style={styles.summaryRow} onPress={() => setContactExpanded((v) => !v)}>
-                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                  {selectedContact === 'CALL_ON_ARRIVAL' ? (
-                    <Path
-                      d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"
-                      stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-                    />
-                  ) : (
-                    <>
-                      <Path d="M13.73 21a2 2 0 01-3.46 0M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9z" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                      <Path d="M3 3l18 18" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" />
-                    </>
-                  )}
-                </Svg>
-                <Text style={styles.summaryText}>{getContactSummary()}</Text>
-                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                  <Path
-                    d={contactExpanded ? 'M18 15l-6-6-6 6' : 'M6 9l6 6 6-6'}
-                    stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-                  />
-                </Svg>
-              </Pressable>
-
-              {/* Expanded options */}
-              {contactExpanded && (
-                <>
-                  <View style={styles.availabilityOptions}>
-                    {CONTACT_PREFERENCE_OPTIONS.map((option) => {
-                      const isSelected = selectedContact === option.value;
-                      const isSaving = savingContactValue === option.value;
-                      return (
-                        <Pressable
-                          key={option.value}
-                          style={[
-                            styles.availabilityOption,
-                            isSelected && styles.availabilityOptionSelected,
-                            savingContactValue !== null && !isSaving && !isSelected && styles.optionDisabled,
-                          ]}
-                          onPress={() => handleContactTap(option.value)}
-                          disabled={savingContactValue !== null}
-                        >
-                          <View
-                            style={[
-                              styles.availabilityIconCircle,
-                              isSelected && styles.availabilityIconCircleSelected,
-                            ]}
-                          >
-                            {isSaving ? (
-                              <ActivityIndicator size="small" color="#ffffff" />
-                            ) : (
-                              <ContactIcon icon={option.icon} selected={isSelected} />
-                            )}
-                          </View>
-                          <View style={styles.availabilityText}>
-                            <Text style={styles.availabilityLabel}>{t(option.labelKey)}</Text>
-                            <Text style={styles.availabilityDesc}>{t(option.descriptionKey)}</Text>
-                          </View>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-
-                  {contactSuccess && (
-                    <View style={styles.successToast}>
-                      <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-                        <Path d="M20 6L9 17l-5-5" stroke={Colors.success} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-                      </Svg>
-                      <Text style={styles.successToastText}>{t('settings.saved')}</Text>
-                    </View>
-                  )}
-                </>
-              )}
-            </>
-          )}
-        </View>
-
-        {/* Customer Support */}
-        <Pressable style={styles.supportButton} onPress={() => router.push('/support' as any)}>
-          <View style={styles.supportButtonInner}>
-            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-              <Path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke={Colors.primary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-            </Svg>
-            <Text style={styles.supportButtonText}>{t('support.contactSupport')}</Text>
-          </View>
-          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-            <Path d="M9 18l6-6-6-6" stroke={Colors.textMuted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-          </Svg>
-        </Pressable>
 
         {/* Sign out */}
         <Pressable style={styles.logoutButton} onPress={handleSignOut}>
@@ -947,23 +766,5 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     fontWeight: '600',
     color: Colors.danger,
-  },
-  supportButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: Spacing.lg,
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-  },
-  supportButtonInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  supportButtonText: {
-    fontSize: FontSize.base,
-    fontWeight: '500',
-    color: Colors.text,
   },
 });

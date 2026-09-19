@@ -3,3 +3,4 @@ export { FilterTabs } from './FilterTabs';
 export { SearchInput } from './SearchInput';
 export { GuidanceSetCard } from './GuidanceSetCard';
 export { EmptyState } from './EmptyState';
+export { ContactPreferenceToggle } from './ContactPreferenceToggle';
