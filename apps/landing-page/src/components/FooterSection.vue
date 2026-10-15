@@ -20,10 +20,10 @@ const footerLinks = {
     { label: 'For Couriers', href: '#couriers' }
   ],
   company: [
-    { label: 'About Us', href: '#' },
-    { label: 'Blog', href: '#' },
-    { label: 'Careers', href: '#' },
-    { label: 'Contact', href: '#' }
+    { label: 'About Us', href: 'https://alanoor.net/#about' },
+    { label: 'Blog', href: 'https://alanoor.net/#blog' },
+    { label: 'Careers', href: 'https://alanoor.net/#contact' },
+    { label: 'Contact', href: 'https://alanoor.net/#contact' }
   ],
   legal: [
     { label: 'Privacy Policy', href: '#' },

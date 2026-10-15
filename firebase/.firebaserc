@@ -5,11 +5,20 @@
   "targets": {
     "guided-navigation-app": {
       "hosting": {
-        "recipient": ["guided-navigation-app"],
-        "courier": ["guidenav-courier"],
-        "admin": ["guidenav-admin"],
-        "landing": ["guidenav-landing"]
+        "courier": [
+          "guidenav-courier"
+        ],
+        "admin": [
+          "guidenav-admin"
+        ],
+        "landing": [
+          "yadul"
+        ],
+        "alanoor": [
+          "alanoor"
+        ]
       }
     }
-  }
+  },
+  "etags": {}
 }

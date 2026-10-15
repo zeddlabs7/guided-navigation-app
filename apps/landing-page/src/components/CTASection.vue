@@ -11,14 +11,11 @@
             Join thousands of users who have eliminated delivery confusion. Create your first visual guidance in under 2 minutes.
           </p>
           <div class="cta__actions">
-            <a href="#" class="cta__btn cta__btn--primary">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              Get Started Free
-            </a>
-            <a href="#how-it-works" class="cta__btn cta__btn--secondary">
+            <a href="#how-it-works" class="cta__btn cta__btn--primary">
               Learn More
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
             </a>
           </div>
         </div>

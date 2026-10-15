@@ -1,0 +1,78 @@
+:root {
+  /* Primary - Teal (from "Digital Solutions" in logo) */
+  --color-primary: #1A9BA5;
+  --color-primary-dark: #157F88;
+  --color-primary-light: #D9F0F2;
+  --color-primary-bg: #EDF8F9;
+
+  /* Buttons - Dark Slate Navy (from "Alanoor" wordmark) */
+  --color-button: #2A3D52;
+  --color-button-hover: #364E66;
+  --color-button-active: #1F2E3F;
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #1A9BA5 0%, #157F88 100%);
+  --gradient-hero: linear-gradient(180deg, var(--color-primary-light) 0%, var(--color-surface) 100%);
+
+  /* Text */
+  --color-text: #2A3D52;
+  --color-text-secondary: #4E6478;
+  --color-text-muted: #8A9DB0;
+  --color-text-light: #B3C2CF;
+
+  /* Surfaces */
+  --color-background: #F8FAFB;
+  --color-surface: #FFFFFF;
+
+  /* Borders */
+  --color-border: #D4DEE7;
+  --color-border-light: #E8EEF3;
+
+  /* Semantic */
+  --color-success: #008236;
+  --color-success-bg: #f0fdf4;
+  --color-warning: #bb4d00;
+  --color-warning-bg: #fffbeb;
+  --color-danger: #dc2626;
+  --color-danger-bg: #fee2e2;
+
+  /* Typography */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 2rem;
+  --font-size-4xl: 2.5rem;
+  --font-size-5xl: 3.5rem;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+
+  /* Border Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(42, 61, 82, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(42, 61, 82, 0.07), 0 2px 4px -2px rgba(42, 61, 82, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(42, 61, 82, 0.08), 0 4px 6px -4px rgba(42, 61, 82, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(42, 61, 82, 0.1), 0 8px 10px -6px rgba(42, 61, 82, 0.05);
+  --shadow-button: 0 2px 4px rgba(26, 155, 165, 0.2);
+}

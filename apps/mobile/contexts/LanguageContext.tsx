@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { View, StyleSheet, I18nManager, NativeModules, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import * as Updates from 'expo-updates';
 import { loadSavedLanguage, setLanguage as persistLanguage } from '@/i18n';
 import { updateUser } from '@/services/users';
 import type { User } from '@guidenav/types';
@@ -19,9 +20,13 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | null>(null);
 
-function reloadApp() {
+async function reloadApp() {
   if (Platform.OS === 'web') return;
-  NativeModules.DevSettings?.reload?.();
+  if (__DEV__) {
+    NativeModules.DevSettings?.reload?.();
+  } else {
+    await Updates.reloadAsync();
+  }
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
@@ -36,13 +41,6 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       const rtl = saved === 'ar';
 
       I18nManager.forceRTL(rtl);
-
-      console.log('[RTL CHECK]', {
-        isRTL: I18nManager.isRTL,
-        swap: I18nManager.doLeftAndRightSwapInRTL,
-        savedLang: saved,
-        rtlNeeded: rtl,
-      });
 
       if (I18nManager.isRTL !== rtl) {
         setIsSwitchingLanguage(true);

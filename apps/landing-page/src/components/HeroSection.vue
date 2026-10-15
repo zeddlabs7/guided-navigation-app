@@ -25,7 +25,7 @@ const isMenuOpen = ref(false);
         <a href="#features" @click="isMenuOpen = false">Features</a>
         <a href="#recipients" @click="isMenuOpen = false">For Recipients</a>
         <a href="#couriers" @click="isMenuOpen = false">For Couriers</a>
-        <a href="#" class="hero__nav-cta">Get Started</a>
+        <a href="#how-it-works" class="hero__nav-cta" @click="isMenuOpen = false">Get Started</a>
       </div>
     </nav>
 
@@ -39,14 +39,11 @@ const isMenuOpen = ref(false);
           Help couriers find your exact location with photo-based step-by-step instructions. No more missed deliveries or confusing directions.
         </p>
         <div class="hero__actions">
-          <a href="#" class="hero__btn hero__btn--primary">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            Create Guidance
-          </a>
-          <a href="#how-it-works" class="hero__btn hero__btn--secondary">
+          <a href="#how-it-works" class="hero__btn hero__btn--primary">
             See How It Works
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
           </a>
         </div>
       </div>

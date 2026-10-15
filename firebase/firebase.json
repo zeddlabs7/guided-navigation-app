@@ -12,19 +12,8 @@
   },
   "hosting": [
     {
-      "target": "recipient",
-      "public": "../apps/recipient-app/dist",
-      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-      "rewrites": [
-        {
-          "source": "**",
-          "destination": "/index.html"
-        }
-      ]
-    },
-    {
       "target": "courier",
-      "public": "../apps/courier-app/dist",
+      "public": "courier-dist",
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "rewrites": [
         {
@@ -35,7 +24,7 @@
     },
     {
       "target": "admin",
-      "public": "../apps/admin-portal/dist",
+      "public": "admin-dist",
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "rewrites": [
         {
@@ -46,7 +35,18 @@
     },
     {
       "target": "landing",
-      "public": "../apps/landing-page/dist",
+      "public": "landing-dist",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    },
+    {
+      "target": "alanoor",
+      "public": "alanoor-dist",
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "rewrites": [
         {
