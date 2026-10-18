@@ -370,27 +370,28 @@ onMounted(() => {
 
 .address-line {
   display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: 6px 0;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.address-line:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .address-line-label {
+  flex: 1;
+  min-width: 0;
   font-size: clamp(15px, 3dvh, 17px);
   font-weight: 600;
   color: var(--color-text-muted);
 }
 
 .address-line-value {
+  flex-shrink: 0;
   font-size: clamp(15px, 2.8dvh, 17px);
   font-weight: 600;
   color: var(--color-text);
+  text-align: end;
   word-break: break-word;
 }
 

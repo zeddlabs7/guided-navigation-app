@@ -107,7 +107,7 @@ const translations: Record<TranslationKey, Record<Language, string>> = {
   viewLocationPhoto: { en: 'View Location Photo', ar: 'عرض صورة الموقع', hi: 'स्थान की फोटो देखें', ur: 'مقام کی تصویر دیکھیں', bn: 'অবস্থানের ছবি দেখুন' },
   getDirections: { en: 'Get Directions', ar: 'احصل على الاتجاهات', hi: 'दिशा-निर्देश प्राप्त करें', ur: 'سمت حاصل کریں', bn: 'দিকনির্দেশ পান' },
   arrivalSteps: { en: 'Arrival Steps', ar: 'خطوات الوصول', hi: 'आगमन चरण', ur: 'پہنچنے کے مراحل', bn: 'আগমনের ধাপ' },
-  startArrivalGuide: { en: 'Start Arrival Guide', ar: 'ابدأ دليل الوصول', hi: 'आगमन गाइड शुरू करें', ur: 'پہنچنے کی گائیڈ شروع کریں', bn: 'আগমনের গাইড শুরু করুন' },
+  startArrivalGuide: { en: 'Steps After You Arrive', ar: 'الخطوات بعد وصولك', hi: 'आपके पहुँचने के बाद के चरण', ur: 'آپ کے پہنچنے کے بعد کے مراحل', bn: 'আপনি পৌঁছানোর পরের ধাপগুলো' },
   viewAllSteps: { en: 'View All Steps', ar: 'عرض جميع الخطوات', hi: 'सभी चरण देखें', ur: 'تمام مراحل دیکھیں', bn: 'সকল ধাপ দেখুন' },
   stepOf: { en: 'Step {current} of {total}', ar: 'الخطوة {current} من {total}', hi: 'चरण {current} / {total}', ur: 'مرحلہ {current} از {total}', bn: 'ধাপ {current} / {total}' },
   destinationLabel: { en: 'Destination', ar: 'الوجهة', hi: 'गंतव्य', ur: 'منزل مقصود', bn: 'গন্তব্য' },

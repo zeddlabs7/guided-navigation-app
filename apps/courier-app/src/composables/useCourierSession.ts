@@ -156,11 +156,11 @@ export function useCourierSession() {
   function getContactPreferenceShortText(): Record<Language, string> {
     if (courierContactPreference.value === 'NO_CALL_LEAVE_PHOTO') {
       return {
-        en: '🔕 NO CALL · LEAVE & SEND PHOTO',
-        ar: '🔕 لا اتصال · اترك وأرسل صورة',
-        hi: '🔕 कॉल नहीं · छोड़ें और फ़ोटो भेजें',
-        ur: '🔕 کال نہیں · چھوڑیں اور تصویر بھیجیں',
-        bn: '🔕 কল নয় · রেখে দিন ও ছবি পাঠান',
+        en: '🔕 DO NOT CALL, DELIVER SHIPMENT & SEND PHOTO',
+        ar: '🔕 لا تتصل، سلّم الشحنة وأرسل صورة',
+        hi: '🔕 कॉल न करें, शिपमेंट डिलीवर करें और फ़ोटो भेजें',
+        ur: '🔕 کال نہ کریں، شپمنٹ ڈیلیور کریں اور تصویر بھیجیں',
+        bn: '🔕 কল করবেন না, চালান ডেলিভার করুন ও ছবি পাঠান',
       };
     }
     return {
