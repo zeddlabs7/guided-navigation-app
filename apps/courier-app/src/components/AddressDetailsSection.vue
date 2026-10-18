@@ -54,9 +54,16 @@ const allVisibleFields = computed(() => {
   return configs.filter(shouldShowField);
 });
 
+const gateNumberValue = computed(() => {
+  if (props.guidanceSet.addressType !== 'RESIDENTIAL_COMPOUND') return '';
+  const config = allVisibleFields.value.find(c => c.field === 'gateNumber');
+  return config ? getFieldValue('gateNumber') : '';
+});
+
 const destinationSummary = computed(() => {
   const parts: string[] = [];
   for (const field of DESTINATION_FIELDS) {
+    if (field === 'gateNumber') continue;
     const config = allVisibleFields.value.find(c => c.field === field);
     if (config) {
       parts.push(getFieldValue(field));
@@ -182,9 +189,19 @@ onMounted(() => {
     <div class="address-content">
       <!-- Address cards -->
       <div class="address-cards">
-        <div v-if="destinationSummary" class="address-card">
-          <span class="address-card-label">{{ t('destinationLabel') }}</span>
-          <span class="address-card-value">{{ destinationSummary }}</span>
+        <div
+          v-if="destinationSummary || gateNumberValue"
+          class="address-card"
+          :class="{ 'address-card--split': destinationSummary && gateNumberValue }"
+        >
+          <div v-if="destinationSummary" class="address-card-main">
+            <span class="address-card-label">{{ t('destinationLabel') }}</span>
+            <span class="address-card-value">{{ destinationSummary }}</span>
+          </div>
+          <div v-if="gateNumberValue" class="address-card-gate">
+            <span class="address-card-label">{{ t('gateLabel') }}</span>
+            <span class="address-card-value">{{ gateNumberValue }}</span>
+          </div>
         </div>
 
         <div v-if="addressDetailLines.length > 0" class="address-card">
@@ -197,7 +214,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <p v-if="!destinationSummary && addressDetailLines.length === 0" class="no-metadata">
+        <p v-if="!destinationSummary && !gateNumberValue && addressDetailLines.length === 0" class="no-metadata">
           {{ t('noAddressDetails') }}
         </p>
       </div>
@@ -342,6 +359,36 @@ onMounted(() => {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.address-card--split {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+}
+
+.address-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.address-card--split .address-card-main {
+  padding: clamp(12px, 2dvh, 16px);
+}
+
+.address-card-gate {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 0 1 38%;
+  max-width: 42%;
+  min-width: 72px;
+  padding: clamp(12px, 2dvh, 16px);
+  border-inline-start: 1px solid var(--color-border);
 }
 
 .address-card-label {
