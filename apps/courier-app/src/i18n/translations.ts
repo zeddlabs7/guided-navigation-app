@@ -19,6 +19,7 @@ type TranslationKey =
   | 'viewAllSteps'
   | 'stepOf'
   | 'destinationLabel'
+  | 'gateLabel'
   | 'addressDetailsLabel'
   // StepListSection
   | 'guide'
@@ -111,6 +112,7 @@ const translations: Record<TranslationKey, Record<Language, string>> = {
   viewAllSteps: { en: 'View All Steps', ar: 'عرض جميع الخطوات', hi: 'सभी चरण देखें', ur: 'تمام مراحل دیکھیں', bn: 'সকল ধাপ দেখুন' },
   stepOf: { en: 'Step {current} of {total}', ar: 'الخطوة {current} من {total}', hi: 'चरण {current} / {total}', ur: 'مرحلہ {current} از {total}', bn: 'ধাপ {current} / {total}' },
   destinationLabel: { en: 'Destination', ar: 'الوجهة', hi: 'गंतव्य', ur: 'منزل مقصود', bn: 'গন্তব্য' },
+  gateLabel: { en: 'Gate', ar: 'البوابة', hi: 'गेट', ur: 'گیٹ', bn: 'গেট' },
   addressDetailsLabel: { en: 'Address Details', ar: 'تفاصيل العنوان', hi: 'पता विवरण', ur: 'پتے کی تفصیلات', bn: 'ঠিকানার বিবরণ' },
 
   // StepListSection
