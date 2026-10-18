@@ -28,11 +28,12 @@ Your primary work will be on the **Vue 3 web apps** (courier app, admin portal, 
 13. [Install Expo / EAS CLI](#13-optional-install-expo--eas-cli)
 14. [Mobile App Environment Variables](#14-optional-mobile-app-environment-variables)
 15. [Running the Mobile App (Android)](#15-optional-running-the-mobile-app-android)
+16. [Running the Mobile App on iPhone (iOS)](#16-optional-running-the-mobile-app-on-iphone-ios)
 
 **Reference**
 
-16. [Access Checklist (for Zohaib)](#16-access-checklist-for-zohaib)
-17. [Quick Reference Card](#17-quick-reference-card)
+17. [Access Checklist (for Zohaib)](#17-access-checklist-for-zohaib)
+18. [Quick Reference Card](#18-quick-reference-card)
 
 ---
 
@@ -464,12 +465,94 @@ This starts the Metro bundler and opens the app on the emulator. Code changes wi
 ### Mobile-Specific Tips
 
 - **Emulator is slow?** Enable Hardware Acceleration (HAXM or Hyper-V) in your BIOS settings. Use an x86_64 system image (not ARM). Allocate at least 4 GB RAM to the emulator in AVD settings.
-- **iOS builds:** You cannot build or run the iOS app on Windows. iOS development requires a Mac. Only Android is available to you.
+- **iOS builds:** You cannot use `expo run:ios` on Windows (that requires Xcode on a Mac), but you **can** build and test on your physical iPhone using EAS Build (cloud builds). See [Section 16](#16-optional-running-the-mobile-app-on-iphone-ios) for full instructions.
 - The mobile app uses native Firebase (`@react-native-firebase/*`), not the Firebase JS SDK that the web apps use. It has its own service layer.
 
 ---
 
-## 16. Access Checklist (for Zohaib)
+## 16. (Optional) Running the Mobile App on iPhone (iOS)
+
+Even though you're on Windows and can't run Xcode locally, you **can** build and test the iOS app on your physical iPhone using **EAS Build** (Expo's cloud build service). EAS runs the iOS build on remote macOS servers, so no Mac is needed on your end.
+
+### Prerequisites
+
+Before starting, make sure:
+
+- You have a **physical iPhone** (the iOS simulator only runs on Mac).
+- Your iPhone and your Windows laptop are on the **same Wi-Fi network** (needed for hot-reload during development).
+- Zohaib has added your Apple ID to the Apple Developer team (ask him if unsure).
+- You have completed [Section 13 (Expo / EAS CLI)](#13-optional-install-expo--eas-cli) — `eas-cli` is installed and you're logged in.
+
+### Firebase Config File for iOS
+
+The mobile app needs a `GoogleService-Info.plist` file for Firebase on iOS. This file should already be in `apps/mobile/GoogleService-Info.plist`. If it's missing, ask Zohaib to send it to you. Place it at:
+
+```
+apps/mobile/GoogleService-Info.plist
+```
+
+### Build the iOS Development Build (Cloud)
+
+Since you can't run Xcode on Windows, EAS Build compiles the app on Expo's cloud servers for you.
+
+1. Navigate to the mobile app folder:
+   ```
+   cd apps/mobile
+   ```
+2. Start the iOS development build:
+   ```
+   eas build --platform ios --profile development
+   ```
+3. **First time only — device registration:** EAS will detect that your iPhone is not yet registered. It will ask if you want to register a new device. Follow the prompts:
+   - Select **Yes** when asked to register a new iOS device.
+   - EAS will give you a URL — open it **on your iPhone's browser** (Safari).
+   - Follow the on-screen steps to download a provisioning profile. This registers your iPhone's UDID automatically.
+   - Go back to your terminal — EAS will continue the build once registration is complete.
+4. Wait for the cloud build to finish. This takes **10-20 minutes**. EAS will print a URL to the build when it's done.
+
+> **Tip:** You can also check build status at https://expo.dev — go to your project > Builds.
+
+### Install the Build on Your iPhone
+
+1. Once the build completes, EAS prints a URL (or you can find it on https://expo.dev under your project's Builds page).
+2. Open that URL **on your iPhone's Safari browser** (not on your PC).
+3. Tap **Install** when prompted. The app will download and appear on your home screen.
+4. **First time only — trust the developer certificate:**
+   - The app won't open yet. You'll see an "Untrusted Developer" alert.
+   - Go to **Settings > General > VPN & Device Management** (on older iOS: **Profiles & Device Management**).
+   - Find the developer certificate and tap **Trust**.
+   - Now open the app again — it should launch.
+
+### Run the Dev Server (Hot-Reload)
+
+After the development build is installed on your iPhone, you don't need to rebuild for JavaScript changes — just start the dev server on your Windows machine and the app connects to it over Wi-Fi.
+
+1. Make sure your iPhone and Windows laptop are on the **same Wi-Fi network**.
+2. Start the Metro dev server from your Windows machine:
+   ```
+   cd apps/mobile
+   npx expo start
+   ```
+3. Open the development build app on your iPhone. It will show a screen to enter the dev server URL.
+4. You can either:
+   - **Scan the QR code** shown in your terminal using your iPhone's camera.
+   - **Enter the URL manually** — type the IP address and port shown in the terminal (e.g. `192.168.1.100:8081`).
+5. The app will connect and load. Any JavaScript/React changes you make will **hot-reload** automatically on your iPhone.
+
+### When Do You Need to Rebuild?
+
+- **JS/React changes (components, screens, styles, logic):** No rebuild needed. Just save the file and it hot-reloads.
+- **Native dependency changes (adding/updating a `@react-native-firebase/*` package, changing `app.config.ts` native settings, adding a new Expo plugin):** You need to run `eas build --platform ios --profile development` again.
+
+### iOS-Specific Tips
+
+- **Build failed?** Check the build logs on https://expo.dev. Common issues are provisioning profile problems (ask Zohaib to check the Apple Developer portal) or missing `GoogleService-Info.plist`.
+- **App can't connect to dev server?** Make sure both devices are on the same Wi-Fi. Check that your Windows firewall isn't blocking the Metro port (usually 8081). Try running `npx expo start --tunnel` as a fallback — this uses Expo's tunnel service and doesn't require same-network connectivity (but is slower).
+- **Want to test a production-like build?** Run `eas build --platform ios --profile preview` to get an optimized build without dev tools.
+
+---
+
+## 17. Access Checklist (for Zohaib)
 
 These are things **Zohaib needs to do** to give the new developer access:
 
@@ -485,10 +568,12 @@ These are things **Zohaib needs to do** to give the new developer access:
 
 - [ ] **Expo / EAS** — Add to the Expo project at https://expo.dev (go to project settings > Members)
 - [ ] **Send `google-services.json`** — The Android Firebase config file (already at `apps/mobile/google-services.json`, but send a copy just in case)
+- [ ] **Apple Developer** — Add developer's Apple ID to the Apple Developer team (so EAS can provision iOS builds)
+- [ ] **Send `GoogleService-Info.plist`** — The iOS Firebase config file (already at `apps/mobile/GoogleService-Info.plist`, but send a copy just in case)
 
 ---
 
-## 17. Quick Reference Card
+## 18. Quick Reference Card
 
 **Web Apps (your main work):**
 
@@ -504,7 +589,7 @@ These are things **Zohaib needs to do** to give the new developer access:
 | Check pnpm version | `pnpm --version` (should be 8+) |
 | Firebase login | `firebase login` |
 
-**Mobile App (optional):**
+**Mobile App — Android (optional):**
 
 | What | Command |
 |------|---------|
@@ -512,3 +597,12 @@ These are things **Zohaib needs to do** to give the new developer access:
 | Run mobile app (after first build) | `cd apps/mobile && npx expo start --android` |
 | Check emulator | `adb devices` |
 | Expo login | `eas login` |
+
+**Mobile App — iOS / iPhone (optional):**
+
+| What | Command |
+|------|---------|
+| Build iOS dev build (cloud) | `cd apps/mobile && eas build --platform ios --profile development` |
+| Start dev server (iPhone connects over Wi-Fi) | `cd apps/mobile && npx expo start` |
+| Start dev server with tunnel (no same-network needed) | `cd apps/mobile && npx expo start --tunnel` |
+| Check build status | Visit https://expo.dev > your project > Builds |

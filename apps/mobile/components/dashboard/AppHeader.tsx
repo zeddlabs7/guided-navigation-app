@@ -128,12 +128,12 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
   },
   logoButton: {
-    height: 34,
+    height: 42,
     justifyContent: 'center',
   },
   logoImage: {
-    height: 26,
-    width: 96,
+    height: 38,
+    width: 140,
   },
   spacer: {
     flex: 1,
