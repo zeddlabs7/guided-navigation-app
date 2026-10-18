@@ -24,7 +24,6 @@ const {
   getStepInstruction,
   getStepTitle,
   getGuidanceTitle,
-  getAvailabilityText,
   getContactPreferenceShortText,
   setLanguage,
   translateUserContent,
@@ -46,11 +45,6 @@ const currentStep = computed(() => getStepByIndex(currentIndex.value));
 const isFirstStep = computed(() => currentIndex.value === 0);
 const isLastStep = computed(() => currentIndex.value === totalSteps.value - 1);
 
-
-const availabilityText = computed(() => {
-  const texts = getAvailabilityText();
-  return texts[currentLanguage.value];
-});
 
 const contactPreferenceText = computed(() => {
   const texts = getContactPreferenceShortText();
@@ -215,7 +209,7 @@ function handleImageError() {
         <path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M22 4L12 14.01l-3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      <span class="availability-text">{{ availabilityText }} · {{ contactPreferenceText }}</span>
+      <span class="availability-text">{{ contactPreferenceText }}</span>
     </div>
 
     <!-- Main Content -->
