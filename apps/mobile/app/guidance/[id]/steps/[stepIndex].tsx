@@ -11,6 +11,7 @@ import {
   Pressable,
   ActivityIndicator,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { AppText as Text } from '@/components/ui/AppText';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
@@ -34,7 +35,7 @@ import { BackChevron } from '@/components/ui/BackChevron';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { StepTypeDropdown, STEP_TYPE_COLORS, PhotoEditorWithUpload, LocationPicker } from '@/components/steps';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useStepCreationOnboarding } from '@/hooks/useStepCreationOnboarding';
+import { useStepCreationOnboarding, type OnboardingPhase } from '@/hooks/useStepCreationOnboarding';
 import { StepCreationCoachMarks } from '@/components/onboarding/StepCreationCoachMarks';
 
 export default function StepBuilderScreen() {
@@ -85,6 +86,9 @@ export default function StepBuilderScreen() {
   const stepIdRef = useRef<string | null>(editStepId);
   const stepSavedRef = useRef(false);
   const scrollRef = useRef<any>(null);
+  const photoSectionRef = useRef<View>(null);
+  const instructionsSectionRef = useRef<View>(null);
+  const [coachAnchored, setCoachAnchored] = useState(true);
   const arabicInputRef = useRef<TextInput>(null);
   const locationSectionY = useRef(0);
   const instructionsSectionY = useRef(0);
@@ -93,10 +97,10 @@ export default function StepBuilderScreen() {
   const {
     currentPhase: onboardingPhase,
     isActive: onboardingActive,
-    advance: advanceOnboarding,
+    setPhase: setOnboardingPhase,
     dismiss: dismissOnboarding,
-    replay: replayOnboarding,
-  } = useStepCreationOnboarding(isEditMode);
+  } = useStepCreationOnboarding(isEditMode, overlays.length);
+  const [helpFocusOnly, setHelpFocusOnly] = useState(false);
 
   const scrollOffsetRef = useRef(0);
   const headerHeightRef = useRef(0);
@@ -107,6 +111,7 @@ export default function StepBuilderScreen() {
   // Save button is outside scroll — use measureInWindow for it only
   const saveBtnRef = useRef<View>(null);
   const [saveBtnScreenY, setSaveBtnScreenY] = useState<number | null>(null);
+  const [coachLayoutVersion, setCoachLayoutVersion] = useState(0);
 
   const recordSectionLayout = useCallback(
     (key: string, y: number, height: number) => {
@@ -139,7 +144,7 @@ export default function StepBuilderScreen() {
     };
     const key = keyMap[onboardingPhase];
     return key ? getScreenRect(key) : null;
-  }, [onboardingPhase, onboardingActive, getScreenRect, saveBtnScreenY]);
+  }, [onboardingPhase, onboardingActive, getScreenRect, saveBtnScreenY, coachLayoutVersion]);
 
   /** Style applied to the currently-highlighted section */
   const highlightStyle = useMemo(
@@ -172,12 +177,121 @@ export default function StepBuilderScreen() {
   const selectedTypeColors = STEP_TYPE_COLORS[selectedStepType] || STEP_TYPE_COLORS.OTHER;
   const selectedTypeLabel = (STEP_TYPE_LABELS[selectedStepType] as any)?.[language] || STEP_TYPE_LABELS[selectedStepType]?.en || selectedStepType;
 
-  // Auto-advance onboarding when photo is added
-  useEffect(() => {
-    if (onboardingPhase === 'photo' && imageUri) {
-      advanceOnboarding();
+  const needsInstructions = selectedStepType !== 'LOCATION_CHECK';
+
+  const isPhaseFilled = useCallback(
+    (phase: OnboardingPhase) => {
+      if (phase === 'photo' || phase === 'awaitingImage') return !!imageUri;
+      if (phase === 'mark') return overlays.length > 0;
+      if (phase === 'instruct') return !needsInstructions || instructions.trim().length > 0;
+      return false;
+    },
+    [imageUri, overlays.length, needsInstructions, instructions],
+  );
+
+  const nextUnfilled = useCallback(
+    (from: OnboardingPhase): OnboardingPhase => {
+      const order: OnboardingPhase[] = ['photo', 'awaitingImage', 'mark', 'instruct', 'save'];
+      const start = order.indexOf(from);
+      for (let i = start + 1; i < order.length; i++) {
+        const phase = order[i];
+        if (phase === 'awaitingImage' && imageUri) continue;
+        if (phase === 'save' || !isPhaseFilled(phase)) return phase;
+      }
+      return 'done';
+    },
+    [imageUri, isPhaseFilled],
+  );
+
+  const handleAdvanceCoach = useCallback(() => {
+    if (helpFocusOnly) {
+      setHelpFocusOnly(false);
+      dismissOnboarding();
+      return;
     }
-  }, [imageUri, onboardingPhase, advanceOnboarding]);
+    // Step 3 stays hidden until an arrow or marker is actually added.
+    if (onboardingPhase === 'mark') {
+      setOnboardingPhase(overlays.length > 0 ? 'instruct' : 'awaitingMark');
+      return;
+    }
+    // Step 4 stays hidden until the instruction (step 3) is actually entered.
+    if (onboardingPhase === 'instruct') {
+      setOnboardingPhase(instructions.trim() ? 'save' : 'awaitingInstruction');
+      return;
+    }
+    const next = nextUnfilled(onboardingPhase);
+    if (next === 'done') dismissOnboarding();
+    else setOnboardingPhase(next);
+  }, [
+    helpFocusOnly,
+    dismissOnboarding,
+    nextUnfilled,
+    onboardingPhase,
+    instructions,
+    overlays.length,
+    setOnboardingPhase,
+  ]);
+
+  const handleDismissCoach = useCallback(() => {
+    setHelpFocusOnly(false);
+    dismissOnboarding();
+  }, [dismissOnboarding]);
+
+  const handleHelp = useCallback(() => {
+    const formIsEmpty = !imageUri && overlays.length === 0 && instructions.trim().length === 0;
+    if (formIsEmpty) {
+      setHelpFocusOnly(false);
+      setCoachAnchored(true);
+      setOnboardingPhase('photo');
+      return;
+    }
+    const phase = imageUri ? nextUnfilled('awaitingImage') : 'photo';
+    setHelpFocusOnly(true);
+    setCoachAnchored(phase === 'photo' || phase === 'save');
+    setOnboardingPhase(phase);
+  }, [imageUri, overlays.length, instructions, nextUnfilled, setOnboardingPhase]);
+
+  // After the photo is added, open only the next empty field.
+  // Never jump to save here — step 4 waits until step 3 is finished.
+  useEffect(() => {
+    if (onboardingPhase !== 'awaitingImage' || !imageUri) return;
+    const next = nextUnfilled('awaitingImage');
+    setOnboardingPhase(next === 'save' || next === 'done' ? 'mark' : next);
+  }, [imageUri, onboardingPhase, nextUnfilled, setOnboardingPhase]);
+
+  // Scroll the highlighted section into view, then reveal that one tip.
+  useEffect(() => {
+    if (!onboardingActive || !imageUri) return;
+    if (onboardingPhase !== 'mark' && onboardingPhase !== 'instruct') return;
+
+    setCoachAnchored(false);
+    let settle: ReturnType<typeof setTimeout> | undefined;
+    let fallback: ReturnType<typeof setTimeout> | undefined;
+    const timer = setTimeout(() => {
+      const node = onboardingPhase === 'instruct' ? instructionsSectionRef : photoSectionRef;
+      const finish = (target: number) => {
+        scrollOffsetRef.current = target;
+        setCoachLayoutVersion((version) => version + 1);
+        setCoachAnchored(true);
+      };
+      if (!node.current?.measureInWindow) {
+        finish(scrollOffsetRef.current);
+        return;
+      }
+      node.current.measureInWindow((_x, y) => {
+        const delta = y - headerHeightRef.current - Spacing.md;
+        const target = Math.max(scrollOffsetRef.current + delta, 0);
+        scrollRef.current?.scrollTo({ x: 0, y: target, animated: true });
+        settle = setTimeout(() => finish(target), 450);
+      });
+      fallback = setTimeout(() => setCoachAnchored(true), 800);
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+      if (settle) clearTimeout(settle);
+      if (fallback) clearTimeout(fallback);
+    };
+  }, [onboardingActive, onboardingPhase, imageUri]);
 
   // Measure save button position (it's outside the scroll view)
   useEffect(() => {
@@ -313,7 +427,10 @@ export default function StepBuilderScreen() {
   const handleInstructionsBlur = useCallback(() => {
     setInstructionsTouched(true);
     validateInstructions();
-  }, [validateInstructions]);
+    if (onboardingPhase === 'awaitingInstruction' && instructions.trim()) {
+      setOnboardingPhase('save');
+    }
+  }, [validateInstructions, onboardingPhase, instructions, setOnboardingPhase]);
 
   const handleSaveStep = useCallback(async () => {
     setLocationTouched(true);
@@ -486,7 +603,7 @@ export default function StepBuilderScreen() {
         </View>
         <Pressable
           style={styles.helpButton}
-          onPress={replayOnboarding}
+          onPress={handleHelp}
           hitSlop={8}
         >
           <Text style={styles.helpButtonText}>?</Text>
@@ -565,9 +682,12 @@ export default function StepBuilderScreen() {
 
         {/* Photo Upload + Overlay Editor */}
         <View
+          ref={photoSectionRef}
           style={[
             styles.section,
-            (onboardingPhase === 'photo' || onboardingPhase === 'mark') && onboardingActive && highlightStyle,
+            (onboardingPhase === 'photo' || (onboardingPhase === 'mark' && coachAnchored)) &&
+              onboardingActive &&
+              highlightStyle,
           ]}
           onLayout={(e) => {
             const { y, height } = e.nativeEvent.layout;
@@ -591,9 +711,10 @@ export default function StepBuilderScreen() {
 
         {/* Instructions */}
         <View
+          ref={instructionsSectionRef}
           style={[
             styles.section,
-            onboardingPhase === 'instruct' && onboardingActive && highlightStyle,
+            onboardingPhase === 'instruct' && onboardingActive && coachAnchored && highlightStyle,
           ]}
           onLayout={(e) => {
             const { y, height } = e.nativeEvent.layout;
@@ -656,6 +777,10 @@ export default function StepBuilderScreen() {
             />
           </View>
         </View>
+
+        {onboardingActive && (onboardingPhase === 'mark' || onboardingPhase === 'instruct') && (
+          <View style={{ height: Dimensions.get('window').height * 0.45 }} />
+        )}
       </KeyboardAwareScrollView>
 
       <ScreenFooter>
@@ -681,10 +806,14 @@ export default function StepBuilderScreen() {
       {/* Coach marks overlay */}
       <StepCreationCoachMarks
         currentPhase={onboardingPhase}
-        isActive={onboardingActive}
+        isActive={
+          onboardingActive &&
+          (onboardingPhase === 'photo' || onboardingPhase === 'save' || coachAnchored)
+        }
         targetRect={currentTargetRect}
-        onAdvance={advanceOnboarding}
-        onDismiss={dismissOnboarding}
+        showSteps={!helpFocusOnly}
+        onAdvance={handleAdvanceCoach}
+        onDismiss={handleDismissCoach}
       />
     </SafeAreaView>
   );
