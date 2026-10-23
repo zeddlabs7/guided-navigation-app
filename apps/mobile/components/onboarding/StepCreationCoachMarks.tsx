@@ -50,6 +50,8 @@ interface StepCreationCoachMarksProps {
   isActive: boolean;
   /** Absolute screen-Y + height of the highlighted section for the current phase. */
   targetRect: CoachTargetRect | null;
+  /** When false, the card points at one field and hides the step dots. */
+  showSteps?: boolean;
   onAdvance: () => void;
   onDismiss: () => void;
 }
@@ -58,6 +60,7 @@ export function StepCreationCoachMarks({
   currentPhase,
   isActive,
   targetRect,
+  showSteps = true,
   onAdvance,
   onDismiss,
 }: StepCreationCoachMarksProps) {
@@ -116,18 +119,19 @@ export function StepCreationCoachMarks({
             },
           ]}
         >
-          {/* Phase indicator dots */}
-          <View style={styles.phaseDots}>
-            {['photo', 'mark', 'instruct', 'save'].map((p) => (
-              <View
-                key={p}
-                style={[
-                  styles.phaseDot,
-                  p === currentPhase && styles.phaseDotActive,
-                ]}
-              />
-            ))}
-          </View>
+          {showSteps && (
+            <View style={styles.phaseDots}>
+              {['photo', 'mark', 'instruct', 'save'].map((p) => (
+                <View
+                  key={p}
+                  style={[
+                    styles.phaseDot,
+                    p === currentPhase && styles.phaseDotActive,
+                  ]}
+                />
+              ))}
+            </View>
+          )}
 
           <Text style={styles.tooltipTitle}>{t(config.titleKey)}</Text>
           <Text style={styles.tooltipDesc}>{t(config.descKey)}</Text>
