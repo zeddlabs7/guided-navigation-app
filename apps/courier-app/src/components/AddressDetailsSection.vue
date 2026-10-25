@@ -208,8 +208,8 @@ onMounted(() => {
           <span class="address-card-label">{{ t('addressDetailsLabel') }}</span>
           <div class="address-lines">
             <div v-for="(line, i) in addressDetailLines" :key="i" class="address-line">
-              <span class="address-line-label">{{ line.label }}</span>
               <span class="address-line-value">{{ line.value }}</span>
+              <span class="address-line-label">{{ line.label }}</span>
             </div>
           </div>
         </div>
@@ -417,29 +417,33 @@ onMounted(() => {
 
 .address-line {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 0;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 0;
   border-bottom: 1px solid var(--color-border);
 }
 
-.address-line-label {
-  flex: 1;
-  min-width: 0;
-  font-size: clamp(15px, 3dvh, 17px);
-  font-weight: 600;
-  color: var(--color-text-muted);
+.address-line:last-child {
+  border-bottom: none;
+  padding-bottom: 4px;
 }
 
 .address-line-value {
-  flex-shrink: 0;
-  font-size: clamp(15px, 2.8dvh, 17px);
-  font-weight: 600;
+  font-size: clamp(20px, 4dvh, 26px);
+  font-weight: 700;
   color: var(--color-text);
-  text-align: end;
+  text-align: center;
   word-break: break-word;
+  line-height: 1.2;
+}
+
+.address-line-label {
+  font-size: clamp(12px, 2dvh, 14px);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-align: center;
 }
 
 .no-metadata {
