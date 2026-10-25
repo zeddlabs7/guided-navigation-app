@@ -235,15 +235,8 @@ export default function StepBuilderScreen() {
 
   const handleSkipCoach = useCallback(() => {
     setHelpFocusOnly(false);
-    const order: OnboardingPhase[] = ['photo', 'mark', 'instruct', 'save'];
-    const idx = order.indexOf(onboardingPhase);
-    if (idx === -1 || idx >= order.length - 1) {
-      dismissOnboarding();
-      return;
-    }
-    setCoachAnchored(true);
-    setOnboardingPhase(order[idx + 1]);
-  }, [onboardingPhase, dismissOnboarding, setOnboardingPhase]);
+    dismissOnboarding();
+  }, [dismissOnboarding]);
 
   const handleDismissCoach = useCallback(() => {
     setHelpFocusOnly(false);
