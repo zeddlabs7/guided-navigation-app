@@ -3,28 +3,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY = '@arriveo/hasSeenStepCreationGuide';
 
-export type OnboardingPhase =
-  | 'photo'
-  | 'mark'
-  | 'awaitingMark'
-  | 'awaitingImage'
-  | 'instruct'
-  | 'awaitingInstruction'
-  | 'save'
-  | 'done';
+export type OnboardingPhase = 'photo' | 'mark' | 'instruct' | 'save' | 'done';
 
-// Step 1 (photo) is shown before a photo exists. Got it hides the tooltip
-// until the photo is added, then step 2 (mark) appears. Step 4 (save) waits
-// until the instruction from step 3 has been entered.
-const PHASE_ORDER: OnboardingPhase[] = [
-  'photo',
-  'awaitingImage',
-  'mark',
-  'awaitingMark',
-  'instruct',
-  'awaitingInstruction',
-  'save',
-];
+const PHASE_ORDER: OnboardingPhase[] = ['photo', 'mark', 'instruct', 'save'];
 
 interface UseStepCreationOnboardingReturn {
   /** Current onboarding phase, or 'done' if completed/dismissed. */
@@ -35,8 +16,6 @@ interface UseStepCreationOnboardingReturn {
   loading: boolean;
   /** Advance to the next phase. After 'save', marks as done. */
   advance: () => void;
-  /** Jump to an exact phase without skipping ahead. */
-  setPhase: (phase: OnboardingPhase) => void;
   /** Dismiss all remaining onboarding and mark as done. */
   dismiss: () => void;
   /** Replay the full onboarding sequence (session-only, does not clear AsyncStorage). */
@@ -45,24 +24,38 @@ interface UseStepCreationOnboardingReturn {
 
 export function useStepCreationOnboarding(
   isEditMode: boolean,
-  overlayCount = 0,
 ): UseStepCreationOnboardingReturn {
-  const [currentPhase, setCurrentPhase] = useState<OnboardingPhase>(
-    isEditMode ? 'done' : 'photo',
-  );
+  const [currentPhase, setCurrentPhase] = useState<OnboardingPhase>('done');
+  const [loading, setLoading] = useState(true);
   const hasPersistedRef = useRef(false);
 
   useEffect(() => {
     if (isEditMode) {
       setCurrentPhase('done');
+      setLoading(false);
       return;
     }
 
-    // Treat every visit to a new step as the first time, even if this
-    // device already finished the guide.
-    hasPersistedRef.current = false;
-    setCurrentPhase('photo');
-    AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
+    let cancelled = false;
+    AsyncStorage.getItem(STORAGE_KEY)
+      .then((value) => {
+        if (cancelled) return;
+        if (value === 'true') {
+          setCurrentPhase('done');
+        } else {
+          setCurrentPhase('photo');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCurrentPhase('done');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [isEditMode]);
 
   const persistCompletion = useCallback(() => {
@@ -83,19 +76,6 @@ export function useStepCreationOnboarding(
     });
   }, [persistCompletion]);
 
-  const prevOverlayCount = useRef(overlayCount);
-  useEffect(() => {
-    const increased = overlayCount > prevOverlayCount.current;
-    prevOverlayCount.current = overlayCount;
-    if (currentPhase === 'awaitingMark' && increased) {
-      advance();
-    }
-  }, [currentPhase, overlayCount, advance]);
-
-  const setPhase = useCallback((phase: OnboardingPhase) => {
-    setCurrentPhase(phase);
-  }, []);
-
   const dismiss = useCallback(() => {
     setCurrentPhase('done');
     persistCompletion();
@@ -108,9 +88,8 @@ export function useStepCreationOnboarding(
   return {
     currentPhase,
     isActive: currentPhase !== 'done',
-    loading: false,
+    loading,
     advance,
-    setPhase,
     dismiss,
     replay,
   };

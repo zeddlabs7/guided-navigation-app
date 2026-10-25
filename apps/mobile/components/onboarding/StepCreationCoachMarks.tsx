@@ -50,10 +50,7 @@ interface StepCreationCoachMarksProps {
   isActive: boolean;
   /** Absolute screen-Y + height of the highlighted section for the current phase. */
   targetRect: CoachTargetRect | null;
-  /** When false, the card points at one field and hides the step dots. */
-  showSteps?: boolean;
   onAdvance: () => void;
-  onSkip: () => void;
   onDismiss: () => void;
 }
 
@@ -61,9 +58,7 @@ export function StepCreationCoachMarks({
   currentPhase,
   isActive,
   targetRect,
-  showSteps = true,
   onAdvance,
-  onSkip,
   onDismiss,
 }: StepCreationCoachMarksProps) {
   const { t } = useTranslation();
@@ -121,30 +116,24 @@ export function StepCreationCoachMarks({
             },
           ]}
         >
-          {showSteps && (
-            <View style={styles.phaseDots}>
-              {['photo', 'mark', 'instruct', 'save'].map((p) => (
-                <View
-                  key={p}
-                  style={[
-                    styles.phaseDot,
-                    p === currentPhase && styles.phaseDotActive,
-                  ]}
-                />
-              ))}
-            </View>
-          )}
+          {/* Phase indicator dots */}
+          <View style={styles.phaseDots}>
+            {['photo', 'mark', 'instruct', 'save'].map((p) => (
+              <View
+                key={p}
+                style={[
+                  styles.phaseDot,
+                  p === currentPhase && styles.phaseDotActive,
+                ]}
+              />
+            ))}
+          </View>
 
           <Text style={styles.tooltipTitle}>{t(config.titleKey)}</Text>
           <Text style={styles.tooltipDesc}>{t(config.descKey)}</Text>
-          <View style={styles.actions}>
-            <Pressable style={styles.skipBtn} onPress={onSkip} hitSlop={8}>
-              <Text style={styles.skipText}>{t('onboarding.skip')}</Text>
-            </Pressable>
-            <Pressable style={styles.gotItBtn} onPress={onAdvance}>
-              <Text style={styles.gotItText}>{t('onboarding.gotIt')}</Text>
-            </Pressable>
-          </View>
+          <Pressable style={styles.gotItBtn} onPress={onAdvance}>
+            <Text style={styles.gotItText}>{t('onboarding.gotIt')}</Text>
+          </Pressable>
         </Animated.View>
       </Animated.View>
     </Modal>
@@ -194,26 +183,13 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     lineHeight: 20,
   },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: Spacing.xs,
-  },
-  skipBtn: {
-    paddingVertical: Spacing.sm + 2,
-    paddingHorizontal: Spacing.sm,
-  },
-  skipText: {
-    fontSize: FontSize.sm,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
   gotItBtn: {
+    alignSelf: 'flex-start',
     backgroundColor: Colors.text,
     borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.sm + 2,
+    marginTop: Spacing.xs,
   },
   gotItText: {
     fontSize: FontSize.sm,
