@@ -70,6 +70,7 @@ export default function StepBuilderScreen() {
   const [pendingImage, setPendingImage] = useState<StepImage | null>(null);
   const [existingStep, setExistingStep] = useState<GuidanceStep | null>(null);
   const [overlays, setOverlays] = useState<Overlay[]>([]);
+  const [overlayEditorRequest, setOverlayEditorRequest] = useState(0);
   const [locationData, setLocationData] = useState<LocationData | null>(null);
 
   const [loading, setLoading] = useState(true);
@@ -209,9 +210,10 @@ export default function StepBuilderScreen() {
       dismissOnboarding();
       return;
     }
-    // Step 3 stays hidden until an arrow or marker is actually added.
+    // Step 2: close the tip and open the arrow editor.
     if (onboardingPhase === 'mark') {
-      setOnboardingPhase(overlays.length > 0 ? 'instruct' : 'awaitingMark');
+      setOnboardingPhase('awaitingMark');
+      setOverlayEditorRequest((request) => request + 1);
       return;
     }
     // Step 4 stays hidden until the instruction (step 3) is actually entered.
@@ -228,9 +230,20 @@ export default function StepBuilderScreen() {
     nextUnfilled,
     onboardingPhase,
     instructions,
-    overlays.length,
     setOnboardingPhase,
   ]);
+
+  const handleSkipCoach = useCallback(() => {
+    setHelpFocusOnly(false);
+    const order: OnboardingPhase[] = ['photo', 'mark', 'instruct', 'save'];
+    const idx = order.indexOf(onboardingPhase);
+    if (idx === -1 || idx >= order.length - 1) {
+      dismissOnboarding();
+      return;
+    }
+    setCoachAnchored(true);
+    setOnboardingPhase(order[idx + 1]);
+  }, [onboardingPhase, dismissOnboarding, setOnboardingPhase]);
 
   const handleDismissCoach = useCallback(() => {
     setHelpFocusOnly(false);
@@ -704,6 +717,7 @@ export default function StepBuilderScreen() {
             onRemove={handleRemovePhoto}
             onUpdateOverlays={setOverlays}
             onRetryUpload={handleRetryUpload}
+            openOverlayRequest={overlayEditorRequest}
           />
         </View>
 
@@ -813,6 +827,7 @@ export default function StepBuilderScreen() {
         targetRect={currentTargetRect}
         showSteps={!helpFocusOnly}
         onAdvance={handleAdvanceCoach}
+        onSkip={handleSkipCoach}
         onDismiss={handleDismissCoach}
       />
     </SafeAreaView>
