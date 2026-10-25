@@ -19,8 +19,6 @@ interface PhotoEditorWithUploadProps {
   onRemove: () => void;
   onUpdateOverlays: (overlays: Overlay[]) => void;
   onRetryUpload?: () => void;
-  /** Increment to open the arrow editor. */
-  openOverlayRequest?: number;
 }
 
 export function PhotoEditorWithUpload({
@@ -34,7 +32,6 @@ export function PhotoEditorWithUpload({
   onRemove,
   onUpdateOverlays,
   onRetryUpload,
-  openOverlayRequest = 0,
 }: PhotoEditorWithUploadProps) {
   const { t } = useTranslation();
 
@@ -74,7 +71,6 @@ export function PhotoEditorWithUpload({
         uploadStatus={uploadStatus}
         onUpdateOverlays={onUpdateOverlays}
         onRetryUpload={onRetryUpload}
-        openRequest={openOverlayRequest}
       />
       {uploading && (
         <View style={styles.uploadBadge}>
