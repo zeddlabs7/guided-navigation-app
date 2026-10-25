@@ -47,22 +47,37 @@ export function useStepCreationOnboarding(
   isEditMode: boolean,
   overlayCount = 0,
 ): UseStepCreationOnboardingReturn {
-  const [currentPhase, setCurrentPhase] = useState<OnboardingPhase>(
-    isEditMode ? 'done' : 'photo',
-  );
+  const [currentPhase, setCurrentPhase] = useState<OnboardingPhase>('done');
+  const [loading, setLoading] = useState(true);
   const hasPersistedRef = useRef(false);
 
   useEffect(() => {
     if (isEditMode) {
       setCurrentPhase('done');
+      setLoading(false);
       return;
     }
 
-    // Treat every visit to a new step as the first time, even if this
-    // device already finished the guide.
-    hasPersistedRef.current = false;
-    setCurrentPhase('photo');
-    AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
+    let cancelled = false;
+    AsyncStorage.getItem(STORAGE_KEY)
+      .then((value) => {
+        if (cancelled) return;
+        if (value === 'true') {
+          setCurrentPhase('done');
+        } else {
+          setCurrentPhase('photo');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCurrentPhase('done');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [isEditMode]);
 
   const persistCompletion = useCallback(() => {
@@ -108,7 +123,7 @@ export function useStepCreationOnboarding(
   return {
     currentPhase,
     isActive: currentPhase !== 'done',
-    loading: false,
+    loading,
     advance,
     setPhase,
     dismiss,
