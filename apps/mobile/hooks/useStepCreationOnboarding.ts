@@ -83,8 +83,11 @@ export function useStepCreationOnboarding(
     });
   }, [persistCompletion]);
 
+  const prevOverlayCount = useRef(overlayCount);
   useEffect(() => {
-    if (currentPhase === 'awaitingMark' && overlayCount > 0) {
+    const increased = overlayCount > prevOverlayCount.current;
+    prevOverlayCount.current = overlayCount;
+    if (currentPhase === 'awaitingMark' && increased) {
       advance();
     }
   }, [currentPhase, overlayCount, advance]);
