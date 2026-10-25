@@ -119,6 +119,8 @@ interface OverlayEditorModalProps {
   onSave: (overlays: Overlay[]) => void;
   onCancel: () => void;
   onRetryUpload?: () => void;
+  /** Open straight onto the arrow type picker. */
+  startInArrowPlacement?: boolean;
 }
 
 export function OverlayEditorModal({
@@ -130,6 +132,7 @@ export function OverlayEditorModal({
   onSave,
   onCancel,
   onRetryUpload,
+  startInArrowPlacement = false,
 }: OverlayEditorModalProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -155,13 +158,17 @@ export function OverlayEditorModal({
       setSelectedOverlayId(null);
       setShowArrowTypePicker(false);
       setShowLabelModal(false);
+      if (startInArrowPlacement) {
+        setShowArrowTypePicker(true);
+        setSelectedOverlayId(null);
+      }
       if (initialOverlays.length === 0) {
         setShowPulse(true);
         const timer = setTimeout(() => setShowPulse(false), 4000);
         return () => clearTimeout(timer);
       }
     }
-  }, [visible, initialOverlays]);
+  }, [visible, initialOverlays, startInArrowPlacement]);
 
   useEffect(() => {
     (async () => {
