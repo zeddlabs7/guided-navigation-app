@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { AppText as Text } from '@/components/ui/AppText';
 import { Image } from 'expo-image';
@@ -20,6 +20,8 @@ interface OverlayEditorProps {
   userId?: string;
   onUpdateOverlays: (overlays: Overlay[]) => void;
   onRetryUpload?: () => void;
+  /** Increment to open the editor on the arrow picker. */
+  openRequest?: number;
 }
 
 export function OverlayEditor({
@@ -30,9 +32,17 @@ export function OverlayEditor({
   userId = 'dev-user-placeholder',
   onUpdateOverlays,
   onRetryUpload,
+  openRequest = 0,
 }: OverlayEditorProps) {
   const { t } = useTranslation();
   const [modalVisible, setModalVisible] = useState(false);
+  const [startInArrowPlacement, setStartInArrowPlacement] = useState(false);
+
+  useEffect(() => {
+    if (!openRequest || readonly) return;
+    setStartInArrowPlacement(true);
+    setModalVisible(true);
+  }, [openRequest, readonly]);
 
   const handleOpenEditor = useCallback(() => {
     if (readonly) return;
@@ -42,12 +52,14 @@ export function OverlayEditor({
   const handleSave = useCallback(
     (updatedOverlays: Overlay[]) => {
       onUpdateOverlays(updatedOverlays);
+      setStartInArrowPlacement(false);
       setModalVisible(false);
     },
     [onUpdateOverlays],
   );
 
   const handleCancel = useCallback(() => {
+    setStartInArrowPlacement(false);
     setModalVisible(false);
   }, []);
 
@@ -92,6 +104,7 @@ export function OverlayEditor({
         onSave={handleSave}
         onCancel={handleCancel}
         onRetryUpload={onRetryUpload}
+        startInArrowPlacement={startInArrowPlacement}
       />
     </View>
   );
