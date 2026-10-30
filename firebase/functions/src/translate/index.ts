@@ -18,7 +18,7 @@ interface TranslateTextsData {
 }
 
 export const translateTexts = onRequest(
-  { region: FUNCTIONS_REGION, concurrency: 80, memory: '256MiB', cors: CORS_ORIGINS },
+  { region: FUNCTIONS_REGION, minInstances: 1, concurrency: 80, memory: '256MiB', cors: CORS_ORIGINS },
   async (req, res) => {
     const { texts, targetLanguage } = req.body as TranslateTextsData;
 
