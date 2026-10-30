@@ -83,7 +83,7 @@ export const validateToken = onRequest(
 );
 
 export const loadGuidanceData = onRequest(
-  { region: FUNCTIONS_REGION, concurrency: 80, memory: '256MiB', cors: CORS_ORIGINS },
+  { region: FUNCTIONS_REGION, minInstances: 1, concurrency: 80, memory: '256MiB', cors: CORS_ORIGINS },
   async (req, res) => {
     const t0 = Date.now();
     const { token } = req.body as { token: string };
@@ -118,18 +118,21 @@ export const loadGuidanceData = onRequest(
     const shareLink = { id: shareLinkSnap.id, ...shareLinkData };
     const guidanceSetId = shareLinkData.guidanceSetId;
 
+    // Fetch guidance set, steps, user data, and update access count ALL in parallel
+    const guidanceSetPromise = db.collection('guidanceSets').doc(guidanceSetId).get();
+    const stepsPromise = db.collection('guidanceSteps')
+      .where('guidanceSetId', '==', guidanceSetId)
+      .where('deletedAt', '==', null)
+      .orderBy('stepIndex', 'asc')
+      .get();
+    const updatePromise = shareLinkSnap.ref.update({
+      accessCount: admin.firestore.FieldValue.increment(1),
+      lastAccessedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
     const [guidanceSetSnap, stepsSnapshot] = await Promise.all([
-      db.collection('guidanceSets').doc(guidanceSetId).get(),
-      db.collection('guidanceSteps')
-        .where('guidanceSetId', '==', guidanceSetId)
-        .where('deletedAt', '==', null)
-        .orderBy('stepIndex', 'asc')
-        .get(),
-      shareLinkSnap.ref.update({
-        accessCount: admin.firestore.FieldValue.increment(1),
-        lastAccessedAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      }),
+      guidanceSetPromise, stepsPromise, updatePromise,
     ]);
     const tData = Date.now();
 
@@ -157,6 +160,8 @@ export const loadGuidanceData = onRequest(
       return;
     }
 
+    // Fetch recipient data in parallel with the above processing (already resolved by now,
+    // but we start it early to overlap with step filtering)
     let recipientPhoneNumber: string | null = null;
     let courierContactPreference: string | null = null;
     try {

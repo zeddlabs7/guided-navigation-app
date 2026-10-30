@@ -14,14 +14,14 @@ The welcome page renders the language selection UI **immediately** while `valida
 
 **Flow:**
 1. Page mounts → language buttons render immediately
-2. `validateToken()` fires in parallel (HTTP to Cloud Function)
-3. On success → `loadDataInBackground()` starts fetching full guidance data
-4. User picks language → if data ready, navigate instantly; if not, wait with spinner on the selected button
+2. `validateToken()` AND `loadDataInBackground()` fire in PARALLEL (both validate server-side)
+3. If saved language detected → translation pre-triggered as soon as data is ready
+4. User picks language → if data + translation ready, navigate instantly; if not, wait with spinner
 5. On failure → redirect to error page
 
 ## Cloud Function Warm Instances
 
-`validateToken` uses `minInstances: 1` to eliminate cold starts. This is critical for courier-facing latency. Do not remove `minInstances` from courier-facing v2 functions (`validateToken`, `loadGuidanceData`).
+`validateToken`, `loadGuidanceData`, and `translateTexts` all use `minInstances: 1` to eliminate cold starts. This is critical for courier-facing latency. Do not remove `minInstances` from these without considering the impact on load times in Saudi Arabia / Middle East.
 
 ## Share Link Cleanup
 
