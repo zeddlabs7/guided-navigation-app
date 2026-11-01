@@ -25,7 +25,7 @@ export function useCourierSession() {
   const totalSteps = computed(() => steps.value.length);
 
   const hasData = computed(() => guidanceSet.value !== null && steps.value.length > 0);
-  const isDataReady = computed(() => guidanceSet.value !== null && steps.value.length > 0 && !isDataLoading.value);
+  const isDataReady = computed(() => guidanceSet.value !== null && !isDataLoading.value);
 
   const lastStep = computed(() => {
     if (steps.value.length === 0) return null;
