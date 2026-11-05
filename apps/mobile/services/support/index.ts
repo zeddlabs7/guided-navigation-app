@@ -2,7 +2,7 @@ import firestore from '@react-native-firebase/firestore';
 import { Platform } from 'react-native';
 
 const SUPPORT_REQUESTS_COLLECTION = 'supportRequests';
-const STORAGE_BUCKET = 'guided-navigation-app.firebasestorage.app';
+const STORAGE_BUCKET = 'yadul-513813.firebasestorage.app';
 const MAX_IMAGE_WIDTH = 800;
 const COMPRESS_QUALITY = 0.5;
 

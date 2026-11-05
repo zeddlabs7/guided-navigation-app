@@ -4,7 +4,7 @@ import { logger } from 'firebase-functions/v2';
 const { Translate } = require('@google-cloud/translate').v2;
 const translate = new Translate();
 
-const FUNCTIONS_REGION = 'me-central1';
+const FUNCTIONS_REGION = 'me-central2';
 const CORS_ORIGINS = [
   'https://guided-navigation-app-courier.netlify.app',
   'http://localhost:5173',

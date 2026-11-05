@@ -1,7 +1,9 @@
-import * as functions from 'firebase-functions';
+import { onCall, onRequest, HttpsError } from 'firebase-functions/v2/https';
+import { logger } from 'firebase-functions/v2';
 import * as admin from 'firebase-admin';
 import * as crypto from 'crypto';
 
+const FUNCTIONS_REGION = 'me-central2';
 const db = admin.firestore();
 
 const SESSIONS_COLLECTION = 'whatsappVerifySessions';
@@ -80,7 +82,7 @@ async function sendWhatsAppReply(
   );
   if (!res.ok) {
     const body = await res.text();
-    functions.logger.error('WhatsApp reply failed', {
+    logger.error('WhatsApp reply failed', {
       status: res.status,
       body,
     });
@@ -129,12 +131,13 @@ interface CreateSessionData {
   phoneNumber: string;
 }
 
-export const createVerificationSession = functions.https.onCall(
-  async (data: CreateSessionData) => {
-    const { phoneNumber } = data;
+export const createVerificationSession = onCall(
+  { region: FUNCTIONS_REGION },
+  async (request) => {
+    const { phoneNumber } = request.data as CreateSessionData;
 
     if (!phoneNumber || !isValidE164(phoneNumber)) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'invalid-argument',
         'Valid E.164 phone number required.',
       );
@@ -142,7 +145,7 @@ export const createVerificationSession = functions.https.onCall(
 
     const config = getWhatsAppConfig();
     if (!config.businessNumber) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'internal',
         'WhatsApp verification not configured.',
       );
@@ -157,7 +160,7 @@ export const createVerificationSession = functions.https.onCall(
       .get();
 
     if (recentSessions.size >= MAX_SESSIONS_PER_HOUR) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'resource-exhausted',
         'Too many verification requests. Please try again later.',
       );
@@ -214,7 +217,7 @@ export const createVerificationSession = functions.https.onCall(
 
     const whatsappUrl = `https://wa.me/${config.businessNumber}?text=${encodeURIComponent(`VERIFY ${token}`)}`;
 
-    functions.logger.info('Verification session created', {
+    logger.info('Verification session created', {
       sessionId: sessionRef.id,
       phone: phoneNumber,
     });
@@ -227,7 +230,8 @@ export const createVerificationSession = functions.https.onCall(
 // 2. whatsappVerifyWebhook (HTTPS endpoint)
 // ---------------------------------------------------------------------------
 
-export const whatsappVerifyWebhook = functions.https.onRequest(
+export const whatsappVerifyWebhook = onRequest(
+  { region: FUNCTIONS_REGION },
   async (req, res) => {
     // GET: Meta webhook verification challenge
     if (req.method === 'GET') {
@@ -237,7 +241,7 @@ export const whatsappVerifyWebhook = functions.https.onRequest(
       const { verifyToken } = getWhatsAppConfig();
 
       if (mode === 'subscribe' && token === verifyToken) {
-        functions.logger.info('Webhook verified');
+        logger.info('Webhook verified');
         res.status(200).send(challenge);
         return;
       }
@@ -256,7 +260,7 @@ export const whatsappVerifyWebhook = functions.https.onRequest(
     // Validate webhook signature
     const signature = req.headers['x-hub-signature-256'] as string | undefined;
     if (!verifyWebhookSignature(req.rawBody, signature, config.appSecret)) {
-      functions.logger.warn('Invalid webhook signature');
+      logger.warn('Invalid webhook signature');
       res.sendStatus(401);
       return;
     }
@@ -269,11 +273,11 @@ export const whatsappVerifyWebhook = functions.https.onRequest(
       const message = value?.messages?.[0];
 
       if (!message) {
-        functions.logger.info('Webhook: no message in payload (status update)', {
+        logger.info('Webhook: no message in payload (status update)', {
           hasStatuses: !!(value?.statuses),
         });
       } else if (message.type !== 'text') {
-        functions.logger.info('Webhook: non-text message ignored', {
+        logger.info('Webhook: non-text message ignored', {
           type: message.type,
           from: message.from,
         });
@@ -284,7 +288,7 @@ export const whatsappVerifyWebhook = functions.https.onRequest(
 
         const match = text.match(/^VERIFY\s+([a-f0-9]{6})$/i);
         if (!match) {
-          functions.logger.info('Webhook: text did not match VERIFY pattern', {
+          logger.info('Webhook: text did not match VERIFY pattern', {
             from: senderRaw,
             textLength: text.length,
           });
@@ -299,7 +303,7 @@ export const whatsappVerifyWebhook = functions.https.onRequest(
           const receivedHash = hashToken(receivedToken);
           const senderPhone = normalizeToE164(senderRaw);
 
-          functions.logger.info('Webhook: parsed VERIFY message', {
+          logger.info('Webhook: parsed VERIFY message', {
             from: senderPhone,
             tokenPrefix: receivedToken.substring(0, 3) + '***',
           });
@@ -310,7 +314,7 @@ export const whatsappVerifyWebhook = functions.https.onRequest(
             .get();
 
           if (!tokenDoc.exists) {
-            functions.logger.warn('Webhook: token not found in DB', {
+            logger.warn('Webhook: token not found in DB', {
               hashPrefix: receivedHash.substring(0, 8),
             });
             await sendWhatsAppReply(
@@ -323,7 +327,7 @@ export const whatsappVerifyWebhook = functions.https.onRequest(
             const tokenData = tokenDoc.data()!;
             const sessionId: string = tokenData.sessionId;
 
-            functions.logger.info('Webhook: token found, checking session', {
+            logger.info('Webhook: token found, checking session', {
               sessionId,
               tokenConsumed: tokenData.consumed,
             });
@@ -384,7 +388,7 @@ export const whatsappVerifyWebhook = functions.https.onRequest(
             });
 
             if (verified) {
-              functions.logger.info('Verification successful', {
+              logger.info('Verification successful', {
                 sessionId,
                 phone: senderPhone,
               });
@@ -395,7 +399,7 @@ export const whatsappVerifyWebhook = functions.https.onRequest(
                 config.phoneNumberId,
               );
             } else {
-              functions.logger.warn('Verification failed', {
+              logger.warn('Verification failed', {
                 sessionId,
                 phone: senderPhone,
                 reason: failReason,
@@ -411,7 +415,7 @@ export const whatsappVerifyWebhook = functions.https.onRequest(
         }
       }
     } catch (err) {
-      functions.logger.error('Webhook processing error', { error: err });
+      logger.error('Webhook processing error', { error: err });
     }
 
     res.sendStatus(200);
@@ -426,12 +430,13 @@ interface GetStatusData {
   sessionId: string;
 }
 
-export const getVerificationStatus = functions.https.onCall(
-  async (data: GetStatusData) => {
-    const { sessionId } = data;
+export const getVerificationStatus = onCall(
+  { region: FUNCTIONS_REGION },
+  async (request) => {
+    const { sessionId } = request.data as GetStatusData;
 
     if (!sessionId || typeof sessionId !== 'string') {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'invalid-argument',
         'Session ID required.',
       );
@@ -441,7 +446,7 @@ export const getVerificationStatus = functions.https.onCall(
     const sessionSnap = await sessionRef.get();
 
     if (!sessionSnap.exists) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'not-found',
         'Session not found.',
       );
@@ -480,12 +485,13 @@ interface RetryData {
   sessionId: string;
 }
 
-export const retryVerificationSession = functions.https.onCall(
-  async (data: RetryData) => {
-    const { sessionId } = data;
+export const retryVerificationSession = onCall(
+  { region: FUNCTIONS_REGION },
+  async (request) => {
+    const { sessionId } = request.data as RetryData;
 
     if (!sessionId || typeof sessionId !== 'string') {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'invalid-argument',
         'Session ID required.',
       );
@@ -495,7 +501,7 @@ export const retryVerificationSession = functions.https.onCall(
     const sessionSnap = await sessionRef.get();
 
     if (!sessionSnap.exists) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'not-found',
         'Session not found.',
       );
@@ -517,11 +523,9 @@ export const retryVerificationSession = functions.https.onCall(
       await batch.commit();
     }
 
-    // Delegate to createVerificationSession logic
-    // We call the inner logic directly rather than the callable wrapper
     const config = getWhatsAppConfig();
     if (!config.businessNumber) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'internal',
         'WhatsApp verification not configured.',
       );
@@ -536,7 +540,7 @@ export const retryVerificationSession = functions.https.onCall(
       .get();
 
     if (recentSessions.size >= MAX_SESSIONS_PER_HOUR) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'resource-exhausted',
         'Too many verification requests. Please try again later.',
       );
@@ -574,7 +578,7 @@ export const retryVerificationSession = functions.https.onCall(
 
     const whatsappUrl = `https://wa.me/${config.businessNumber}?text=${encodeURIComponent(`VERIFY ${token}`)}`;
 
-    functions.logger.info('Retry verification session created', {
+    logger.info('Retry verification session created', {
       oldSessionId: sessionId,
       newSessionId: newSessionRef.id,
       phone: phoneNumber,

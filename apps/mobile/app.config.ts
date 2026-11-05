@@ -19,14 +19,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   ios: {
     supportsTablet: false,
-    bundleIdentifier: 'com.arriveo.app',
+    bundleIdentifier: 'com.yadul.app',
     googleServicesFile: './GoogleService-Info.plist',
     infoPlist: {
       CFBundleURLTypes: [
         {
           CFBundleURLSchemes: [
-            'app-1-407314189352-ios-98b0ab07a079a2e944791d',
-            'com.googleusercontent.apps.407314189352-3shohcr36rqvmpq29p7aqcfojpn5mjas',
+            'app-1-164657838536-ios-fc30db2d9c7bf51c3fe8fd',
           ],
         },
       ],
@@ -45,7 +44,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       foregroundImage: './assets/adaptive-icon.png',
       backgroundColor: '#ffffff',
     },
-    package: 'com.arriveo.app',
+    package: 'com.yadul.app',
     googleServicesFile: './google-services.json',
     config: {
       googleMaps: {

@@ -1,7 +1,9 @@
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { logger } from 'firebase-functions/v2';
 import * as admin from 'firebase-admin';
 import * as crypto from 'crypto';
 
+const FUNCTIONS_REGION = 'me-central2';
 const db = admin.firestore();
 
 const WHATSAPP_OTP_COLLECTION = 'whatsappOtpCodes';
@@ -38,11 +40,13 @@ interface SendData {
   phoneNumber: string;
 }
 
-export const sendWhatsAppOTP = functions.https.onCall(async (data: SendData) => {
-    const { phoneNumber } = data;
+export const sendWhatsAppOTP = onCall(
+  { region: FUNCTIONS_REGION },
+  async (request) => {
+    const { phoneNumber } = request.data as SendData;
 
     if (!phoneNumber || !isValidE164(phoneNumber)) {
-      throw new functions.https.HttpsError('invalid-argument', 'Valid E.164 phone number required');
+      throw new HttpsError('invalid-argument', 'Valid E.164 phone number required');
     }
 
     const docId = hashPhone(phoneNumber);
@@ -56,7 +60,7 @@ export const sendWhatsAppOTP = functions.https.onCall(async (data: SendData) => 
       const recentSends = sends.filter((t: number) => t > oneHourAgo);
 
       if (recentSends.length >= MAX_SENDS_PER_HOUR) {
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
           'resource-exhausted',
           'Too many OTP requests. Please try again later.'
         );
@@ -83,8 +87,8 @@ export const sendWhatsAppOTP = functions.https.onCall(async (data: SendData) => 
     const { accessToken, phoneNumberId, templateName } = getWhatsAppConfig();
 
     if (!accessToken || !phoneNumberId || !templateName) {
-      functions.logger.error('WhatsApp secrets not configured');
-      throw new functions.https.HttpsError('internal', 'WhatsApp service not configured');
+      logger.error('WhatsApp secrets not configured');
+      throw new HttpsError('internal', 'WhatsApp service not configured');
     }
 
     const recipientNumber = phoneNumber.replace('+', '');
@@ -120,94 +124,98 @@ export const sendWhatsAppOTP = functions.https.onCall(async (data: SendData) => 
 
     if (!response.ok) {
       const errorBody = await response.text();
-      functions.logger.error('WhatsApp API error', { status: response.status, body: errorBody });
-      throw new functions.https.HttpsError(
+      logger.error('WhatsApp API error', { status: response.status, body: errorBody });
+      throw new HttpsError(
         'internal',
         `WhatsApp API ${response.status}: ${errorBody}`
       );
     }
 
-    functions.logger.info('WhatsApp OTP sent', { phoneNumber, messageStatus: response.status });
+    logger.info('WhatsApp OTP sent', { phoneNumber, messageStatus: response.status });
 
     return { success: true };
-  });
+  }
+);
 
 interface VerifyData {
   phoneNumber: string;
   code: string;
 }
 
-export const verifyWhatsAppOTP = functions.https.onCall(async (data: VerifyData) => {
-  const { phoneNumber, code } = data;
+export const verifyWhatsAppOTP = onCall(
+  { region: FUNCTIONS_REGION },
+  async (request) => {
+    const { phoneNumber, code } = request.data as VerifyData;
 
-  if (!phoneNumber || !isValidE164(phoneNumber)) {
-    throw new functions.https.HttpsError('invalid-argument', 'Valid E.164 phone number required');
-  }
-
-  if (!code || !/^\d{6}$/.test(code)) {
-    throw new functions.https.HttpsError('invalid-argument', 'Valid 6-digit code required');
-  }
-
-  const docId = hashPhone(phoneNumber);
-  const docRef = db.collection(WHATSAPP_OTP_COLLECTION).doc(docId);
-  const otpDoc = await docRef.get();
-
-  if (!otpDoc.exists) {
-    throw new functions.https.HttpsError('not-found', 'No OTP request found. Please request a new code.');
-  }
-
-  const otpData = otpDoc.data()!;
-
-  if (Date.now() > otpData.expiresAt) {
-    await docRef.delete();
-    throw new functions.https.HttpsError('deadline-exceeded', 'Code has expired. Please request a new one.');
-  }
-
-  if (otpData.attempts >= MAX_VERIFY_ATTEMPTS) {
-    await docRef.delete();
-    throw new functions.https.HttpsError(
-      'resource-exhausted',
-      'Too many failed attempts. Please request a new code.'
-    );
-  }
-
-  if (hashCode(code) !== otpData.codeHash) {
-    await docRef.update({ attempts: admin.firestore.FieldValue.increment(1) });
-    throw new functions.https.HttpsError('permission-denied', 'Invalid code. Please try again.');
-  }
-
-  await docRef.delete();
-
-  let uid: string;
-  try {
-    const userRecord = await admin.auth().getUserByPhoneNumber(phoneNumber);
-    uid = userRecord.uid;
-  } catch (e: unknown) {
-    const authError = e as { code?: string };
-    if (authError.code === 'auth/user-not-found') {
-      const newUser = await admin.auth().createUser({ phoneNumber });
-      uid = newUser.uid;
-    } else {
-      throw new functions.https.HttpsError('internal', 'Failed to look up user');
+    if (!phoneNumber || !isValidE164(phoneNumber)) {
+      throw new HttpsError('invalid-argument', 'Valid E.164 phone number required');
     }
+
+    if (!code || !/^\d{6}$/.test(code)) {
+      throw new HttpsError('invalid-argument', 'Valid 6-digit code required');
+    }
+
+    const docId = hashPhone(phoneNumber);
+    const docRef = db.collection(WHATSAPP_OTP_COLLECTION).doc(docId);
+    const otpDoc = await docRef.get();
+
+    if (!otpDoc.exists) {
+      throw new HttpsError('not-found', 'No OTP request found. Please request a new code.');
+    }
+
+    const otpData = otpDoc.data()!;
+
+    if (Date.now() > otpData.expiresAt) {
+      await docRef.delete();
+      throw new HttpsError('deadline-exceeded', 'Code has expired. Please request a new one.');
+    }
+
+    if (otpData.attempts >= MAX_VERIFY_ATTEMPTS) {
+      await docRef.delete();
+      throw new HttpsError(
+        'resource-exhausted',
+        'Too many failed attempts. Please request a new code.'
+      );
+    }
+
+    if (hashCode(code) !== otpData.codeHash) {
+      await docRef.update({ attempts: admin.firestore.FieldValue.increment(1) });
+      throw new HttpsError('permission-denied', 'Invalid code. Please try again.');
+    }
+
+    await docRef.delete();
+
+    let uid: string;
+    try {
+      const userRecord = await admin.auth().getUserByPhoneNumber(phoneNumber);
+      uid = userRecord.uid;
+    } catch (e: unknown) {
+      const authError = e as { code?: string };
+      if (authError.code === 'auth/user-not-found') {
+        const newUser = await admin.auth().createUser({ phoneNumber });
+        uid = newUser.uid;
+      } else {
+        throw new HttpsError('internal', 'Failed to look up user');
+      }
+    }
+
+    const userDocRef = db.collection('users').doc(uid);
+    const userDoc = await userDocRef.get();
+    if (!userDoc.exists) {
+      await userDocRef.set({
+        phoneNumber,
+        email: null,
+        languagePreference: 'en',
+        isActive: true,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
+    const customToken = await admin.auth().createCustomToken(uid);
+
+    logger.info('WhatsApp OTP verified, custom token issued', { phoneNumber, uid });
+
+    return { customToken };
   }
-
-  const userDocRef = db.collection('users').doc(uid);
-  const userDoc = await userDocRef.get();
-  if (!userDoc.exists) {
-    await userDocRef.set({
-      phoneNumber,
-      email: null,
-      languagePreference: 'en',
-      isActive: true,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-  }
-
-  const customToken = await admin.auth().createCustomToken(uid);
-
-  functions.logger.info('WhatsApp OTP verified, custom token issued', { phoneNumber, uid });
-
-  return { customToken };
-});
+);

@@ -1,10 +1,9 @@
-import { onRequest } from 'firebase-functions/v2/https';
+import { onRequest, onCall, HttpsError } from 'firebase-functions/v2/https';
 import { logger } from 'firebase-functions/v2';
-import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import * as crypto from 'crypto';
 
-const FUNCTIONS_REGION = 'me-central1';
+const FUNCTIONS_REGION = 'me-central2';
 const CORS_ORIGINS = [
   'https://guided-navigation-app-courier.netlify.app',
   'http://localhost:5173',
@@ -160,8 +159,6 @@ export const loadGuidanceData = onRequest(
       return;
     }
 
-    // Fetch recipient data in parallel with the above processing (already resolved by now,
-    // but we start it early to overlap with step filtering)
     let recipientPhoneNumber: string | null = null;
     let courierContactPreference: string | null = null;
     try {
@@ -197,155 +194,162 @@ export const loadGuidanceData = onRequest(
   },
 );
 
-// --- v1 functions (recipient-app, not on courier critical path) ---
+// --- v2 callable functions (recipient-app, not on courier critical path) ---
 
-export const validateShareLink = functions.https.onCall(async (data: { token: string }) => {
-  const { token } = data;
+export const validateShareLink = onCall(
+  { region: FUNCTIONS_REGION },
+  async (request) => {
+    const { token } = request.data as { token: string };
 
-  if (!token) {
-    throw new functions.https.HttpsError('invalid-argument', 'Token is required');
-  }
+    if (!token) {
+      throw new HttpsError('invalid-argument', 'Token is required');
+    }
 
-  const shareLinkSnap = await resolveShareLinkDoc(token);
+    const shareLinkSnap = await resolveShareLinkDoc(token);
 
-  if (!shareLinkSnap) {
-    return { valid: false, error: 'NOT_FOUND' };
-  }
+    if (!shareLinkSnap) {
+      return { valid: false, error: 'NOT_FOUND' };
+    }
 
-  const shareLink = shareLinkSnap.data()!;
+    const shareLink = shareLinkSnap.data()!;
 
-  if (shareLink.status === 'REVOKED') {
-    shareLinkSnap.ref.delete().catch(() => {});
-    return { valid: false, error: 'NOT_FOUND' };
-  }
+    if (shareLink.status === 'REVOKED') {
+      shareLinkSnap.ref.delete().catch(() => {});
+      return { valid: false, error: 'NOT_FOUND' };
+    }
 
-  if (new Date(shareLink.expiresAt) < new Date()) {
-    shareLinkSnap.ref.delete().catch(() => {});
-    return { valid: false, error: 'EXPIRED' };
-  }
+    if (new Date(shareLink.expiresAt) < new Date()) {
+      shareLinkSnap.ref.delete().catch(() => {});
+      return { valid: false, error: 'EXPIRED' };
+    }
 
-  await shareLinkSnap.ref.update({
-    accessCount: admin.firestore.FieldValue.increment(1),
-    lastAccessedAt: admin.firestore.FieldValue.serverTimestamp(),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
-
-  return {
-    valid: true,
-    shareLinkId: shareLinkSnap.id,
-    guidanceSetId: shareLink.guidanceSetId,
-  };
-});
-
-export const loadGuidanceByToken = functions.https.onCall(async (data: { token: string }) => {
-  const { token } = data;
-
-  if (!token) {
-    throw new functions.https.HttpsError('invalid-argument', 'Token is required');
-  }
-
-  const shareLinkSnap = await resolveShareLinkDoc(token);
-
-  if (!shareLinkSnap) {
-    return { valid: false, error: 'NOT_FOUND' };
-  }
-
-  const shareLinkData = shareLinkSnap.data()!;
-
-  if (shareLinkData.status === 'REVOKED') {
-    shareLinkSnap.ref.delete().catch(() => {});
-    return { valid: false, error: 'NOT_FOUND' };
-  }
-
-  if (new Date(shareLinkData.expiresAt) < new Date()) {
-    shareLinkSnap.ref.delete().catch(() => {});
-    return { valid: false, error: 'EXPIRED' };
-  }
-
-  const shareLink = { id: shareLinkSnap.id, ...shareLinkData };
-  const guidanceSetId = shareLinkData.guidanceSetId;
-
-  const [guidanceSetSnap, stepsSnapshot] = await Promise.all([
-    db.collection('guidanceSets').doc(guidanceSetId).get(),
-    db.collection('guidanceSteps')
-      .where('guidanceSetId', '==', guidanceSetId)
-      .where('deletedAt', '==', null)
-      .orderBy('stepIndex', 'asc')
-      .get(),
-    shareLinkSnap.ref.update({
+    await shareLinkSnap.ref.update({
       accessCount: admin.firestore.FieldValue.increment(1),
       lastAccessedAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    }),
-  ]);
+    });
 
-  if (!guidanceSetSnap.exists) {
-    return { valid: false, error: 'NOT_FOUND' };
+    return {
+      valid: true,
+      shareLinkId: shareLinkSnap.id,
+      guidanceSetId: shareLink.guidanceSetId,
+    };
   }
+);
 
-  const guidanceSetData = guidanceSetSnap.data() as admin.firestore.DocumentData;
-  const guidanceSet = { id: guidanceSetSnap.id, ...guidanceSetData };
+export const loadGuidanceByToken = onCall(
+  { region: FUNCTIONS_REGION },
+  async (request) => {
+    const { token } = request.data as { token: string };
 
-  if (guidanceSetData.status === 'DISABLED') {
-    return { valid: false, error: 'GUIDANCE_DISABLED' };
-  }
+    if (!token) {
+      throw new HttpsError('invalid-argument', 'Token is required');
+    }
 
-  const rawSteps = stepsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const shareLinkSnap = await resolveShareLinkDoc(token);
 
-  const courierSteps = rawSteps
-    .filter((step) => isStepVisibleToCourier(step))
-    .map((step) => applyPublishedSnapshotForCourier(step));
+    if (!shareLinkSnap) {
+      return { valid: false, error: 'NOT_FOUND' };
+    }
 
-  if (courierSteps.length === 0) {
-    return { valid: false, error: 'NO_STEPS' };
-  }
+    const shareLinkData = shareLinkSnap.data()!;
 
-  let recipientPhoneNumber: string | null = null;
-  let courierContactPreference: string | null = null;
-  try {
-    const recipientUserId = guidanceSetData.recipientUserId as string;
-    if (recipientUserId) {
-      const userSnap = await db.collection('users').doc(recipientUserId).get();
-      if (userSnap.exists) {
-        const userData = userSnap.data();
-        recipientPhoneNumber = userData?.phoneNumber ?? null;
-        courierContactPreference = userData?.courierContactPreference ?? 'CALL_ON_ARRIVAL';
+    if (shareLinkData.status === 'REVOKED') {
+      shareLinkSnap.ref.delete().catch(() => {});
+      return { valid: false, error: 'NOT_FOUND' };
+    }
+
+    if (new Date(shareLinkData.expiresAt) < new Date()) {
+      shareLinkSnap.ref.delete().catch(() => {});
+      return { valid: false, error: 'EXPIRED' };
+    }
+
+    const shareLink = { id: shareLinkSnap.id, ...shareLinkData };
+    const guidanceSetId = shareLinkData.guidanceSetId;
+
+    const [guidanceSetSnap, stepsSnapshot] = await Promise.all([
+      db.collection('guidanceSets').doc(guidanceSetId).get(),
+      db.collection('guidanceSteps')
+        .where('guidanceSetId', '==', guidanceSetId)
+        .where('deletedAt', '==', null)
+        .orderBy('stepIndex', 'asc')
+        .get(),
+      shareLinkSnap.ref.update({
+        accessCount: admin.firestore.FieldValue.increment(1),
+        lastAccessedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }),
+    ]);
+
+    if (!guidanceSetSnap.exists) {
+      return { valid: false, error: 'NOT_FOUND' };
+    }
+
+    const guidanceSetData = guidanceSetSnap.data() as admin.firestore.DocumentData;
+    const guidanceSet = { id: guidanceSetSnap.id, ...guidanceSetData };
+
+    if (guidanceSetData.status === 'DISABLED') {
+      return { valid: false, error: 'GUIDANCE_DISABLED' };
+    }
+
+    const rawSteps = stepsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+    const courierSteps = rawSteps
+      .filter((step) => isStepVisibleToCourier(step))
+      .map((step) => applyPublishedSnapshotForCourier(step));
+
+    if (courierSteps.length === 0) {
+      return { valid: false, error: 'NO_STEPS' };
+    }
+
+    let recipientPhoneNumber: string | null = null;
+    let courierContactPreference: string | null = null;
+    try {
+      const recipientUserId = guidanceSetData.recipientUserId as string;
+      if (recipientUserId) {
+        const userSnap = await db.collection('users').doc(recipientUserId).get();
+        if (userSnap.exists) {
+          const userData = userSnap.data();
+          recipientPhoneNumber = userData?.phoneNumber ?? null;
+          courierContactPreference = userData?.courierContactPreference ?? 'CALL_ON_ARRIVAL';
+        }
       }
+    } catch (err) {
+      logger.warn('Failed to fetch recipient phone:', err);
     }
-  } catch (err) {
-    functions.logger.warn('Failed to fetch recipient phone:', err);
+
+    return {
+      valid: true,
+      shareLink,
+      guidanceSet,
+      steps: courierSteps,
+      recipientPhoneNumber,
+      courierContactPreference,
+    };
   }
+);
 
-  return {
-    valid: true,
-    shareLink,
-    guidanceSet,
-    steps: courierSteps,
-    recipientPhoneNumber,
-    courierContactPreference,
-  };
-});
-
-export const revokeShareLink = functions.https.onCall(
-  async (data: { shareLinkId: string }, context) => {
-    if (!context.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+export const revokeShareLink = onCall(
+  { region: FUNCTIONS_REGION },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'User must be authenticated');
     }
 
-    const { shareLinkId } = data;
+    const { shareLinkId } = request.data as { shareLinkId: string };
 
     const shareLinkRef = db.collection('shareLinks').doc(shareLinkId);
     const shareLink = await shareLinkRef.get();
 
     if (!shareLink.exists) {
-      throw new functions.https.HttpsError('not-found', 'Share link not found');
+      throw new HttpsError('not-found', 'Share link not found');
     }
 
     const guidanceSetRef = db.collection('guidanceSets').doc(shareLink.data()?.guidanceSetId);
     const guidanceSet = await guidanceSetRef.get();
 
-    if (guidanceSet.data()?.recipientUserId !== context.auth.uid) {
-      throw new functions.https.HttpsError('permission-denied', 'Not authorized');
+    if (guidanceSet.data()?.recipientUserId !== request.auth.uid) {
+      throw new HttpsError('permission-denied', 'Not authorized');
     }
 
     await shareLinkRef.delete();

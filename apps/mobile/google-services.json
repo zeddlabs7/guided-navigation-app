@@ -1,43 +1,26 @@
 {
   "project_info": {
-    "project_number": "407314189352",
-    "project_id": "guided-navigation-app",
-    "storage_bucket": "guided-navigation-app.firebasestorage.app"
+    "project_number": "164657838536",
+    "project_id": "yadul-513813",
+    "storage_bucket": "yadul-513813.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:407314189352:android:f9435d765bf0cfb444791d",
+        "mobilesdk_app_id": "1:164657838536:android:e89dcd5f1c0f5d4f3fe8fd",
         "android_client_info": {
-          "package_name": "com.arriveo.app"
+          "package_name": "com.yadul.app"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "407314189352-vfqqdjqengv3tre5d7ovr7dtoil404ka.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyC3yeZITJgJ6LKC622dzLfYGOuocN-0iLI"
+          "current_key": "AIzaSyCuOz0mM1RFy0nuApOUfcDTv3ShZvBBX5A"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "407314189352-vfqqdjqengv3tre5d7ovr7dtoil404ka.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "407314189352-3shohcr36rqvmpq29p7aqcfojpn5mjas.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.arriveo.app"
-              }
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }
