@@ -370,7 +370,7 @@ export async function uploadStepImage(
   const idToken = await auth.default().currentUser?.getIdToken();
   if (!idToken) throw new Error('Not authenticated');
 
-  const bucket = 'guided-navigation-app.firebasestorage.app';
+  const bucket = 'yadul-513813.firebasestorage.app';
   const encodedPath = encodeURIComponent(storagePath);
   const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodedPath}`;
 

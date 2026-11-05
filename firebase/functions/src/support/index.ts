@@ -1,4 +1,5 @@
-import * as functions from 'firebase-functions';
+import { onDocumentCreated } from 'firebase-functions/v2/firestore';
+import { logger } from 'firebase-functions/v2';
 import * as nodemailer from 'nodemailer';
 
 // Environment variables loaded from firebase/functions/.env at deploy time.
@@ -13,6 +14,7 @@ import * as nodemailer from 'nodemailer';
 // To update env vars without code changes: edit .env then redeploy,
 // or set them in Google Cloud Console > Cloud Functions > Edit > Environment Variables.
 
+const FUNCTIONS_REGION = 'me-central2';
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || '';
 const SUPPORT_PASSWORD = process.env.SUPPORT_PASSWORD || '';
 const SUPPORT_RECIPIENT = process.env.SUPPORT_RECIPIENT || '';
@@ -36,11 +38,14 @@ function escapeHtml(text: string): string {
     .replace(/\n/g, '<br>');
 }
 
-export const onSupportRequestCreated = functions.firestore
-  .document('supportRequests/{requestId}')
-  .onCreate(async (snap, context) => {
+export const onSupportRequestCreated = onDocumentCreated(
+  { document: 'supportRequests/{requestId}', region: FUNCTIONS_REGION },
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+
     const data = snap.data();
-    const requestId = context.params.requestId;
+    const requestId = event.params.requestId;
 
     const phone = data.phoneNumber || 'N/A';
     const email = data.email || 'N/A';
@@ -49,7 +54,7 @@ export const onSupportRequestCreated = functions.firestore
     const imageUrls: string[] = data.imageUrls || [];
 
     if (!SUPPORT_RECIPIENT || !SUPPORT_EMAIL || !SUPPORT_PASSWORD) {
-      functions.logger.error(
+      logger.error(
         'Support email not configured. Add SUPPORT_EMAIL, SUPPORT_PASSWORD, and SUPPORT_RECIPIENT to firebase/functions/.env',
       );
       return;
@@ -62,7 +67,7 @@ export const onSupportRequestCreated = functions.firestore
         <tr>
           <td style="padding:8px 0;color:#555;font-weight:600;vertical-align:top;">Attachments</td>
           <td style="padding:8px 0;color:#1a1a1a;">
-            ${imageUrls.map((url, i) => `<a href="${url}" style="color:#4F46E5;">Image ${i + 1}</a>`).join(' &nbsp; ')}
+            ${imageUrls.map((url: string, i: number) => `<a href="${url}" style="color:#4F46E5;">Image ${i + 1}</a>`).join(' &nbsp; ')}
           </td>
         </tr>`
       : '';
@@ -114,8 +119,9 @@ export const onSupportRequestCreated = functions.firestore
         subject,
         html,
       });
-      functions.logger.info(`Support email sent for request ${requestId}`);
+      logger.info(`Support email sent for request ${requestId}`);
     } catch (err) {
-      functions.logger.error('Failed to send support email:', err);
+      logger.error('Failed to send support email:', err);
     }
-  });
+  }
+);

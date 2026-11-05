@@ -12,10 +12,20 @@ export default defineConfig({
   server: {
     port: 3001,
     proxy: {
-      '/api': {
-        target: 'https://me-central1-guided-navigation-app.cloudfunctions.net',
+      '/api/validateToken': {
+        target: 'https://validatetoken-txrb6jqctq-wx.a.run.app',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+        rewrite: () => '/',
+      },
+      '/api/loadGuidanceData': {
+        target: 'https://loadguidancedata-txrb6jqctq-wx.a.run.app',
+        changeOrigin: true,
+        rewrite: () => '/',
+      },
+      '/api/translateTexts': {
+        target: 'https://translatetexts-txrb6jqctq-wx.a.run.app',
+        changeOrigin: true,
+        rewrite: () => '/',
       },
     },
   },

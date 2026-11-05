@@ -1,9 +1,9 @@
 {
   "projects": {
-    "default": "guided-navigation-app"
+    "default": "yadul-513813"
   },
   "targets": {
-    "guided-navigation-app": {
+    "yadul-513813": {
       "hosting": {
         "courier": [
           "guidenav-courier"

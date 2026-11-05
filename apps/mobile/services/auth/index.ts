@@ -48,7 +48,7 @@ const DEV_BYPASS_UID = 'YCAilJHBfpeqoSrInaYJeqQVmwp1';
  * and signs in as the designated test user (same as web app).
  */
 export async function devSignIn(): Promise<void> {
-  const fn = functions().httpsCallable('devSignIn');
+  const fn = functions('me-central2').httpsCallable('devSignIn');
   const result = await fn({ uid: DEV_BYPASS_UID });
   const { customToken } = result.data as { customToken: string };
   await auth().signInWithCustomToken(customToken);

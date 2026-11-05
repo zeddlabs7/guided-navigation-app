@@ -1,6 +1,7 @@
-import * as functions from 'firebase-functions';
+import { onCall } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 
+const FUNCTIONS_REGION = 'me-central2';
 const db = admin.firestore();
 
 interface LogAnalyticsEventData {
@@ -12,9 +13,11 @@ interface LogAnalyticsEventData {
   metadata?: Record<string, unknown>;
 }
 
-export const logAnalyticsEvent = functions.https.onCall(
-  async (data: LogAnalyticsEventData) => {
-    const { app, eventType, guidanceSetId, guidanceStepId, shareLinkId, metadata } = data;
+export const logAnalyticsEvent = onCall(
+  { region: FUNCTIONS_REGION },
+  async (request) => {
+    const { app, eventType, guidanceSetId, guidanceStepId, shareLinkId, metadata } =
+      request.data as LogAnalyticsEventData;
 
     const eventRef = await db.collection('analyticsEvents').add({
       app,
