@@ -231,7 +231,7 @@ export const createVerificationSession = onCall(
 // ---------------------------------------------------------------------------
 
 export const whatsappVerifyWebhook = onRequest(
-  { region: FUNCTIONS_REGION },
+  { region: FUNCTIONS_REGION, invoker: 'public' },
   async (req, res) => {
     // GET: Meta webhook verification challenge
     if (req.method === 'GET') {

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "164657838536",
+    "project_id": "yadul-513813",
+    "storage_bucket": "yadul-513813.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:164657838536:android:e89dcd5f1c0f5d4f3fe8fd",
+        "android_client_info": {
+          "package_name": "com.yadul.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCuOz0mM1RFy0nuApOUfcDTv3ShZvBBX5A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -5,11 +5,12 @@ const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'Yadul',
-  slug: 'arriveo',
+  slug: 'yadul',
+  owner: 'zeddlabs',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
-  scheme: 'arriveo',
+  scheme: 'yadul',
   userInterfaceStyle: 'light',
   newArchEnabled: true,
   splash: {
@@ -20,8 +21,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: false,
     bundleIdentifier: 'com.yadul.app',
-    googleServicesFile: './GoogleService-Info.plist',
+    googleServicesFile: process.env.GOOGLE_SERVICE_INFO_PLIST ?? './GoogleService-Info.plist',
     infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
       CFBundleURLTypes: [
         {
           CFBundleURLSchemes: [
@@ -45,7 +47,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: '#ffffff',
     },
     package: 'com.yadul.app',
-    googleServicesFile: './google-services.json',
+    googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? './google-services.json',
     config: {
       googleMaps: {
         apiKey: GOOGLE_MAPS_API_KEY,
@@ -96,7 +98,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ],
   extra: {
     eas: {
-      projectId: '68767fae-c3e1-467d-b66e-d6180e281380',
+      projectId: 'ecbeb5c0-847f-4c81-8972-0998fd1b9d7b',
     },
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
   },
