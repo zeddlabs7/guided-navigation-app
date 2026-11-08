@@ -432,7 +432,7 @@ onMounted(() => {
 }
 
 .address-line-label {
-  align-self: end;
+  align-self: center;
   min-width: 0;
   font-size: 11px;
   font-weight: 600;
@@ -443,7 +443,7 @@ onMounted(() => {
 }
 
 .address-line-value {
-  align-self: start;
+  align-self: center;
   font-size: 18px;
   font-weight: 700;
   color: var(--color-text);
