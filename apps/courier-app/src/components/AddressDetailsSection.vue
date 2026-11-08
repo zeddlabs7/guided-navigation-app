@@ -47,7 +47,7 @@ function shouldShowField(config: MetadataFieldConfig): boolean {
 }
 
 const DESTINATION_FIELDS: MetadataFieldType[] = ['compoundName', 'gateNumber', 'locationDescription', 'villaNumber'];
-const ADDRESS_DETAIL_FIELDS: MetadataFieldType[] = ['buildingNumber', 'floorNumber', 'doorNumber', 'apartmentNumber', 'unitType', 'storeName'];
+const ADDRESS_DETAIL_FIELDS: MetadataFieldType[] = ['buildingNumber', 'floorNumber', 'doorNumber', 'apartmentNumber', 'villaNumber', 'unitType', 'storeName'];
 
 const allVisibleFields = computed(() => {
   const configs = getMetadataFieldConfigs(props.guidanceSet.addressType);
@@ -208,8 +208,8 @@ onMounted(() => {
           <span class="address-card-label">{{ t('addressDetailsLabel') }}</span>
           <div class="address-lines">
             <div v-for="(line, i) in addressDetailLines" :key="i" class="address-line">
-              <span class="address-line-value">{{ line.value }}</span>
               <span class="address-line-label">{{ line.label }}</span>
+              <span class="address-line-value">{{ line.value }}</span>
             </div>
           </div>
         </div>
@@ -410,40 +410,46 @@ onMounted(() => {
 }
 
 .address-lines {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  row-gap: 4px;
 }
 
 .address-line {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.address-line:last-child {
-  border-bottom: none;
-  padding-bottom: 4px;
-}
-
-.address-line-value {
-  font-size: clamp(20px, 4dvh, 26px);
-  font-weight: 700;
-  color: var(--color-text);
+  justify-items: center;
+  min-width: 0;
   text-align: center;
-  word-break: break-word;
-  line-height: 1.2;
+  padding: 8px 6px;
+  border-radius: 12px;
+  background-color: #f3f1f8;
 }
 
 .address-line-label {
-  font-size: clamp(12px, 2dvh, 14px);
+  align-self: end;
+  min-width: 0;
+  font-size: 11px;
   font-weight: 600;
   color: var(--color-text-muted);
   text-align: center;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+}
+
+.address-line-value {
+  align-self: start;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+  text-align: center;
+  line-height: 1.1;
+  overflow-wrap: break-word;
 }
 
 .no-metadata {
