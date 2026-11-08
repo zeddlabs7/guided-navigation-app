@@ -139,6 +139,7 @@ export interface LocaleMessages {
     VILLA: string;
     RESIDENTIAL_COMPOUND: string;
     OFFICE_BUILDING: string;
+    COMMERCIAL_BUILDING: string;
     OTHER: string;
   };
 }

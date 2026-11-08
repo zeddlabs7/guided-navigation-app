@@ -100,6 +100,7 @@ const ADDRESS_TYPE_ICONS: Record<AddressType, string> = {
   VILLA: '🏠',
   RESIDENTIAL_COMPOUND: '🏘️',
   OFFICE_BUILDING: '🏛️',
+  COMMERCIAL_BUILDING: '🏬',
   OTHER: '📍',
 };
 

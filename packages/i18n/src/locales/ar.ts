@@ -141,6 +141,7 @@ export const ar: LocaleMessages = {
     VILLA: 'فيلا',
     RESIDENTIAL_COMPOUND: 'مجمع سكني',
     OFFICE_BUILDING: 'مبنى مكاتب',
+    COMMERCIAL_BUILDING: 'مبنى تجاري',
     OTHER: 'أخرى',
   },
 };

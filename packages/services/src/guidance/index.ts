@@ -98,6 +98,18 @@ export async function deleteGuidanceSet(guidanceSetId: string): Promise<void> {
     deletedAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+
+  const linksQuery = query(
+    collection(db, 'shareLinks'),
+    where('guidanceSetId', '==', guidanceSetId),
+  );
+  const linksSnapshot = await getDocs(linksQuery);
+
+  if (!linksSnapshot.empty) {
+    const batch = writeBatch(db);
+    linksSnapshot.docs.forEach((docSnap) => batch.delete(docSnap.ref));
+    await batch.commit();
+  }
 }
 
 export async function getGuidanceSteps(guidanceSetId: string): Promise<GuidanceStep[]> {
