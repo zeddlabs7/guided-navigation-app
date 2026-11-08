@@ -1,5 +1,5 @@
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
-import functions from '@react-native-firebase/functions';
+import { getFunctions, httpsCallable } from '@react-native-firebase/functions';
 
 export type FirebaseUser = FirebaseAuthTypes.User;
 export type ConfirmationResult = FirebaseAuthTypes.ConfirmationResult;
@@ -48,8 +48,9 @@ const DEV_BYPASS_UID = 'YCAilJHBfpeqoSrInaYJeqQVmwp1';
  * and signs in as the designated test user (same as web app).
  */
 export async function devSignIn(): Promise<void> {
-  const fn = functions('me-central2').httpsCallable('devSignIn');
+  const functionsInstance = getFunctions(undefined, 'me-central2');
+  const fn = httpsCallable<{ uid: string }, { customToken: string }>(functionsInstance, 'devSignIn');
   const result = await fn({ uid: DEV_BYPASS_UID });
-  const { customToken } = result.data as { customToken: string };
+  const { customToken } = result.data;
   await auth().signInWithCustomToken(customToken);
 }
