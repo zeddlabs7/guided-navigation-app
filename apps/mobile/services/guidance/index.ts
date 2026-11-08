@@ -46,6 +46,7 @@ function mapDocToGuidanceSet(doc: { id: string; data: () => Record<string, any> 
     villaNumber: data.villaNumber,
     apartmentNumber: data.apartmentNumber,
     locationDescription: data.locationDescription,
+    storeName: data.storeName,
     recipientPhoneNumber: data.recipientPhoneNumber,
     ...(data.titleArabic ? { titleArabic: data.titleArabic } : {}),
   } as GuidanceSet;
@@ -144,6 +145,17 @@ export async function deleteGuidanceSet(guidanceSetId: string): Promise<void> {
       deletedAt: firestore.FieldValue.serverTimestamp(),
       updatedAt: firestore.FieldValue.serverTimestamp(),
     });
+
+  const snapshot = await firestore()
+    .collection('shareLinks')
+    .where('guidanceSetId', '==', guidanceSetId)
+    .get();
+
+  if (!snapshot.empty) {
+    const batch = firestore().batch();
+    snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+  }
 }
 
 export async function updateGuidanceSet(
@@ -245,6 +257,7 @@ export async function createGuidanceSet(
   if (input.villaNumber) docData.villaNumber = input.villaNumber;
   if (input.apartmentNumber) docData.apartmentNumber = input.apartmentNumber;
   if (input.locationDescription) docData.locationDescription = input.locationDescription;
+  if (input.storeName) docData.storeName = input.storeName;
   if (input.recipientPhoneNumber) docData.recipientPhoneNumber = input.recipientPhoneNumber;
 
   const docRef = await firestore()

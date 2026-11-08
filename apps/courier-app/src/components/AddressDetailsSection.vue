@@ -47,7 +47,7 @@ function shouldShowField(config: MetadataFieldConfig): boolean {
 }
 
 const DESTINATION_FIELDS: MetadataFieldType[] = ['compoundName', 'gateNumber', 'locationDescription', 'villaNumber'];
-const ADDRESS_DETAIL_FIELDS: MetadataFieldType[] = ['buildingNumber', 'floorNumber', 'doorNumber', 'apartmentNumber', 'unitType'];
+const ADDRESS_DETAIL_FIELDS: MetadataFieldType[] = ['buildingNumber', 'floorNumber', 'doorNumber', 'apartmentNumber', 'unitType', 'storeName'];
 
 const allVisibleFields = computed(() => {
   const configs = getMetadataFieldConfigs(props.guidanceSet.addressType);

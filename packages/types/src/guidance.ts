@@ -11,6 +11,7 @@ export type AddressType =
   | 'VILLA'
   | 'RESIDENTIAL_COMPOUND'
   | 'OFFICE_BUILDING'
+  | 'COMMERCIAL_BUILDING'
   | 'OTHER';
 
 export type StepType =
@@ -76,6 +77,7 @@ export interface GuidanceSet {
   villaNumber?: string;
   apartmentNumber?: string;
   locationDescription?: string;
+  storeName?: string;
   recipientPhoneNumber?: string;
 }
 
@@ -148,6 +150,7 @@ export type CreateGuidanceSetInput = Pick<
   villaNumber?: string;
   apartmentNumber?: string;
   locationDescription?: string;
+  storeName?: string;
   recipientPhoneNumber?: string;
 };
 
@@ -172,6 +175,7 @@ export type UpdateGuidanceSetInput = Partial<
     | 'villaNumber'
     | 'apartmentNumber'
     | 'locationDescription'
+    | 'storeName'
     | 'recipientPhoneNumber'
   >
 >;
@@ -236,5 +240,6 @@ export const ADDRESS_TYPE_LABELS: Record<AddressType, TranslatedLabel> = {
   VILLA: { en: 'Villa', ar: 'فيلا', hi: 'विला', ur: 'ولا', bn: 'ভিলা' },
   RESIDENTIAL_COMPOUND: { en: 'Residential Compound', ar: 'مجمع سكني', hi: 'आवासीय परिसर', ur: 'رہائشی کمپاؤنڈ', bn: 'আবাসিক কমপাউন্ড' },
   OFFICE_BUILDING: { en: 'Office Building', ar: 'مبنى مكاتب', hi: 'कार्यालय भवन', ur: 'آفس بلڈنگ', bn: 'অফিস বিল্ডিং' },
+  COMMERCIAL_BUILDING: { en: 'Commercial Building', ar: 'مبنى تجاري', hi: 'व्यावसायिक भवन', ur: 'تجارتی عمارت', bn: 'বাণিজ্যিক ভবন' },
   OTHER: { en: 'Other', ar: 'أخرى', hi: 'अन्य', ur: 'دیگر', bn: 'অন্যান্য' },
 };

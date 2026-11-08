@@ -141,6 +141,7 @@ export const en: LocaleMessages = {
     VILLA: 'Villa',
     RESIDENTIAL_COMPOUND: 'Residential Compound',
     OFFICE_BUILDING: 'Office Building',
+    COMMERCIAL_BUILDING: 'Commercial Building',
     OTHER: 'Other',
   },
 };

@@ -143,6 +143,11 @@ export const loadGuidanceData = onRequest(
     const guidanceSetData = guidanceSetSnap.data() as admin.firestore.DocumentData;
     const guidanceSet = { id: guidanceSetSnap.id, ...guidanceSetData };
 
+    if (guidanceSetData.deletedAt) {
+      res.json({ valid: false, error: 'NOT_FOUND' });
+      return;
+    }
+
     if (guidanceSetData.status === 'DISABLED') {
       res.json({ valid: false, error: 'GUIDANCE_DISABLED' });
       return;
@@ -287,6 +292,10 @@ export const loadGuidanceByToken = onCall(
 
     const guidanceSetData = guidanceSetSnap.data() as admin.firestore.DocumentData;
     const guidanceSet = { id: guidanceSetSnap.id, ...guidanceSetData };
+
+    if (guidanceSetData.deletedAt) {
+      return { valid: false, error: 'NOT_FOUND' };
+    }
 
     if (guidanceSetData.status === 'DISABLED') {
       return { valid: false, error: 'GUIDANCE_DISABLED' };

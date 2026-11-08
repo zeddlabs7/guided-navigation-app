@@ -91,6 +91,7 @@ export default function CreateGuidanceScreen() {
     if (metadata.villaNumber) payload.villaNumber = metadata.villaNumber;
     if (metadata.apartmentNumber) payload.apartmentNumber = metadata.apartmentNumber;
     if (metadata.locationDescription) payload.locationDescription = metadata.locationDescription;
+    if (metadata.storeName) payload.storeName = metadata.storeName;
     return payload;
   }, [metadata]);
 

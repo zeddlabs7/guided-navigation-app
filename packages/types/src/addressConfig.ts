@@ -15,7 +15,8 @@ export type MetadataFieldType =
   | 'unitType'
   | 'villaNumber'
   | 'apartmentNumber'
-  | 'locationDescription';
+  | 'locationDescription'
+  | 'storeName';
 
 export type UnitType = 'villa' | 'apartment';
 
@@ -192,6 +193,45 @@ export const ADDRESS_TYPE_STEP_CONFIG: Record<AddressType, AddressTypeConfig> = 
       },
     ],
     sectionTitle: { en: 'Office Details', ar: 'تفاصيل المكتب', hi: 'कार्यालय विवरण', ur: 'آفس کی تفصیلات', bn: 'অফিসের বিবরণ' },
+  },
+
+  COMMERCIAL_BUILDING: {
+    stepTypes: [
+      { type: 'PARKING_LOCATION', orderHint: 'Usually 1st', orderIndex: 1 },
+      { type: 'GATE_ENTRY', orderHint: 'Usually 2nd', orderIndex: 2 },
+      { type: 'BUILDING_ENTRY', orderHint: 'Usually 3rd', orderIndex: 3 },
+      { type: 'RECEPTION_OR_SECURITY', orderHint: 'Usually 4th', orderIndex: 4 },
+      { type: 'LOBBY_NAVIGATION', orderHint: 'Usually 5th', orderIndex: 5 },
+      { type: 'ELEVATOR_ENTRY', orderHint: 'Usually 6th', orderIndex: 6 },
+      { type: 'FLOOR_NUMBER', orderHint: 'Usually 7th', orderIndex: 7 },
+      { type: 'CORRIDOR_OR_PATH', orderHint: 'Usually 8th', orderIndex: 8 },
+      { type: 'UNIT_OR_DOOR_IDENTIFICATION', orderHint: 'Usually 9th', orderIndex: 9 },
+      { type: 'DROP_OFF_POINT', orderHint: 'Usually last', orderIndex: 10 },
+      { type: 'OTHER', orderHint: 'Anytime', orderIndex: 99 },
+    ],
+    requiresMetadata: true,
+    metadataFields: ['buildingNumber', 'floorNumber', 'storeName'],
+    metadataFieldConfigs: [
+      {
+        field: 'buildingNumber',
+        label: { en: 'Building Name', ar: 'اسم المبنى', hi: 'भवन का नाम', ur: 'عمارت کا نام', bn: 'ভবনের নাম' },
+        placeholder: { en: 'e.g. Al Nakheel Tower, City Mall', ar: 'مثال: برج النخيل، سيتي مول', hi: 'e.g. Al Nakheel Tower, City Mall', ur: 'e.g. Al Nakheel Tower, City Mall', bn: 'e.g. Al Nakheel Tower, City Mall' },
+        required: true,
+      },
+      {
+        field: 'floorNumber',
+        label: { en: 'Drop-off location inside the building', ar: 'موقع التسليم داخل المبنى', hi: 'भवन के अंदर ड्रॉप-ऑफ स्थान', ur: 'عمارت کے اندر ڈراپ آف مقام', bn: 'ভবনের ভিতরে ড্রপ-অফ অবস্থান' },
+        placeholder: { en: 'e.g. Ground Floor, 2nd Floor, Food Court', ar: 'مثال: الطابق الأرضي، الطابق الثاني، ساحة الطعام', hi: 'e.g. Ground Floor, 2nd Floor, Food Court', ur: 'e.g. Ground Floor, 2nd Floor, Food Court', bn: 'e.g. Ground Floor, 2nd Floor, Food Court' },
+        required: true,
+      },
+      {
+        field: 'storeName',
+        label: { en: 'Store Name', ar: 'اسم المتجر', hi: 'दुकान का नाम', ur: 'دکان کا نام', bn: 'দোকানের নাম' },
+        placeholder: { en: 'e.g. Starbucks, Nike Store, Unit 15B', ar: 'مثال: ستاربكس، نايكي، وحدة 15ب', hi: 'e.g. Starbucks, Nike Store, Unit 15B', ur: 'e.g. Starbucks, Nike Store, Unit 15B', bn: 'e.g. Starbucks, Nike Store, Unit 15B' },
+        required: true,
+      },
+    ],
+    sectionTitle: { en: 'Commercial Building Details', ar: 'تفاصيل المبنى التجاري', hi: 'व्यावसायिक भवन विवरण', ur: 'تجارتی عمارت کی تفصیلات', bn: 'বাণিজ্যিক ভবনের বিবরণ' },
   },
 
   OTHER: {
