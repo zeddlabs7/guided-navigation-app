@@ -18,9 +18,11 @@ dist-ssr
 *.sln
 *.sw?
 
-# Environment variables (local overrides only)
+# Environment variables — NEVER commit secrets
+.env
 .env.local
 .env.*.local
+firebase/functions/.env
 
 # Firebase service account keys (never commit)
 *-key.json
